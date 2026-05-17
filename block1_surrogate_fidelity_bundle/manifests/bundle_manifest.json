@@ -1,7 +1,7 @@
 {
   "bundle": "block1_surrogate_fidelity_bundle",
   "source_root": "C:\\Users\\user\\Desktop\\HVAC_DRL_MORL",
-  "item_count": 46,
+  "item_count": 53,
   "items": [
     {
       "type": "file",
@@ -62,6 +62,11 @@
       "type": "file",
       "source": "evaluation\\build_hou_evins_open_items_closure.py",
       "bundle_path": "code\\evaluation\\build_hou_evins_open_items_closure.py"
+    },
+    {
+      "type": "file",
+      "source": "evaluation\\build_hou_evins_q1_gap_tables.py",
+      "bundle_path": "code\\evaluation\\build_hou_evins_q1_gap_tables.py"
     },
     {
       "type": "file",
@@ -175,6 +180,16 @@
     },
     {
       "type": "file",
+      "source": "reports\\literature_review_alignment_block1_block2.md",
+      "bundle_path": "reports\\literature_review_alignment_block1_block2.md"
+    },
+    {
+      "type": "file",
+      "source": "reports\\hou_evins_q1_gap_closure.md",
+      "bundle_path": "reports\\hou_evins_q1_gap_closure.md"
+    },
+    {
+      "type": "file",
       "source": "reports\\hou_evins_compliance_matrix.md",
       "bundle_path": "reports\\hou_evins_compliance_matrix.md"
     },
@@ -222,6 +237,26 @@
       "type": "file",
       "source": "reports\\hou_evins_targeted_sensitivity_table.csv",
       "bundle_path": "reports\\hou_evins_targeted_sensitivity_table.csv"
+    },
+    {
+      "type": "file",
+      "source": "reports\\hou_evins_training_hyperparams_table.csv",
+      "bundle_path": "reports\\hou_evins_training_hyperparams_table.csv"
+    },
+    {
+      "type": "file",
+      "source": "reports\\hou_evins_scaling_table.csv",
+      "bundle_path": "reports\\hou_evins_scaling_table.csv"
+    },
+    {
+      "type": "file",
+      "source": "reports\\hou_evins_input_independence_table.csv",
+      "bundle_path": "reports\\hou_evins_input_independence_table.csv"
+    },
+    {
+      "type": "file",
+      "source": "reports\\hou_evins_predictive_validity_table.csv",
+      "bundle_path": "reports\\hou_evins_predictive_validity_table.csv"
     },
     {
       "type": "file",

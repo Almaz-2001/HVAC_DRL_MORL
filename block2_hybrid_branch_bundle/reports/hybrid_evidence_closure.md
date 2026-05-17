@@ -9,6 +9,12 @@ This report closes the two remaining evidence gaps:
 1. standalone hybrid disagreement summary
 2. hybrid transfer validation against pure `v3` and direct `v3.5`
 
+Literature-review alignment:
+
+- This closure file supports the Hou-and-Evins requirement that surrogate and modeling choices be numerically justified against alternatives.
+- The broader mapping from Literature review to Block 1 and Block 2 is maintained in [literature_review_alignment_block1_block2.md](C:/Users/user/Desktop/HVAC_DRL_MORL/reports/literature_review_alignment_block1_block2.md).
+- The hybrid claim is bounded: `v3.5` is stronger as a predictive physical twin, while the hybrid is justified as a downstream control-regularization mechanism.
+
 ## Physics Side
 
 The hybrid backend uses `v3` as primary dynamics and `v3.5` as a physics regularizer.

@@ -2,6 +2,11 @@
 
 Date: 2026-04-30
 
+Literature-review alignment:
+
+- This file is an older partial-closure snapshot of the Hou-and-Evins workstream summarized in [main_Article/_lit_review.txt](C:/Users/user/Desktop/HVAC_DRL_MORL/main_Article/_lit_review.txt).
+- For the current Block 1 and Block 2 mapping, use [literature_review_alignment_block1_block2.md](C:/Users/user/Desktop/HVAC_DRL_MORL/reports/literature_review_alignment_block1_block2.md) and [hou_evins_compliance_matrix.md](C:/Users/user/Desktop/HVAC_DRL_MORL/reports/hou_evins_compliance_matrix.md).
+
 ## Scope
 
 This document closes the previously partial items:

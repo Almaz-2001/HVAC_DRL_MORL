@@ -108,12 +108,14 @@ def build_bundle(bundle_dir: Path) -> None:
         REPO_ROOT / "reports" / "block2_hdrl_lambda_sweep_summary.csv",
         REPO_ROOT / "reports" / "block2_morl_canonical_report.md",
         REPO_ROOT / "reports" / "block2_morl_comparison_summary.csv",
+        REPO_ROOT / "reports" / "literature_review_alignment_block1_block2.md",
+        REPO_ROOT / "reports" / "q1_article_full_progress_report.md",
         REPO_ROOT / "reports" / "hybrid_evidence_closure.md",
         REPO_ROOT / "reports" / "hybrid_disagreement_summary.csv",
         REPO_ROOT / "reports" / "hybrid_transfer_comparison.csv",
         REPO_ROOT / "reports" / "hybrid_evidence_status.md",
         REPO_ROOT / "reports" / "structured_plan_status.md",
-        REPO_ROOT / "results" / "minimum_paper_suite" / "docs" / "next_steps.md",
+        REPO_ROOT / "reports" / "next_steps.md",
     ]
 
     figure_files = [
@@ -141,8 +143,6 @@ def build_bundle(bundle_dir: Path) -> None:
 
     for src in report_files:
         target = bundle_dir / "reports" / src.name
-        if src.parts[-3:] == ("docs", "next_steps.md"):
-            target = bundle_dir / "reports" / "next_steps.md"
         copy_file(src, target, bundle_dir, manifest)
 
     for src in figure_files:

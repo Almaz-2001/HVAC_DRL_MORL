@@ -1,6 +1,6 @@
 # Project Workspace Map
 
-Date: 2026-04-29
+Date: 2026-05-11
 
 ## Active Code Roots
 
@@ -32,6 +32,7 @@ These are the code roots that remain in the active working set.
   - `validate_surrogate_v35_rollout_prepared.py`
   - `validate_closed_loop_transfer_thermostatic_live.py`
   - `diagnose_thermostatic_obs_transfer_gap.py`
+  - `build_hou_evins_q1_gap_tables.py`
   - `build_hybrid_surrogate_snapshot.py`
   - `build_paper_canonical_bundle.py`
 - `envs/`
@@ -43,43 +44,75 @@ These are the code roots that remain in the active working set.
   - `data/surrogate_v2/`
   - `data/block_1_2_surrogate_rmse/`
 - `reports/`
-  Canonical narrative and frozen study summaries.
+  Canonical narrative, frozen study summaries, and the Literature-review/Hou-Evins alignment layer.
 - `results/`
   Canonical paper bundle and presentation-facing exports.
+
+## Literature-Review Alignment Layer
+
+The current article-facing reports are now tied to the Literature review in [main_Article/_lit_review.txt](C:/Users/user/Desktop/HVAC_DRL_MORL/main_Article/_lit_review.txt).
+
+Primary alignment file:
+
+- [literature_review_alignment_block1_block2.md](C:/Users/user/Desktop/HVAC_DRL_MORL/reports/literature_review_alignment_block1_block2.md)
+
+The current Hou-and-Evins article-facing closure also depends on:
+
+- [hou_evins_training_hyperparams_table.csv](C:/Users/user/Desktop/HVAC_DRL_MORL/reports/hou_evins_training_hyperparams_table.csv)
+- [hou_evins_scaling_table.csv](C:/Users/user/Desktop/HVAC_DRL_MORL/reports/hou_evins_scaling_table.csv)
+- [hou_evins_input_independence_table.csv](C:/Users/user/Desktop/HVAC_DRL_MORL/reports/hou_evins_input_independence_table.csv)
+- [hou_evins_predictive_validity_table.csv](C:/Users/user/Desktop/HVAC_DRL_MORL/reports/hou_evins_predictive_validity_table.csv)
 
 ## Frozen But Retained
 
 These are still useful for reproducibility, but they are not part of the day-to-day active editing set.
 
-- `block_1_2_surrogate_rmse/`
-  Historical Block 1.2 experimentation package.
 - `training/launch_thermostatic_warmstart_benchmark.py`
   Reproducibility for the negative direct `v3.5` warm-start result.
 - `outputs/block2_thermostatic_warmstart_utility/`
   Frozen negative baseline for Block 2.
 
-## Draft / Archive Candidates
+## Archived Under `draft/legacy_archive`
 
-These should be treated as archive candidates. They should not be deleted blindly, but they no longer belong to the active working set.
+These paths were moved out of the active working set and now live under `draft/legacy_archive/`.
 
-- `outputs/current/`
-  Older canonical-output snapshot. Superseded by `results/paper_canonical_bundle/`.
-- `block_1_3_closed_loop_transfer/`
+- `draft/legacy_archive/top_level/block_1_2_surrogate_rmse/`
+  Historical Block 1.2 experimentation package.
+- `draft/legacy_archive/top_level/block_1_3_closed_loop_transfer/`
   Top-level legacy experiment stub.
-- `outputs/block2_thermostatic_hybrid_v3_v35/`
-  Pre-sweep hybrid result. Superseded by `block2_thermostatic_hybrid_v3_v35_l010/`.
-- `outputs/block2_thermostatic_hybrid_v3_v35_l005/`
-- `outputs/block2_thermostatic_hybrid_v3_v35_l015/`
-  Useful for sweep history, but not canonical after selecting `l010`.
-- `outputs/block2_thermostatic_no_*`
-- `outputs/block2_thermostatic_with_power/`
-- `outputs/block2_thermostatic_causal_smooth/`
+- `draft/legacy_archive/training/`
+  Frozen utility scripts:
+  - `run_bestest_air_15min.py`
+  - `sweep_weights.py`
+  - `train_ppo.py`
+  - `train_ppo_parallel.py`
+- `draft/legacy_archive/evaluation/`
+  Frozen evaluation utilities:
+  - `benchmark_speed.py`
+  - `evaluate_policy.py`
+  - `plot_rigorous_results.py`
+- `draft/legacy_archive/outputs/current/`
+  Older canonical-output snapshot. Superseded by `paper_canonical_bundle/`.
+- `draft/legacy_archive/outputs/block2_thermostatic_hybrid_v3_v35/`
+  Pre-sweep hybrid result. Superseded by `outputs/block2_thermostatic_hybrid_v3_v35_l010/`.
+- `draft/legacy_archive/outputs/block2_thermostatic_hybrid_v3_v35_l005/`
+- `draft/legacy_archive/outputs/block2_thermostatic_hybrid_v3_v35_l015/`
+  Hybrid sweep history retained outside the active path after selecting `l010`.
+- `draft/legacy_archive/outputs/block2_thermostatic_no_*`
+- `draft/legacy_archive/outputs/block2_thermostatic_with_power/`
+- `draft/legacy_archive/outputs/block2_thermostatic_causal_smooth/`
   Feature-ablation branches retained only for historical diagnostics.
-- `outputs/block13_obs_gap_*`
-- `outputs/block13_transfer_*`
-  Keep only the canonical diagnostic pair in active references:
-  - `outputs/block13_closed_loop_transfer_no_delta_t_powerlog_tzone/`
-  - `outputs/block13_obs_gap_no_delta_t_powerlog_tzone/`
+- `draft/legacy_archive/outputs/block13_obs_gap_*`
+- `draft/legacy_archive/outputs/block13_transfer_*`
+- `draft/legacy_archive/outputs/block13_closed_loop_transfer_causal_smooth/`
+  Historical transfer-gap diagnostics archived after selecting the canonical pair.
+- `draft/legacy_archive/logs/logs/`
+  Runtime logs removed from the active root.
+
+Keep only the canonical diagnostic pair in active references:
+
+- `outputs/block13_closed_loop_transfer_no_delta_t_powerlog_tzone/`
+- `outputs/block13_obs_gap_no_delta_t_powerlog_tzone/`
 
 ## Canonical Storage Rule
 
@@ -89,5 +122,5 @@ From now on:
   - `paper_canonical_bundle/`
 - article-facing zip models live in:
   - `paper_canonical_bundle/models/`
-- original experiment folders remain untouched in `outputs/` and `models/`
-  for reproducibility
+- active reproducibility paths remain in `outputs/` and `models/`
+- archived historical branches live in `draft/legacy_archive/`

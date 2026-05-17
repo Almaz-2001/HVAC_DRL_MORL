@@ -12,7 +12,7 @@ This folder is the single article-facing bundle.
 
 ## Status
 
-- copied artifacts: `31`
+- copied artifacts: `43`
 - missing artifacts: `0`
 
 ## Canonical Intent

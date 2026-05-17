@@ -6,6 +6,12 @@ Date: 2026-05-06
 
 This report freezes the canonical MORL result for Block 2 after the observation-path redesign.
 
+Literature-review alignment:
+
+- This is the Block 2 target-controller result that extends the Hou-and-Evins surrogate-validity standard into downstream multi-objective control.
+- The failed `5D` path and successful `17D TSup-style` path provide numerical justification for the observation-interface choice.
+- The result supports the literature-aligned claim in [literature_review_alignment_block1_block2.md](C:/Users/user/Desktop/HVAC_DRL_MORL/reports/literature_review_alignment_block1_block2.md): calibrated physics helps as a soft regularizer only when the controller interface is compatible.
+
 Canonical MORL setup:
 
 - backend: `hybrid_v3_v35`

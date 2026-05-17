@@ -8,6 +8,13 @@ The paper remains centered on one explicit claim:
 
 **A calibrated digital twin with explicit building physics is valuable for downstream HVAC control, with MORL/PPO as the target controller family.**
 
+Literature-review alignment:
+
+- The article-facing structure is now explicitly tied to Hou and Evins (2024), as summarized in [literature_review_alignment_block1_block2.md](C:/Users/user/Desktop/HVAC_DRL_MORL/reports/literature_review_alignment_block1_block2.md).
+- Block 1 corresponds to surrogate development and validation.
+- Block 2 corresponds to downstream controller utility and controller-family-specific numerical justification.
+- Block 3 should test transferability only after these two claim boundaries are frozen.
+
 The practical interpretation is now sharper:
 
 - Block 1 must prove physical identifiability and rollout realism.
@@ -198,7 +205,7 @@ Interpretation:
 
 ### 7. Hou-and-Evins Packaging
 
-Status: `thermostatic branch closed`
+Status: `surrogate and Block 2 article-facing package closed for current scope`
 
 Closed on 2026-04-30:
 
@@ -218,6 +225,11 @@ Final closure package:
 - [hou_evins_sample_size_justification_table.csv](C:/Users/user/Desktop/HVAC_DRL_MORL/reports/hou_evins_sample_size_justification_table.csv)
 - [hou_evins_split_representativeness_table.csv](C:/Users/user/Desktop/HVAC_DRL_MORL/reports/hou_evins_split_representativeness_table.csv)
 - [hou_evins_targeted_sensitivity_table.csv](C:/Users/user/Desktop/HVAC_DRL_MORL/reports/hou_evins_targeted_sensitivity_table.csv)
+- [hou_evins_training_hyperparams_table.csv](C:/Users/user/Desktop/HVAC_DRL_MORL/reports/hou_evins_training_hyperparams_table.csv)
+- [hou_evins_scaling_table.csv](C:/Users/user/Desktop/HVAC_DRL_MORL/reports/hou_evins_scaling_table.csv)
+- [hou_evins_input_independence_table.csv](C:/Users/user/Desktop/HVAC_DRL_MORL/reports/hou_evins_input_independence_table.csv)
+- [hou_evins_predictive_validity_table.csv](C:/Users/user/Desktop/HVAC_DRL_MORL/reports/hou_evins_predictive_validity_table.csv)
+- [literature_review_alignment_block1_block2.md](C:/Users/user/Desktop/HVAC_DRL_MORL/reports/literature_review_alignment_block1_block2.md)
 
 Positioning frozen:
 

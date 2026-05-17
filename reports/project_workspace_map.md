@@ -1,6 +1,6 @@
 # Project Workspace Map
 
-Date: 2026-04-29
+Date: 2026-05-11
 
 ## Active Code Roots
 
@@ -32,6 +32,7 @@ These are the code roots that remain in the active working set.
   - `validate_surrogate_v35_rollout_prepared.py`
   - `validate_closed_loop_transfer_thermostatic_live.py`
   - `diagnose_thermostatic_obs_transfer_gap.py`
+  - `build_hou_evins_q1_gap_tables.py`
   - `build_hybrid_surrogate_snapshot.py`
   - `build_paper_canonical_bundle.py`
 - `envs/`
@@ -43,9 +44,24 @@ These are the code roots that remain in the active working set.
   - `data/surrogate_v2/`
   - `data/block_1_2_surrogate_rmse/`
 - `reports/`
-  Canonical narrative and frozen study summaries.
+  Canonical narrative, frozen study summaries, and the Literature-review/Hou-Evins alignment layer.
 - `results/`
   Canonical paper bundle and presentation-facing exports.
+
+## Literature-Review Alignment Layer
+
+The current article-facing reports are now tied to the Literature review in [main_Article/_lit_review.txt](C:/Users/user/Desktop/HVAC_DRL_MORL/main_Article/_lit_review.txt).
+
+Primary alignment file:
+
+- [literature_review_alignment_block1_block2.md](C:/Users/user/Desktop/HVAC_DRL_MORL/reports/literature_review_alignment_block1_block2.md)
+
+The current Hou-and-Evins article-facing closure also depends on:
+
+- [hou_evins_training_hyperparams_table.csv](C:/Users/user/Desktop/HVAC_DRL_MORL/reports/hou_evins_training_hyperparams_table.csv)
+- [hou_evins_scaling_table.csv](C:/Users/user/Desktop/HVAC_DRL_MORL/reports/hou_evins_scaling_table.csv)
+- [hou_evins_input_independence_table.csv](C:/Users/user/Desktop/HVAC_DRL_MORL/reports/hou_evins_input_independence_table.csv)
+- [hou_evins_predictive_validity_table.csv](C:/Users/user/Desktop/HVAC_DRL_MORL/reports/hou_evins_predictive_validity_table.csv)
 
 ## Frozen But Retained
 

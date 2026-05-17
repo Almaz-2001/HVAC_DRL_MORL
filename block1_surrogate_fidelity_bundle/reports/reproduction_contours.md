@@ -2,6 +2,11 @@
 
 Date: 2026-04-30
 
+Literature-review alignment:
+
+- The current article-facing methodology map is [literature_review_alignment_block1_block2.md](C:/Users/user/Desktop/HVAC_DRL_MORL/reports/literature_review_alignment_block1_block2.md).
+- This file remains a reproduction-contour document, not a scientific interpretation report.
+
 ## Purpose
 
 This note answers one strict question:

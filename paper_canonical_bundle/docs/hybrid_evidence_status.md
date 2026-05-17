@@ -1,64 +1,72 @@
 # Hybrid Evidence Status
 
-Date: 2026-04-29
+Date: 2026-04-30
 
-This note answers a strict question:
+This note answers the strict question:
 
-Can we already make the strong hybrid claim, or do we still only have an intermediate claim?
+**Do we still have an incomplete hybrid claim, or is the thermostatic hybrid branch now closed strongly enough to promote to the next controller family?**
 
-## Target Strong Claim
+Literature-review alignment:
 
-To make the strongest version of the paper claim, we need all three layers:
+- The evidence standard below follows the Hou-and-Evins split between physical validity, predictive/transfer validity, and downstream task utility.
+- The current literature-facing synthesis is [literature_review_alignment_block1_block2.md](C:/Users/user/Desktop/HVAC_DRL_MORL/reports/literature_review_alignment_block1_block2.md).
+- The updated claim boundary is that the hybrid is a control-regularization mechanism, not the best standalone predictive twin.
+
+## Required Three-Layer Standard
+
+To justify the hybrid branch, we need all three layers:
 
 1. physics side
-2. predictive side
+2. predictive/transfer side
 3. control side
 
 ## Current Status
 
 | layer | required evidence | status | current support |
 | --- | --- | --- | --- |
-| physics | `C_zon` remains correct | yes | Block 1 canonical `v3.5` calibration is stable at `4.413e+05 J/K` |
-| physics | disagreement stays bounded and not chaotic | partial | hybrid uses disagreement penalty, but there is no standalone summary yet for mean / p95 disagreement on trajectories |
-| predictive | hybrid better than direct `v3.5` on rollout realism | partial | direct `v3.5` is worse in downstream control, but we do not yet have a dedicated hybrid open-loop rollout benchmark table against pure `v3` and direct `v3.5` |
-| predictive | hybrid is not worse than pure `v3` on drift / transfer-gap | no | no canonical hybrid `first_divergence_step` and `action_gap_norm` report yet |
-| control | hybrid closer to pure `v3` on `m_s` | yes | `hybrid_l010` is near pure `v3` on peak and better on typical |
-| control | hybrid preserves some energy advantage | yes | `hybrid_l010` uses less energy than pure `v3` on both scenarios |
+| physics | `C_zon` remains correct | yes | canonical `v3.5` Block 1 backend remains fixed at `4.413e+05 J/K` |
+| physics | disagreement stays bounded and not chaotic | yes | [hybrid_disagreement_summary.csv](C:/Users/user/Desktop/HVAC_DRL_MORL/reports/hybrid_disagreement_summary.csv) shows overall mean temp disagreement `0.969 C`, p95 `2.516 C`, mean power disagreement `708.4 W`, p95 `1235.5 W` |
+| predictive/transfer | hybrid materially improves over direct `v3.5` | yes | [hybrid_transfer_comparison.csv](C:/Users/user/Desktop/HVAC_DRL_MORL/reports/hybrid_transfer_comparison.csv) shows direct `v3.5` action gap about `2.0` and catastrophic `ms_gap`, while `hybrid_l010` reduces this to `0.473` peak and `0.253` typical |
+| predictive/transfer | hybrid is not worse than pure `v3` in the practically important sense | partial-yes | hybrid is slightly worse than pure `v3` on `peak` action gap (`0.473` vs `0.377`) but clearly better on `typical`, where `first_divergence_step` moves from `1` to `16` |
+| control | hybrid stays close to pure `v3` on `m_s` | yes | peak `0.0866` vs `0.0725`; typical `0.0411` vs `0.0947` |
+| control | hybrid preserves some energy advantage | yes | hybrid uses less energy than pure `v3` on both scenarios |
+
+## Canonical Supporting Files
+
+- [hybrid_evidence_closure.md](C:/Users/user/Desktop/HVAC_DRL_MORL/reports/hybrid_evidence_closure.md)
+- [hybrid_disagreement_summary.csv](C:/Users/user/Desktop/HVAC_DRL_MORL/reports/hybrid_disagreement_summary.csv)
+- [hybrid_transfer_comparison.csv](C:/Users/user/Desktop/HVAC_DRL_MORL/reports/hybrid_transfer_comparison.csv)
+- [hybrid_disagreement_summary.png](C:/Users/user/Desktop/HVAC_DRL_MORL/reports/figures/hybrid_disagreement_summary.png)
+- [hybrid_transfer_gap_comparison.png](C:/Users/user/Desktop/HVAC_DRL_MORL/reports/figures/hybrid_transfer_gap_comparison.png)
 
 ## Current Honest Conclusion
 
-The current conclusion is still:
+The incomplete-status version is no longer correct.
 
-**hybrid regularization is promising and already useful, but not yet dominant by the full three-layer standard.**
+The updated conclusion is:
 
-This is because:
+**thermostatic `hybrid_l010` is now the strongest verified compromise across physical consistency and downstream control utility, but it is still not a dominant standalone predictive twin.**
 
-- control-side evidence is already strong
-- physics-side evidence is acceptable but not yet summarized as a dedicated disagreement benchmark
-- predictive-side evidence for the hybrid is still incomplete
+That wording matters.
 
-## What Is Still Missing
+What is now closed:
 
-Two additional canonical checks are still needed before the strongest claim:
+- the physics regularizer does not drift chaotically
+- the hybrid branch is decisively better than direct `v3.5`
+- the hybrid branch is close enough to pure `v3` on control utility to justify promotion
 
-1. `hybrid` disagreement summary
-   - mean disagreement
-   - p95 disagreement
-   - ideally per scenario
-2. `hybrid` predictive/transfer validation
-   - rollout realism table against pure `v3` and direct `v3.5`
-   - transfer-gap table:
-     - `first_divergence_step`
-     - `action_gap_norm`
+What is still not being claimed:
 
-## Practical Paper Position Right Now
+- that the hybrid backend is the best standalone predictive model
+- that it fully dominates pure `v3` on every transfer statistic in every scenario
 
-Right now we can already defend:
+## Operational Decision
 
-- `v3.5` alone is physically valuable but not controller-friendly
-- `v3` alone is controller-friendly but less physically grounded
-- `hybrid_l010` is the best currently verified compromise
+The thermostatic hybrid branch is closed strongly enough to move on, and the promotion has now been measured for both `HDRL` and `MORL`.
 
-But the strongest phrasing should still be:
+The current empirical state is:
 
-**hybrid regularization is currently the leading Block 2 direction, not the fully closed final proof.**
+1. thermostatic PPO uses `lambda_temp_disagree = 0.10`
+2. HDRL uses `lambda_temp_disagree = 0.00`
+3. MORL uses `lambda_temp_disagree = 0.00`, `lambda_power_disagree = 5e-5`, and the 17D TSup-style observation path
+4. the next active empirical step is Block 3 transferability across related testcases

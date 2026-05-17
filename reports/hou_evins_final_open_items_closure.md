@@ -2,6 +2,12 @@
 
 Date: 2026-04-30
 
+Literature-review alignment:
+
+- This closure follows the Hou-and-Evins protocol summarized in [main_Article/_lit_review.txt](C:/Users/user/Desktop/HVAC_DRL_MORL/main_Article/_lit_review.txt).
+- The current Block 1 and Block 2 mapping is maintained in [literature_review_alignment_block1_block2.md](C:/Users/user/Desktop/HVAC_DRL_MORL/reports/literature_review_alignment_block1_block2.md).
+- Additional 2026-05-11 artifacts now close the explicit hyperparameter, scaling, independence, and predictive-validity gaps.
+
 ## Scope
 
 This note closes the last previously open methodology items:

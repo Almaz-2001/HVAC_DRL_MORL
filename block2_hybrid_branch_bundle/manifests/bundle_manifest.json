@@ -1,7 +1,7 @@
 {
   "bundle": "block2_hybrid_branch_bundle",
   "source_root": "C:\\Users\\user\\Desktop\\HVAC_DRL_MORL",
-  "item_count": 57,
+  "item_count": 59,
   "items": [
     {
       "type": "file",
@@ -225,6 +225,16 @@
     },
     {
       "type": "file",
+      "source": "reports\\literature_review_alignment_block1_block2.md",
+      "bundle_path": "reports\\literature_review_alignment_block1_block2.md"
+    },
+    {
+      "type": "file",
+      "source": "reports\\q1_article_full_progress_report.md",
+      "bundle_path": "reports\\q1_article_full_progress_report.md"
+    },
+    {
+      "type": "file",
       "source": "reports\\hybrid_evidence_closure.md",
       "bundle_path": "reports\\hybrid_evidence_closure.md"
     },
@@ -250,7 +260,7 @@
     },
     {
       "type": "file",
-      "source": "results\\minimum_paper_suite\\docs\\next_steps.md",
+      "source": "reports\\next_steps.md",
       "bundle_path": "reports\\next_steps.md"
     },
     {

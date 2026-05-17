@@ -13,6 +13,12 @@ This sweep tested whether the thermostatic hybrid regularization default transfe
 - fixed `lambda_power_disagree = 5e-5`
 - swept `lambda_temp_disagree = {0.00, 0.03, 0.05, 0.10}`
 
+Literature-review alignment:
+
+- This sweep is the Level-3 numerical justification for rejecting a universal hybrid regularization weight.
+- It operationalizes the Hou-and-Evins principle that modeling choices must be justified by alternative configurations, not assumed from a previous controller family.
+- The interpretation is summarized in [literature_review_alignment_block1_block2.md](C:/Users/user/Desktop/HVAC_DRL_MORL/reports/literature_review_alignment_block1_block2.md).
+
 ## Results
 
 Reference table:

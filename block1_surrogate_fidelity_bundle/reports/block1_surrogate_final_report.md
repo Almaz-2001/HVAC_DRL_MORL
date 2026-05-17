@@ -6,6 +6,12 @@ Date: 2026-04-22
 
 This report freezes the final Block 1 surrogate status before moving the main project focus to Block 2 in the form of a warm-start utility benchmark.
 
+Literature-review alignment:
+
+- This Block 1 package corresponds to the Hou-and-Evins surrogate-development stages summarized in [literature_review_alignment_block1_block2.md](C:/Users/user/Desktop/HVAC_DRL_MORL/reports/literature_review_alignment_block1_block2.md).
+- The current article-facing evidence now includes explicit sample generation, preprocessing, scaling, input significance/independence, training hyperparameters, architecture justification, replicative validity, and predictive validity tables.
+- The key claim boundary is that calibrated `v3.5` is a stronger standalone predictive/physical twin, while `hybrid_l010` is a downstream control regularization strategy rather than a better free-run predictor.
+
 The Block 1 conclusion is:
 
 - the calibrated 15-minute `v3.5` surrogate is strong enough for inverse calibration, rollout realism, and downstream warm-start experiments
@@ -140,6 +146,7 @@ Frozen Block 1 claim:
 - the surrogate materially improves temperature and power rollout realism relative to the raw model
 - the surrogate is strong enough for pretraining and warm-start studies
 - the surrogate is still not strong enough for zero-shot closed-loop transfer on live BOPTEST
+- under the Hou-and-Evins reporting standard, Block 1 is now article-facing complete for the current paper scope because the missing hyperparameter, scaling, independence, and predictive-validity artifacts have been added
 
 Therefore the main project focus now moves to Block 2:
 

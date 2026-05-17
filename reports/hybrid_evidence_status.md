@@ -6,6 +6,12 @@ This note answers the strict question:
 
 **Do we still have an incomplete hybrid claim, or is the thermostatic hybrid branch now closed strongly enough to promote to the next controller family?**
 
+Literature-review alignment:
+
+- The evidence standard below follows the Hou-and-Evins split between physical validity, predictive/transfer validity, and downstream task utility.
+- The current literature-facing synthesis is [literature_review_alignment_block1_block2.md](C:/Users/user/Desktop/HVAC_DRL_MORL/reports/literature_review_alignment_block1_block2.md).
+- The updated claim boundary is that the hybrid is a control-regularization mechanism, not the best standalone predictive twin.
+
 ## Required Three-Layer Standard
 
 To justify the hybrid branch, we need all three layers:
@@ -56,10 +62,11 @@ What is still not being claimed:
 
 ## Operational Decision
 
-The thermostatic hybrid branch is closed strongly enough to move on.
+The thermostatic hybrid branch is closed strongly enough to move on, and the promotion has now been measured for both `HDRL` and `MORL`.
 
-The next active empirical step is:
+The current empirical state is:
 
-1. promote canonical `hybrid_l010` to `HDRL`
-2. if stable, promote the same default to `MORL`
-3. do not reopen thermostatic feature tuning unless the next controller family regresses badly
+1. thermostatic PPO uses `lambda_temp_disagree = 0.10`
+2. HDRL uses `lambda_temp_disagree = 0.00`
+3. MORL uses `lambda_temp_disagree = 0.00`, `lambda_power_disagree = 5e-5`, and the 17D TSup-style observation path
+4. the next active empirical step is Block 3 transferability across related testcases
