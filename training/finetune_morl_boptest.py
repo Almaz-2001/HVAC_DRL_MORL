@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import random
 import sys
 from pathlib import Path
@@ -36,6 +37,7 @@ YEARLY_STARTS = [
 
 
 def set_all_seeds(seed: int) -> None:
+    os.environ["PYTHONHASHSEED"] = str(seed)
     random.seed(seed)
     np.random.seed(seed)
     try:
@@ -46,6 +48,13 @@ def set_all_seeds(seed: int) -> None:
             torch.cuda.manual_seed_all(seed)
     except Exception:
         pass
+
+
+def seed_env_spaces(env, seed: int) -> None:
+    for space_name in ("action_space", "observation_space"):
+        space = getattr(env, space_name, None)
+        if hasattr(space, "seed"):
+            space.seed(seed)
 
 
 def default_pretrained_path(seed: int) -> str:
@@ -142,7 +151,9 @@ def main() -> None:
         )
     print(f"Output dir:      {out_dir}")
 
-    env = Monitor(EnvFactory.create(env_cfg))
+    raw_env = EnvFactory.create(env_cfg)
+    seed_env_spaces(raw_env, args.seed)
+    env = Monitor(raw_env)
     print(f"Obs space:       {env.observation_space}")
     print(f"Act space:       {env.action_space}")
 

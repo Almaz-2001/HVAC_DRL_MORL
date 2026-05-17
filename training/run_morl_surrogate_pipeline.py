@@ -121,6 +121,34 @@ def require_file(path: Path, label: str) -> None:
         raise FileNotFoundError(f"{label} not found: {path}")
 
 
+def parse_morl_weights(text: str | None) -> tuple[float, float, float] | None:
+    if not text:
+        return None
+    parts = [float(x.strip()) for x in text.split(",") if x.strip()]
+    if len(parts) != 3:
+        raise ValueError("MORL weights must have three comma-separated values: comfort,energy,safety")
+    total = sum(parts)
+    if any(value < 0.0 for value in parts) or total <= 0.0:
+        raise ValueError("MORL weights must be non-negative and not all zero.")
+    return tuple(float(value / total) for value in parts)
+
+
+def write_fixed_weights_json(path: Path, weights: tuple[float, float, float]) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(
+            {
+                "w_comfort": weights[0],
+                "w_energy": weights[1],
+                "w_safety": weights[2],
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+    return path
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Central MORL/PPO pipeline runner: surrogate pretrain -> optional BOPTEST fine-tune -> yearly validation."
@@ -145,6 +173,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--eram-tau-w", type=float, default=None)
     parser.add_argument("--eram-adv-lr", type=float, default=None)
     parser.add_argument("--eram-init-weights", default=None)
+    parser.add_argument("--morl-weights", default=None, help="Fixed MORL weights as comfort,energy,safety.")
     parser.add_argument("--finetune-steps", type=int, default=None)
     parser.add_argument("--finetune-learning-rate", type=float, default=None)
     parser.add_argument("--finetune-jitter-days", type=float, default=None)
@@ -172,6 +201,7 @@ def main() -> None:
     defaults = pipeline_cfg.get("defaults", {}) or {}
 
     seed = int(args.seed if args.seed is not None else defaults.get("seed", 42))
+    os.environ["PYTHONHASHSEED"] = str(seed)
     artifact_root = project_path(args.artifact_root or pipeline_cfg.get("artifact_root", "outputs/morl_surrogate_ppo"))
     pipeline_cfg, paths = build_paths(config_dir, artifact_root, seed)
 
@@ -233,6 +263,13 @@ def main() -> None:
     if args.t_zone_feature_mode:
         surrogate_overrides.extend(["--t-zone-feature-mode", args.t_zone_feature_mode])
 
+    fixed_weight_overrides: list[str] = []
+    fixed_morl_weights = parse_morl_weights(args.morl_weights)
+    fixed_weights_json = None
+    if fixed_morl_weights is not None:
+        fixed_weight_overrides.extend(["--morl-weights", ",".join(str(value) for value in fixed_morl_weights)])
+        fixed_weights_json = write_fixed_weights_json(paths.seed_root / "fixed_objective_weights.json", fixed_morl_weights)
+
     pretrain_cmd = [
         python_exe,
         str(ROOT / "training" / "train_morl_surrogate.py"),
@@ -244,7 +281,7 @@ def main() -> None:
         str(pretrain_steps),
         "--out_dir",
         str(paths.pretrain_out),
-    ] + surrogate_overrides
+    ] + surrogate_overrides + fixed_weight_overrides
 
     eram_cmd = [
         python_exe,
@@ -321,7 +358,7 @@ def main() -> None:
     if args.mode == "finetune":
         model_path = project_path(args.model) if args.model else paths.pretrain_model
         require_file(model_path, "Pretrained MORL model")
-        weights_json = project_path(args.weights_json) if args.weights_json else None
+        weights_json = project_path(args.weights_json) if args.weights_json else fixed_weights_json
         if weights_json is not None:
             require_file(weights_json, "Objective weight JSON")
         run_command(finetune_cmd(model_path, weights_json), "MORL BOPTEST FINE-TUNE")
@@ -336,7 +373,7 @@ def main() -> None:
     if args.mode == "full":
         run_command(pretrain_cmd, "MORL SURROGATE PRETRAIN")
         require_file(paths.pretrain_model, "Pretrained MORL model")
-        run_command(finetune_cmd(paths.pretrain_model), "MORL BOPTEST FINE-TUNE")
+        run_command(finetune_cmd(paths.pretrain_model, fixed_weights_json), "MORL BOPTEST FINE-TUNE")
         require_file(paths.finetune_model, "Fine-tuned MORL model")
         run_command(eval_cmd(paths.finetune_model), "MORL YEARLY VALIDATION")
         return

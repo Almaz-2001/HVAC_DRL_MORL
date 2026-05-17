@@ -67,6 +67,7 @@ def build_bundle(bundle_dir: Path) -> None:
         REPO_ROOT / "evaluation" / "diagnose_thermostatic_obs_transfer_gap.py",
         REPO_ROOT / "evaluation" / "build_hou_evins_appendix_tables.py",
         REPO_ROOT / "evaluation" / "build_hou_evins_open_items_closure.py",
+        REPO_ROOT / "evaluation" / "build_hou_evins_q1_gap_tables.py",
         REPO_ROOT / "evaluation" / "build_block1_fidelity_bundle.py",
         REPO_ROOT / "draft" / "legacy_archive" / "top_level" / "block_1_2_surrogate_rmse" / "data" / "prepare_block12_15min_dataset.py",
         REPO_ROOT / "draft" / "legacy_archive" / "top_level" / "block_1_2_surrogate_rmse" / "data" / "collect_block12_15min_dataset.py",
@@ -98,6 +99,8 @@ def build_bundle(bundle_dir: Path) -> None:
     report_files = [
         REPO_ROOT / "reports" / "block1_surrogate_final_report.md",
         REPO_ROOT / "reports" / "block1_surrogate_final_metrics.csv",
+        REPO_ROOT / "reports" / "literature_review_alignment_block1_block2.md",
+        REPO_ROOT / "reports" / "hou_evins_q1_gap_closure.md",
         REPO_ROOT / "reports" / "hou_evins_compliance_matrix.md",
         REPO_ROOT / "reports" / "hou_evins_partial_closure.md",
         REPO_ROOT / "reports" / "hou_evins_sample_generation_table.csv",
@@ -108,6 +111,10 @@ def build_bundle(bundle_dir: Path) -> None:
         REPO_ROOT / "reports" / "hou_evins_sample_size_justification_table.csv",
         REPO_ROOT / "reports" / "hou_evins_split_representativeness_table.csv",
         REPO_ROOT / "reports" / "hou_evins_targeted_sensitivity_table.csv",
+        REPO_ROOT / "reports" / "hou_evins_training_hyperparams_table.csv",
+        REPO_ROOT / "reports" / "hou_evins_scaling_table.csv",
+        REPO_ROOT / "reports" / "hou_evins_input_independence_table.csv",
+        REPO_ROOT / "reports" / "hou_evins_predictive_validity_table.csv",
         REPO_ROOT / "reports" / "reproduce_current_state_runbook.md",
         REPO_ROOT / "reports" / "reproduction_contours.md",
     ]

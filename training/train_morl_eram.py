@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import os
 import random
 import sys
 from pathlib import Path
@@ -16,10 +17,12 @@ if str(ROOT) not in sys.path:
 
 from configs.loader import load_all_configs
 from envs.factory import EnvFactory
+from envs.tsup_features import SUPPORTED_POWER_FEATURE_MODES, SUPPORTED_T_ZONE_FEATURE_MODES
 from training.train_ppo import MORLLogCallback, build_ppo, maybe_save_model
 
 
 def set_all_seeds(seed: int) -> None:
+    os.environ["PYTHONHASHSEED"] = str(seed)
     random.seed(seed)
     np.random.seed(seed)
     try:
@@ -30,6 +33,17 @@ def set_all_seeds(seed: int) -> None:
             torch.cuda.manual_seed_all(seed)
     except Exception:
         pass
+
+
+def seed_env_spaces(env, seed: int) -> None:
+    try:
+        env.reset(seed=seed)
+    except Exception:
+        pass
+    for space_name in ("action_space", "observation_space"):
+        space = getattr(env, space_name, None)
+        if hasattr(space, "seed"):
+            space.seed(seed)
 
 
 class ObjectiveStatsCallback(BaseCallback):
@@ -104,7 +118,7 @@ def main() -> None:
     parser.add_argument("--out_dir", default=None)
     parser.add_argument(
         "--surrogate-kind",
-        choices=["legacy_v3", "v35_raw", "v35_calibrated"],
+        choices=["legacy_v3", "v35_raw", "v35_calibrated", "hybrid_v3_v35"],
         default=None,
         help="Select which direct-TSup surrogate implementation to use.",
     )
@@ -112,6 +126,10 @@ def main() -> None:
     parser.add_argument("--surrogate-summary-json", default=None, help="Calibration summary JSON for v3.5 adapters.")
     parser.add_argument("--surrogate-checkpoint", default=None, help="Explicit v3.5 staged checkpoint path.")
     parser.add_argument("--surrogate-base-model", default=None, help="Explicit base v3 TSup checkpoint for v3.5 adapters.")
+    parser.add_argument("--lambda-temp-disagree", type=float, default=None)
+    parser.add_argument("--lambda-power-disagree", type=float, default=None)
+    parser.add_argument("--power-feature-mode", choices=sorted(SUPPORTED_POWER_FEATURE_MODES), default=None)
+    parser.add_argument("--t-zone-feature-mode", choices=sorted(SUPPORTED_T_ZONE_FEATURE_MODES), default=None)
     args = parser.parse_args()
 
     set_all_seeds(args.seed)
@@ -133,6 +151,14 @@ def main() -> None:
         env_cfg["surrogate_checkpoint"] = args.surrogate_checkpoint
     if args.surrogate_base_model is not None:
         env_cfg["surrogate_base_model"] = args.surrogate_base_model
+    if args.lambda_temp_disagree is not None:
+        env_cfg["lambda_temp_disagree"] = float(args.lambda_temp_disagree)
+    if args.lambda_power_disagree is not None:
+        env_cfg["lambda_power_disagree"] = float(args.lambda_power_disagree)
+    if args.power_feature_mode is not None:
+        env_cfg["power_feature_mode"] = args.power_feature_mode
+    if args.t_zone_feature_mode is not None:
+        env_cfg["t_zone_feature_mode"] = args.t_zone_feature_mode
 
     out_dir = Path(args.out_dir or f"outputs/morl_eram_seed{args.seed}")
     models_dir = out_dir / "models"
@@ -145,6 +171,7 @@ def main() -> None:
     train_cfg["morl_csv_name"] = "morl_eram_log.csv"
 
     raw_env = EnvFactory.create(env_cfg)
+    seed_env_spaces(raw_env, args.seed)
     model = build_ppo(raw_env, agent_cfg)
 
     weights = parse_weights(args.init_weights)

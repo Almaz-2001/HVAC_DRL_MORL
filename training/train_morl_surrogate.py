@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import random
 import sys
 from pathlib import Path
@@ -18,7 +19,21 @@ from envs.tsup_features import SUPPORTED_POWER_FEATURE_MODES, SUPPORTED_T_ZONE_F
 from training.train_ppo import build_ppo, maybe_save_model, train_ppo
 
 
+def parse_morl_weights(text: str | None) -> tuple[float, float, float] | None:
+    if not text:
+        return None
+    parts = [float(x.strip()) for x in text.split(",") if x.strip()]
+    if len(parts) != 3:
+        raise ValueError("MORL weights must have three comma-separated values: comfort,energy,safety")
+    arr = np.asarray(parts, dtype=np.float64)
+    if np.any(arr < 0.0) or arr.sum() <= 0.0:
+        raise ValueError("MORL weights must be non-negative and not all zero.")
+    arr = arr / arr.sum()
+    return float(arr[0]), float(arr[1]), float(arr[2])
+
+
 def set_all_seeds(seed: int) -> None:
+    os.environ["PYTHONHASHSEED"] = str(seed)
     random.seed(seed)
     np.random.seed(seed)
     try:
@@ -29,6 +44,17 @@ def set_all_seeds(seed: int) -> None:
             torch.cuda.manual_seed_all(seed)
     except Exception:
         pass
+
+
+def seed_env_spaces(env, seed: int) -> None:
+    try:
+        env.reset(seed=seed)
+    except Exception:
+        pass
+    for space_name in ("action_space", "observation_space"):
+        space = getattr(env, space_name, None)
+        if hasattr(space, "seed"):
+            space.seed(seed)
 
 
 def main() -> None:
@@ -51,6 +77,7 @@ def main() -> None:
     parser.add_argument("--lambda-power-disagree", type=float, default=None)
     parser.add_argument("--power-feature-mode", choices=sorted(SUPPORTED_POWER_FEATURE_MODES), default=None)
     parser.add_argument("--t-zone-feature-mode", choices=sorted(SUPPORTED_T_ZONE_FEATURE_MODES), default=None)
+    parser.add_argument("--morl-weights", default=None, help="Fixed MORL weights as comfort,energy,safety.")
     args = parser.parse_args()
 
     set_all_seeds(args.seed)
@@ -80,6 +107,16 @@ def main() -> None:
         env_cfg["power_feature_mode"] = args.power_feature_mode
     if args.t_zone_feature_mode is not None:
         env_cfg["t_zone_feature_mode"] = args.t_zone_feature_mode
+    morl_weights = parse_morl_weights(args.morl_weights)
+    if morl_weights is not None:
+        env_cfg["morl"] = dict(env_cfg.get("morl", {}))
+        env_cfg["morl"].update(
+            {
+                "w_comfort": morl_weights[0],
+                "w_energy": morl_weights[1],
+                "w_safety": morl_weights[2],
+            }
+        )
 
     out_dir = Path(args.out_dir or f"outputs/morl_surrogate_seed{args.seed}")
     models_dir = out_dir / "models"
@@ -120,9 +157,17 @@ def main() -> None:
             f"power_mode={env_cfg.get('power_feature_mode', 'raw')}, "
             f"t_zone_mode={env_cfg.get('t_zone_feature_mode', 'raw')}"
         )
+    morl_cfg = env_cfg.get("morl", {})
+    print(
+        "MORL w:    "
+        f"comfort={float(morl_cfg.get('w_comfort', 0.0)):.3f}, "
+        f"energy={float(morl_cfg.get('w_energy', 0.0)):.3f}, "
+        f"safety={float(morl_cfg.get('w_safety', 0.0)):.3f}"
+    )
     print(f"Output dir: {out_dir}")
 
     env = EnvFactory.create(env_cfg)
+    seed_env_spaces(env, args.seed)
     print(f"Obs space:  {env.observation_space}")
     print(f"Act space:  {env.action_space}")
 
