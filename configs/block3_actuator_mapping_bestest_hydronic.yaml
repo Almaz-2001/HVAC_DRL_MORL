@@ -125,7 +125,7 @@ smoke_test_protocol:
     - "oveTSetSup_y should track the commanded supply setpoint"
 
 audit:
-  adapter_commit_sha: null
+  adapter_commit_sha: 46fbaa9ef40e540c2ea2e68961031a92fc5b18d8
   pushed_before_smoke_test: false
   smoke_test_result_file: reports/block3_bestest_hydronic_adapter_smoke_summary.csv
   smoke_test_result: PENDING
