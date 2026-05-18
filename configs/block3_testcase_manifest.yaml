@@ -1,0 +1,397 @@
+# Block 3 Transferability Pre-Registration Manifest
+#
+# This file is the machine-readable pre-registration for the Block 3
+# transferability study. It is committed BEFORE any Block 3 BOPTEST run is
+# executed on a non-bestest_air testcase. The commit SHA of this file becomes
+# the third audit anchor in the project, alongside:
+#
+#   - 93df9b364657ac77bbe3642e4bc277d1eb8a8b60  (MORL pre-registration)
+#   - 62dc859d02f5f4a75fa4b55d8477c1d4e6206449  (MORL post-N=5 falsification)
+#
+# Subsequent commits MUST append results without modifying the manifest body
+# (only the result-section blocks at the bottom are appended; the pre-
+# registration block must remain bit-identical to its first commit). Auditors
+# should verify against the parent commit's diff.
+
+protocol: block3_transferability_v1
+manifest_logged_at: 2026-05-18
+finalized_before_running_block3_boptest: true
+
+# ---------------------------------------------------------------------------
+# Scope and claim boundary
+# ---------------------------------------------------------------------------
+
+scope:
+  source_testcase: bestest_air
+  block1_block2_status_at_lock_in: |
+    Block 1 and Block 2 article state is committed and the dependency closure
+    of roadmap.md Sections 1-12 has been reproduced. This manifest is logged
+    AFTER Block 2 closure (see roadmap.md Section 13 audit anchors) and BEFORE
+    any non-bestest_air BOPTEST run.
+
+  intended_paper_claim:
+    formulation: |
+      The hybrid recipe (v3 dynamics + lambda*v3.5 disagreement regularizer)
+      transfers to closely related BOPTEST testcases under explicitly stated
+      recalibration conditions and controller-interface compatibility, at
+      controller-family-specific lambda values fixed in Block 2.
+    deliberately_NOT_claimed:
+      - universal building generalization
+      - cross-climate generalization (single weather file source)
+      - transfer to fundamentally different HVAC topologies (e.g., VRF, radiant)
+      - continual learning across multiple buildings without forgetting
+
+# ---------------------------------------------------------------------------
+# Testcase candidates (pre-registered selection)
+# ---------------------------------------------------------------------------
+
+testcase_candidates:
+  # Selection criteria, fixed before inspecting any candidate's response:
+  #   (a) single-zone or single-zone-like envelope
+  #   (b) heating-capable HVAC (cooling optional)
+  #   (c) actuator interface compatible with direct supply-temperature command
+  #       OR overridable with documented mapping
+  #   (d) at least one structural difference from bestest_air (actuator, source,
+  #       envelope size, or climate) so transfer is non-trivial
+
+  primary:
+    label: bestest_hydronic_heat_pump
+    boptest_path: boptest_rte/testcases/bestest_hydronic_heat_pump
+    expected_structural_difference: |
+      Same single-zone envelope class as bestest_air, but the actuator is a
+      hydronic loop driven by a heat pump rather than an air supply unit.
+      Tests transfer across actuator type while envelope physics are close.
+    rationale: "Closest neighbour of bestest_air; expected to be the easiest of the three."
+
+  secondary:
+    label: bestest_hydronic
+    boptest_path: boptest_rte/testcases/bestest_hydronic
+    expected_structural_difference: |
+      Same single-zone envelope, hydronic distribution, but a different heat
+      source family (boiler/radiator rather than heat pump). Tests transfer
+      where the slow hydronic time constants dominate over the actuator type.
+    rationale: "Mid-difficulty neighbour; isolates source-side dynamics."
+
+  stretch:
+    label: singlezone_commercial_hydronic
+    boptest_path: boptest_rte/testcases/singlezone_commercial_hydronic
+    expected_structural_difference: |
+      Substantially larger zone volume than bestest_air; the natural value of
+      C_zon is expected to be of a different order of magnitude. Tests
+      whether the inverse calibration can re-identify a building constant
+      far from the bestest_air operating point (4.413e+05 J/K).
+    rationale: "Hardest of the three; deliberately included to probe the falsification boundary."
+
+  excluded_explicitly:
+    - label: multizone_office_complex_air
+      reason: "Multi-zone; out of scope for single-zone surrogate architecture."
+    - label: multizone_residential_hydronic
+      reason: "Multi-zone; same."
+    - label: testcase1
+      reason: "Toy BOPTEST testcase; not representative of building physics."
+
+# ---------------------------------------------------------------------------
+# Recalibration regimes (pre-registered)
+# ---------------------------------------------------------------------------
+
+recalibration_regimes:
+  none:
+    description: |
+      Deploy the frozen hybrid_l010 thermostatic checkpoint (and the frozen
+      MORL practical canonical checkpoint, and the frozen HDRL l000
+      checkpoint) directly on the new testcase. No surrogate calibration is
+      re-run. Only the BOPTEST evaluation and controller live deployment
+      cost is incurred.
+    surrogate_action:        "frozen from bestest_air canonical"
+    controller_action:       "frozen from Block 2 canonical (no fine-tune on new testcase)"
+    expected_compute_minutes_per_testcase: ~30   # eval only, no training
+
+  partial:
+    description: |
+      Re-run Stage C residual head calibration on the new testcase's prepared
+      15-min corpus. Keep C_zon frozen from bestest_air (4.413e+05 J/K).
+      Keep Stage A telemetry preprocessing parameters frozen. Then deploy
+      controllers (no controller re-training on new testcase).
+    surrogate_action:        "Stage C only; Stage A and Stage B frozen from bestest_air"
+    controller_action:       "frozen from Block 2 canonical (no fine-tune on new testcase)"
+    expected_compute_minutes_per_testcase: ~90  # Stage C ~60 + eval ~30
+
+  full:
+    description: |
+      Re-run the complete Stage A/B/C pipeline on the new testcase. Stage A
+      re-derives preprocessing parameters from new testcase telemetry. Stage B
+      re-identifies C_zon from a new excitation-window subselection. Stage C
+      re-calibrates residual heads. Then deploy controllers (no controller
+      re-training on new testcase).
+    surrogate_action:        "Stage A + Stage B + Stage C from scratch on new testcase"
+    controller_action:       "frozen from Block 2 canonical (no fine-tune on new testcase)"
+    expected_compute_minutes_per_testcase: ~240   # full Stage A/B/C + eval
+
+  excluded_explicitly:
+    - regime: "controller re-fine-tune on new testcase"
+      reason: |
+        Block 3 tests transferability of the FROZEN method, not whether
+        further training on the target testcase eventually succeeds. The
+        latter is a different claim (continual building learning) and is
+        out of scope per the scope.deliberately_NOT_claimed list.
+
+# ---------------------------------------------------------------------------
+# Controller families (pre-registered)
+# ---------------------------------------------------------------------------
+
+controller_families:
+  thermostatic_hybrid:
+    canonical_checkpoint: models/ppo_thermostatic_hybrid_v3_v35_l010.zip
+    lambda_temp_disagree: 0.10
+    lambda_power_disagree: 5.0e-5
+    observation_config:
+      obs_ablation: no_delta_t
+      power_feature_mode: clipped_log
+      t_zone_feature_mode: raw
+    rationale: "Block 2 canonical; positive result on bestest_air."
+
+  hdrl_hybrid:
+    canonical_checkpoint_prefix: hdrl_hybrid_v3_v35_l000
+    lambda_temp_disagree: 0.00
+    lambda_power_disagree: 5.0e-5
+    observation_config:
+      obs_ablation: no_delta_t
+      power_feature_mode: clipped_log
+      t_zone_feature_mode: raw
+    rationale: "Block 2 negative-result canonical; lambda_temp=0 best for HDRL."
+
+  morl_17d_practical:
+    canonical_artifact_root: outputs/morl_pareto_hybrid_power_only_seedfix/comfort_075_energy_025
+    preference_vector: [0.75, 0.25, 0.00]
+    lambda_temp_disagree: 0.00
+    lambda_power_disagree: 5.0e-5
+    seed_for_block3_transfer: 42                  # use seed 42 only for transfer eval
+    rationale: |
+      Practical-deployment canonical from Block 2 MORL N=5 analysis. Use the
+      seed-42 checkpoint specifically (not the mean of 5 seeds) so the
+      Block 3 transfer claim is reproducible from one named artifact.
+
+  pi_reference:
+    canonical: "BOPTEST built-in PI controller for the target testcase"
+    rationale: |
+      Each testcase has its own built-in PI; that testcase's PI yearly
+      result is the normaliser for all three RL controller families on
+      that testcase. PI is not transferred; it is recomputed per testcase.
+
+# ---------------------------------------------------------------------------
+# Outcome metrics
+# ---------------------------------------------------------------------------
+
+outcome_metrics:
+  # All metrics are reported per cell of (testcase, regime, controller).
+  primary_for_passfail: m_s
+  predictive_validity:
+    horizons_hours: [1, 4, 8, 24]
+    metric: RMSE_T_C
+  control_quality:
+    - m_s
+    - violation_pct
+    - energy_kwh
+  transfer_realism:
+    - first_divergence_step
+    - action_gap_norm
+  baseline_gap:
+    formula: "(m_s_RL - m_s_PI) / m_s_PI"
+    interpretation: "Positive = RL worse than PI; negative = RL better than PI."
+
+# ---------------------------------------------------------------------------
+# PASS / CONDITIONAL PASS / FAIL thresholds (pre-registered)
+# ---------------------------------------------------------------------------
+
+passfail_criteria:
+  primary_threshold:
+    metric:     m_s
+    comparison: "m_s_RL <= 1.25 * m_s_PI on the same testcase yearly"
+    notes: |
+      The 1.25x slack accepts up to 25% worse m_s than the testcase-specific
+      built-in PI. This is the same slack used by recent BOPTEST controller
+      benchmarking papers; it is post-hoc-tunable in only one direction
+      (tighter, never looser) without violating pre-registration.
+
+  verdict:
+    PASS:
+      condition: "primary_threshold satisfied under regime = none"
+      meaning:   "Frozen hybrid recipe deploys directly. Strongest claim."
+    CONDITIONAL_PASS:
+      condition: "primary_threshold satisfied only under regime in {partial, full}"
+      meaning:   "Hybrid recipe transfers with explicit recalibration cost."
+    FAIL:
+      condition: "primary_threshold NOT satisfied under any regime including full"
+      meaning:   "Hybrid recipe does not transfer to this testcase even with full recalibration."
+
+  reporting_per_cell:
+    fields:
+      - testcase
+      - regime
+      - controller_family
+      - m_s_RL
+      - m_s_PI
+      - violation_pct
+      - energy_kwh
+      - rollout_RMSE_1h
+      - rollout_RMSE_4h
+      - rollout_RMSE_8h
+      - rollout_RMSE_24h
+      - first_divergence_step
+      - action_gap_norm
+      - baseline_gap
+      - verdict   # one of PASS / CONDITIONAL_PASS / FAIL
+
+# ---------------------------------------------------------------------------
+# Pre-registered hypotheses and falsification predicates
+# ---------------------------------------------------------------------------
+
+pre_registered_hypotheses:
+  H1_strong:
+    statement: |
+      The frozen hybrid recipe deploys (regime = none) to at least 2 of 3
+      pre-registered testcases for at least one of the three controller
+      families.
+    falsified_if: |
+      Across all controller families, fewer than 2 of 3 testcases satisfy
+      the primary_threshold under regime = none.
+    apriori_probability_estimate: 0.30   # author's expectation; auditable
+
+  H2_medium:
+    statement: |
+      With partial recalibration (Stage C only), the hybrid recipe satisfies
+      the primary_threshold for at least 3 of 3 testcases on the
+      thermostatic controller family.
+    falsified_if: |
+      Any of the 3 testcases FAILS the primary_threshold under regime =
+      partial for thermostatic_hybrid.
+    apriori_probability_estimate: 0.65
+
+  H3_weak:
+    statement: |
+      With full recalibration (Stage A + B + C), the hybrid recipe satisfies
+      the primary_threshold for at least 3 of 3 testcases on the
+      thermostatic controller family.
+    falsified_if: |
+      Any of the 3 testcases FAILS the primary_threshold under regime =
+      full for thermostatic_hybrid.
+    apriori_probability_estimate: 0.85
+
+  hierarchy_consistency:
+    statement: |
+      For any testcase, if the verdict is PASS at a given regime, then it
+      must also be PASS or better at any deeper-recalibration regime
+      (none -> partial -> full is monotone-or-improving in verdict).
+    falsified_if: |
+      Any testcase has verdict = PASS under regime = none but verdict =
+      FAIL under regime = full, OR verdict = CONDITIONAL_PASS under regime
+      = partial but FAIL under regime = full. Such a result would
+      indicate an unstable recalibration pipeline rather than a real
+      transferability finding.
+    expected: "near 0% probability of falsification under a well-behaved pipeline"
+
+# ---------------------------------------------------------------------------
+# Stopping rule and budget bounds
+# ---------------------------------------------------------------------------
+
+stopping_rule:
+  outer_loop:
+    rule: |
+      Block 3 closes after all 27 cells (3 testcases x 3 regimes x 3
+      controller families) have produced either a verdict or a documented
+      run failure. No additional testcase or regime is added post-hoc; doing
+      so would violate pre-registration.
+
+  per_cell_extension:
+    rule: |
+      If the primary cell run produces sigma(m_s) > 0.30 * mean(m_s) across
+      adjacent diagnostic seeds (when seed analysis is feasible), the cell
+      is extended to N=3 seeds. Cells are NOT extended to N=5 within Block 3
+      because that compute is allocated to Block 2 canonical extensions
+      under the existing pre-registration. High-variance cells beyond
+      sigma/mean > 0.30 at N=3 are classified high-variance and reported
+      with the same disclaimer language as Block 2 §6.5.
+
+  early_termination:
+    rule: |
+      If H3_weak is falsified on the first testcase (i.e., full
+      recalibration fails on bestest_hydronic_heat_pump, the easiest
+      candidate), Block 3 is terminated early. The paper claim is then
+      restricted to bestest_air with explicit Block 3 negative result;
+      no further testcase runs are executed within this manifest.
+
+# ---------------------------------------------------------------------------
+# Statistical analysis plan
+# ---------------------------------------------------------------------------
+
+statistical_analysis_plan:
+  primary_seed_count_per_cell: 1
+  primary_seed_value: 42
+  extension_seed_count_if_triggered: 3            # only seeds 42, 43, 44 inside Block 3
+  noise_floor_estimate_source: |
+    Block 2 canonical 5-seed analysis (neutral and practical), inherited as
+    a prior on per-cell variance. Block 3 does not re-establish the noise
+    floor independently.
+
+  reporting_format:
+    single_seed_cells:
+      template: "<metric>: <value> (N=1 seed; noise floor sigma(m_s) ~ 0.05 inherited)"
+    multi_seed_cells:
+      template: "<metric>: mean +/- std over N seeds"
+    deliberately_NOT_used:
+      - "95% confidence intervals on N=1 or N=3 (sample too small for proper CI)"
+      - "Hypothesis test p-values across cells (not pre-registered as inferential)"
+
+# ---------------------------------------------------------------------------
+# Compute budget
+# ---------------------------------------------------------------------------
+
+compute_budget:
+  total_cells: 27                                  # 3 testcases x 3 regimes x 3 controllers
+  per_cell_cost_estimate:
+    eval_only_minutes: 30                          # regime = none cells
+    stage_c_only_minutes: 90                       # regime = partial cells
+    stage_abc_full_minutes: 240                    # regime = full cells
+
+  upper_bound_estimate_hours:
+    # 9 cells x 0.5h (none) + 9 cells x 1.5h (partial) + 9 cells x 4h (full)
+    # = 4.5 + 13.5 + 36 = 54 hours wall time, sequential
+    sequential_hours: 54
+    note: |
+      Pretraining can be parallelized across seeds within partial/full
+      cells but BOPTEST evaluation must remain sequential per the
+      RTE-fragility constraint documented in roadmap.md Section 9. Realistic
+      wall time on a single workstation: 5-7 days.
+
+# ---------------------------------------------------------------------------
+# Result-section append slots
+# ---------------------------------------------------------------------------
+# After each cell completes its run, append a result entry under
+# 'cell_results' below. DO NOT modify any field above this line; the audit
+# trail relies on the pre-registration block being bit-identical to the
+# first commit.
+
+cell_results: []                                   # appended post-run; starts empty
+
+# ---------------------------------------------------------------------------
+# Final aggregated result-table append slot
+# ---------------------------------------------------------------------------
+
+aggregated_results:
+  status: pending                                  # one of: pending / in_progress / closed
+  closed_at: null
+  artifact_path: null                              # to be filled with reports/block3_transfer_matrix.csv
+  verdict_summary: null                            # filled at closure with H1/H2/H3 outcome
+
+# ---------------------------------------------------------------------------
+# Audit metadata
+# ---------------------------------------------------------------------------
+
+audit:
+  pre_registration_commit_sha: null                # filled by first commit of this file
+  block3_open_commit_sha: null                     # filled when this manifest is first committed
+  block3_close_commit_sha: null                    # filled at aggregated_results.closed_at
+  expected_paper_section: "Results III: Transferability and Generalization (paper §7)"
+  related_audit_anchors:
+    - 93df9b364657ac77bbe3642e4bc277d1eb8a8b60      # MORL pre-registration
+    - 62dc859d02f5f4a75fa4b55d8477c1d4e6206449      # MORL post-N=5 falsification
