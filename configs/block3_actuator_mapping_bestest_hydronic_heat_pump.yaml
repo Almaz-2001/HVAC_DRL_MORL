@@ -176,7 +176,7 @@ smoke_test_protocol:
     in a separate commit.
 
 audit:
-  adapter_commit_sha: pending
-  pushed_before_smoke_test: pending
+  adapter_commit_sha: eb7091e25492cae7d4291fab100e2d19bf74bd24
+  pushed_before_smoke_test: true
   smoke_test_result_file: pending
   control_eval_started_after_adapter_commit: pending
