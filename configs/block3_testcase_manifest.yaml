@@ -449,6 +449,111 @@ cell_results:
       rows_train_selected_allrows_heads: 8256
       rows_train_all: 8256
 
+  - cell_id: bestest_hydronic_heat_pump_full_thermostatic_hybrid
+    date_completed: 2026-05-18
+    status: completed
+    testcase: bestest_hydronic_heat_pump
+    regime: full
+    controller_family: thermostatic_hybrid
+    adapter_used: hydronic_t_supply_to_setpoint_v1
+    seed: 42
+    artifact_paths:
+      telemetry: data/block3_bestest_hydronic_heat_pump/hydronic_adapter_stage_c_15min.csv
+      full_stage_abc: outputs/block3_bestest_hydronic_heat_pump/surrogate_v35_full_stage_abc_allrows_heads/calibration_summary_boptest_v35.json
+    measurements:
+      m_s_RL: 0.665237
+      m_s_PI: 0.463590
+      pass_threshold_m_s: 0.579487
+      violation_pct_RL: 50.031002
+      violation_pct_PI: 34.678819
+      energy_kwh_RL: 335.631077
+      energy_kwh_PI: 361.947251
+      energy_delta_pct_vs_PI: -7.270721
+      baseline_gap: 0.434970
+    verdict: FAIL
+    notes: |
+      The pre-registered full regime re-runs the complete Stage A/B/C
+      surrogate pipeline on the target testcase but keeps the controller
+      frozen. Because the controller and adapter remain bit-identical to the
+      none cell, the live KPI is structurally unchanged and the
+      pre-registered controller-side verdict remains FAIL.
+    diagnostic_only_surrogate_fidelity:
+      status: PASS_SURROGATE_FULL_RECALIBRATION
+      interpretation: |
+        Full Stage A/B/C recalibration strongly improves target-testcase
+        predictive fidelity and re-identifies the hydronic thermal
+        capacitance. This diagnostic block establishes surrogate-component
+        transferability under full recalibration, but not controller
+        transferability.
+      raw_v35_target_RMSE_T_c: 1.420565
+      full_recalibrated_RMSE_T_c: 0.565307
+      RMSE_T_relative_improvement_pct: 60.205492
+      raw_v35_target_MAE_P_w: 2921.062500
+      full_recalibrated_MAE_P_w: 1767.057617
+      MAE_P_relative_improvement_pct: 39.506340
+      c_zon_initial_bestest_air_j_per_k: 441269.40625
+      c_zon_final_j_per_k: 834718.125
+      c_zon_relative_change_vs_bestest_air: 1.891629
+      stage_b_epochs_ran: 120
+      stage_c_epochs_ran: 180
+      rows_train_selected: 8256
+      rows_train_all: 8256
+
+  - cell_id: bestest_hydronic_heat_pump_aggregate
+    date_completed: 2026-05-18
+    status: testcase_aggregate
+    testcase: bestest_hydronic_heat_pump
+    controller_verdict_per_regime:
+      none: FAIL
+      partial: FAIL
+      full: FAIL
+    surrogate_diagnostic_per_regime:
+      none: "not applicable; frozen bestest_air surrogate/controller deployed through hydronic adapter"
+      partial: "CONDITIONAL: Stage C all-rows heads improves RMSE_T by 20.1%; C_zon remains frozen at bestest_air value"
+      full: "STRONG: Stage A/B/C improves RMSE_T by 60.2%; C_zon re-identified at 1.89x bestest_air value"
+    finding_summary: |
+      The surrogate component is transferable to bestest_hydronic_heat_pump
+      under full Stage A/B/C recalibration: predictive RMSE_T drops by 60.2%
+      and the inverse procedure re-identifies C_zon at 8.347e+05 J/K,
+      approximately 1.89x the bestest_air value. This indicates that the
+      hydronic heat-pump testcase is a distinct physical regime, not a
+      trivial actuator-adapter neighbour.
+
+      The controller component is not transferable to this testcase under
+      any of the three pre-registered regimes, because all three keep the
+      controller frozen and the adapter constant. Live m_s = 0.665 exceeds
+      the 1.25 x m_s_PI = 0.579 threshold.
+
+      The transferability boundary on this testcase therefore lies at the
+      controller-adapter interface, not in the surrogate physics
+      representation capacity. Controller fine-tune on the target-
+      recalibrated surrogate is scope-excluded and becomes a Block 4 /
+      future-work direction.
+    h3_weak_status: |
+      H3_weak is falsified on bestest_hydronic_heat_pump by the
+      controller-side FAIL at regime = full. The surrogate-side diagnostic
+      supports the full recalibration pipeline, but the pre-registered
+      pass/fail criterion is live controller m_s.
+    next_step_decision:
+      chosen_option: option_b_compute_optimized
+      decision_rationale: |
+        Continue to secondary and stretch testcases to check whether the
+        surrogate-transferable / controller-non-transferable pattern
+        replicates beyond the primary testcase, but reduce compute by
+        running only thermostatic_hybrid and only regimes {none, full}.
+        The primary testcase showed that partial-vs-full changes surrogate
+        predictive fidelity but not controller-side verdict under a frozen
+        controller. HDRL and MORL are also deferred because the structural
+        bottleneck identified here is the frozen controller-adapter
+        interface, not controller-family-specific optimization.
+      planned_remaining_cells:
+        - testcase: bestest_hydronic
+          regimes: [none, full]
+          controller_families: [thermostatic_hybrid]
+        - testcase: singlezone_commercial_hydronic
+          regimes: [none, full]
+          controller_families: [thermostatic_hybrid]
+
 # ---------------------------------------------------------------------------
 # Final aggregated result-table append slot
 # ---------------------------------------------------------------------------
