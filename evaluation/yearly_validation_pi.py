@@ -142,6 +142,7 @@ def parse_state(payload: dict[str, Any]) -> tuple[float, float, float]:
             "reaPFan_y",
             "reaPPumEmi_y",
             "reaPHea_y",
+            "reaQHea_y",
             "reaPCoo_y",
             "reaPPum_y",
         ),

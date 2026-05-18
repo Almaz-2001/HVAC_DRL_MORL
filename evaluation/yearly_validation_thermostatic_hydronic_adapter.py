@@ -9,6 +9,7 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
+import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -98,6 +99,7 @@ def parse_hydronic_state(
             "reaPFan_y",
             "reaPPumEmi_y",
             "reaPHea_y",
+            "reaQHea_y",
             "reaPCoo_y",
             "reaPPum_y",
             "fcu_reaPCoo_y",
@@ -120,10 +122,10 @@ def parse_hydronic_state(
         "day": float(day),
         "delta_t_zone": float(delta_t_zone),
         "prev_t_supply_c": action_to_t_supply(float(prev_action[0])) if prev_action is not None else 26.5,
-        "rea_t_supply_c": k_to_c(get_val(payload, "reaTSup_y", np.nan)),
-        "rea_heat_pump_power_w": get_val(payload, "reaPHeaPum_y", 0.0),
+        "rea_t_supply_c": k_to_c(get_first_val(payload, ("reaTSup_y", "oveTSetSup_y"))) if any(k in payload for k in ("reaTSup_y", "oveTSetSup_y")) else np.nan,
+        "rea_heat_pump_power_w": get_first_val(payload, ("reaPHeaPum_y", "reaQHea_y")) if any(k in payload for k in ("reaPHeaPum_y", "reaQHea_y")) else 0.0,
         "rea_fan_power_w": get_val(payload, "reaPFan_y", 0.0),
-        "rea_pump_power_w": get_val(payload, "reaPPumEmi_y", 0.0),
+        "rea_pump_power_w": get_first_val(payload, ("reaPPumEmi_y", "reaPPum_y")) if any(k in payload for k in ("reaPPumEmi_y", "reaPPum_y")) else 0.0,
     }
 
 
@@ -160,11 +162,36 @@ def make_obs(
     return obs, state
 
 
-def hydronic_adapter_command(action: np.ndarray) -> tuple[dict[str, float], dict[str, float]]:
+def load_adapter_name(path: Path) -> str:
+    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    return str(data.get("adapter_mapping", {}).get("name", "hydronic_setpoint_enable_adapter_v1"))
+
+
+def hydronic_adapter_command(action: np.ndarray, adapter_name: str) -> tuple[dict[str, float], dict[str, float]]:
     policy_t_like_c = action_to_t_supply(float(action[0]))
     h = float(np.clip((policy_t_like_c - 18.0) / (35.0 - 18.0), 0.0, 1.0))
-    setpoint_k = 288.15 + h * (297.15 - 288.15)
     enabled = 1.0 if h > 0.05 else 0.0
+    if adapter_name == "hydronic_direct_supply_setpoint_adapter_v1":
+        setpoint_k = policy_t_like_c + 273.15
+        payload = {
+            "oveTSetSup_activate": 1,
+            "oveTSetSup_u": float(setpoint_k),
+            "oveTSetHea_activate": 1,
+            "oveTSetHea_u": 294.15,
+            "oveTSetCoo_activate": 1,
+            "oveTSetCoo_u": 297.15,
+            "ovePum_activate": 1,
+            "ovePum_u": enabled,
+        }
+        adapter_info = {
+            "policy_temperature_like_command_c": float(policy_t_like_c),
+            "adapter_heat_intensity": h,
+            "adapter_supply_setpoint_c": float(policy_t_like_c),
+            "adapter_zone_setpoint_c": np.nan,
+            "adapter_plant_enabled": enabled,
+        }
+        return payload, adapter_info
+    setpoint_k = 288.15 + h * (297.15 - 288.15)
     payload = {
         "oveTSet_activate": 1,
         "oveTSet_u": float(setpoint_k),
@@ -232,6 +259,7 @@ def run_scenario(
     temp_high: float,
     temp_target: float,
     output_dir: Path,
+    adapter_name: str,
 ) -> dict[str, float | str]:
     print("\n" + "=" * 72)
     print(f"THERMOSTATIC HYDRONIC ADAPTER SCENARIO: {name} (start={start_time:.0f}s)")
@@ -258,7 +286,7 @@ def run_scenario(
         for step in range(steps):
             action, info = controller.act(obs, state)
             action = np.asarray(action, dtype=np.float32)
-            command, adapter_info = hydronic_adapter_command(action)
+            command, adapter_info = hydronic_adapter_command(action, adapter_name)
             payload = client.advance(testid, command)
             next_obs, next_state = make_obs(
                 payload,
@@ -346,6 +374,7 @@ def main() -> None:
     adapter_config = ROOT / args.adapter_config
     if not adapter_config.exists():
         raise FileNotFoundError(f"Adapter config not found: {adapter_config}")
+    adapter_name = load_adapter_name(adapter_config)
 
     weather = WeatherLookup(resolve_weather_csv())
     controller = ThermostaticController(
@@ -369,6 +398,7 @@ def main() -> None:
     print(f"BOPTEST version: {version.get('payload', {}).get('version', version)}")
     print(f"Model: {args.model}")
     print(f"Adapter config: {adapter_config}")
+    print(f"Adapter name: {adapter_name}")
 
     summary_rows = []
     for name, start_time in SCENARIOS.items():
@@ -390,6 +420,7 @@ def main() -> None:
                 temp_high=float(args.temp_high),
                 temp_target=float(args.temp_target),
                 output_dir=output_dir,
+                adapter_name=adapter_name,
             )
         )
 
@@ -413,8 +444,8 @@ def main() -> None:
         "delta_feature_mode": args.delta_feature_mode,
         "power_feature_mode": args.power_feature_mode,
         "t_zone_feature_mode": args.t_zone_feature_mode,
-        "adapter_name": "hydronic_setpoint_enable_adapter_v1",
-        "transfer_claim": "adapter-mediated, not literal direct-TSup transfer",
+        "adapter_name": adapter_name,
+        "transfer_claim": "direct supply-setpoint transfer" if adapter_name == "hydronic_direct_supply_setpoint_adapter_v1" else "adapter-mediated, not literal direct-TSup transfer",
     }
     (output_dir / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
     print("\n" + "=" * 86)
