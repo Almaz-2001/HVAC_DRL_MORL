@@ -102,19 +102,60 @@ def get_val(payload: dict[str, Any], key: str, default: float = 0.0) -> float:
     return float(value.get("value", value) if isinstance(value, dict) else value)
 
 
+def get_first_val(payload: dict[str, Any], keys: tuple[str, ...]) -> float:
+    for key in keys:
+        if key in payload:
+            return get_val(payload, key)
+    raise KeyError(f"None of the expected BOPTEST keys were found: {keys}")
+
+
+def sum_existing_vals(payload: dict[str, Any], keys: tuple[str, ...]) -> float:
+    found = [key for key in keys if key in payload]
+    if not found:
+        raise KeyError(f"None of the expected BOPTEST power keys were found: {keys}")
+    return float(sum(get_val(payload, key) for key in found))
+
+
 def k_to_c(value: float) -> float:
     value = float(value)
     return value - 273.15 if value > 200.0 else value
 
 
 def parse_state(payload: dict[str, Any]) -> tuple[float, float, float]:
-    t_zone = k_to_c(get_val(payload, "zon_reaTRooAir_y"))
-    p_total = (
-        get_val(payload, "fcu_reaPCoo_y")
-        + get_val(payload, "fcu_reaPFan_y")
-        + get_val(payload, "fcu_reaPHea_y")
+    t_zone = k_to_c(
+        get_first_val(
+            payload,
+            (
+                "zon_reaTRooAir_y",  # bestest_air
+                "reaTZon_y",  # hydronic testcases
+                "reaTRooAir_y",
+            ),
+        )
     )
-    t_amb = k_to_c(get_val(payload, "zon_weaSta_reaWeaTDryBul_y"))
+    p_total = sum_existing_vals(
+        payload,
+        (
+            "fcu_reaPCoo_y",  # bestest_air
+            "fcu_reaPFan_y",
+            "fcu_reaPHea_y",
+            "reaPHeaPum_y",  # hydronic heat pump
+            "reaPFan_y",
+            "reaPPumEmi_y",
+            "reaPHea_y",
+            "reaPCoo_y",
+            "reaPPum_y",
+        ),
+    )
+    t_amb = k_to_c(
+        get_first_val(
+            payload,
+            (
+                "zon_weaSta_reaWeaTDryBul_y",  # bestest_air
+                "weaSta_reaWeaTDryBul_y",  # hydronic testcases
+                "reaWeaTDryBul_y",
+            ),
+        )
+    )
     return t_zone, p_total, t_amb
 
 
@@ -193,7 +234,7 @@ def main() -> None:
     parser.add_argument("--advance-timeout", type=float, default=ADVANCE_TIMEOUT)
     parser.add_argument("--http-retries", type=int, default=HTTP_RETRIES)
     parser.add_argument("--boptest-url", default=BOPTEST_URL)
-    parser.add_argument("--testcase", default=TESTCASE)
+    parser.add_argument("--testcase", "--testcase-id", dest="testcase", default=TESTCASE)
     args = parser.parse_args()
 
     STEP_SEC = int(args.step_sec)
