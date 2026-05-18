@@ -388,8 +388,8 @@ aggregated_results:
 # ---------------------------------------------------------------------------
 
 audit:
-  pre_registration_commit_sha: null                # filled by first commit of this file
-  block3_open_commit_sha: null                     # filled when this manifest is first committed
+  pre_registration_commit_sha: 1861e48dc0eacb2e2c466ba0e0d03502d9185723
+  block3_open_commit_sha: 1861e48dc0eacb2e2c466ba0e0d03502d9185723
   block3_close_commit_sha: null                    # filled at aggregated_results.closed_at
   expected_paper_section: "Results III: Transferability and Generalization (paper §7)"
   related_audit_anchors:
