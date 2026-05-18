@@ -178,5 +178,6 @@ smoke_test_protocol:
 audit:
   adapter_commit_sha: eb7091e25492cae7d4291fab100e2d19bf74bd24
   pushed_before_smoke_test: true
-  smoke_test_result_file: pending
-  control_eval_started_after_adapter_commit: pending
+  smoke_test_result_file: reports/block3_hydronic_heat_pump_adapter_smoke_summary.csv
+  smoke_test_result: PASS
+  control_eval_started_after_adapter_commit: false
