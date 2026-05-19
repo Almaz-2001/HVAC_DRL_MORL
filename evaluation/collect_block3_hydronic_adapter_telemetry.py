@@ -79,6 +79,8 @@ def parse_hydronic_state(
             "reaPHeaPum_y",
             "reaPFan_y",
             "reaPPumEmi_y",
+            "ahu_reaPFanExt_y",
+            "ahu_reaPFanSup_y",
             "reaPHea_y",
             "reaQHea_y",
             "reaPCoo_y",
@@ -99,9 +101,9 @@ def parse_hydronic_state(
         "day": float((sim_time_sec / 86400.0) % 365.0),
         "delta_t_zone": 0.0 if prev_t_zone is None else float(t_zone - prev_t_zone),
         "prev_t_supply_c": action_to_t_supply(float(prev_action[0])) if prev_action is not None else 26.5,
-        "rea_t_supply_c": k_to_c(get_first_val(payload, ("reaTSup_y", "oveTSetSup_y"))) if any(k in payload for k in ("reaTSup_y", "oveTSetSup_y")) else np.nan,
+        "rea_t_supply_c": k_to_c(get_first_val(payload, ("reaTSup_y", "oveTSetSup_y", "dh_reaTSupHyd_y", "dh_oveTSupSetHea_y"))) if any(k in payload for k in ("reaTSup_y", "oveTSetSup_y", "dh_reaTSupHyd_y", "dh_oveTSupSetHea_y")) else np.nan,
         "rea_heat_pump_power_w": get_first_val(payload, ("reaPHeaPum_y", "reaQHea_y")) if any(k in payload for k in ("reaPHeaPum_y", "reaQHea_y")) else 0.0,
-        "rea_fan_power_w": get_val(payload, "reaPFan_y", 0.0),
+        "rea_fan_power_w": sum(get_val(payload, key, 0.0) for key in ("reaPFan_y", "ahu_reaPFanExt_y", "ahu_reaPFanSup_y")),
         "rea_pump_power_w": get_first_val(payload, ("reaPPumEmi_y", "reaPPum_y")) if any(k in payload for k in ("reaPPumEmi_y", "reaPPum_y")) else 0.0,
     }
 
@@ -132,6 +134,30 @@ def hydronic_adapter_command(action: np.ndarray, adapter_name: str) -> tuple[dic
                 "adapter_heat_intensity": h,
                 "adapter_supply_setpoint_c": float(policy_t_like_c),
                 "adapter_zone_setpoint_c": np.nan,
+                "adapter_plant_enabled": enabled,
+            },
+        )
+    if adapter_name == "commercial_hydronic_supply_valve_adapter_v1":
+        return (
+            {
+                "dh_oveTSupSetHea_activate": 1,
+                "dh_oveTSupSetHea_u": float(policy_t_like_c + 273.15),
+                "oveTZonSet_activate": 1,
+                "oveTZonSet_u": 294.15,
+                "oveTSupSetAir_activate": 1,
+                "oveTSupSetAir_u": 291.15,
+                "ovePum_activate": 1,
+                "ovePum_u": enabled,
+                "oveValCoi_activate": 1,
+                "oveValCoi_u": enabled,
+                "oveValRad_activate": 1,
+                "oveValRad_u": enabled,
+            },
+            {
+                "policy_temperature_like_command_c": float(policy_t_like_c),
+                "adapter_heat_intensity": h,
+                "adapter_supply_setpoint_c": float(policy_t_like_c),
+                "adapter_zone_setpoint_c": 21.0,
                 "adapter_plant_enabled": enabled,
             },
         )

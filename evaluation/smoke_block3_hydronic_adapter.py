@@ -51,6 +51,34 @@ def build_conditions(adapter_name: str) -> dict[str, dict[str, float]]:
                 "oveTSetCoo_u": 297.15,
             },
         }
+    if adapter_name == "commercial_hydronic_supply_valve_adapter_v1":
+        return {
+            "baseline_no_override": {},
+            "low_supply_override": {
+                "dh_oveTSupSetHea_activate": 1,
+                "dh_oveTSupSetHea_u": 291.15,
+                "ovePum_activate": 1,
+                "ovePum_u": 0.0,
+                "oveValCoi_activate": 1,
+                "oveValCoi_u": 0.0,
+                "oveValRad_activate": 1,
+                "oveValRad_u": 0.0,
+                "oveTZonSet_activate": 1,
+                "oveTZonSet_u": 294.15,
+            },
+            "high_supply_override": {
+                "dh_oveTSupSetHea_activate": 1,
+                "dh_oveTSupSetHea_u": 308.15,
+                "ovePum_activate": 1,
+                "ovePum_u": 1.0,
+                "oveValCoi_activate": 1,
+                "oveValCoi_u": 1.0,
+                "oveValRad_activate": 1,
+                "oveValRad_u": 1.0,
+                "oveTZonSet_activate": 1,
+                "oveTZonSet_u": 294.15,
+            },
+        }
     return {
         "baseline_no_override": {},
         "low_heat_override": {
@@ -167,11 +195,17 @@ def row_from_payload(condition: str, step_index: int, payload: dict[str, Any], a
         "step_index": step_index,
         "time_s": get_float(payload, "time", float(step_index * STEP_SEC)),
         "t_zone_c": k_to_c(get_float(payload, "reaTZon_y", get_float(payload, "reaTRoo_y", 0.0))),
-        "t_supply_c": k_to_c(get_float(payload, "reaTSup_y", get_float(payload, "oveTSetSup_y", 0.0))),
+        "t_supply_c": k_to_c(
+            get_float(
+                payload,
+                "reaTSup_y",
+                get_float(payload, "oveTSetSup_y", get_float(payload, "dh_reaTSupHyd_y", get_float(payload, "dh_oveTSupSetHea_y", 0.0))),
+            )
+        ),
         "t_set_heat_c": k_to_c(get_float(payload, "reaTSetHea_y", get_float(payload, "oveTSetHea_y", 0.0))),
         "t_set_cool_c": k_to_c(get_float(payload, "reaTSetCoo_y", get_float(payload, "oveTSetCoo_y", 0.0))),
         "heat_power_w": get_float(payload, "reaPHeaPum_y", get_float(payload, "reaQHea_y", 0.0)),
-        "fan_power_w": get_float(payload, "reaPFan_y", 0.0),
+        "fan_power_w": get_float(payload, "reaPFan_y", 0.0) + get_float(payload, "ahu_reaPFanExt_y", 0.0) + get_float(payload, "ahu_reaPFanSup_y", 0.0),
         "pump_power_w": get_float(payload, "reaPPumEmi_y", get_float(payload, "reaPPum_y", 0.0)),
         "reaCOP": get_float(payload, "reaCOP_y"),
         "action_json": json.dumps(action, sort_keys=True),

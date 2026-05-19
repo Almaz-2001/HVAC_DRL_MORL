@@ -659,6 +659,50 @@ cell_results:
       testcase (singlezone_commercial_hydronic) as the falsification probe
       under option_b_compute_optimized.
 
+stretch_testcase_predictions:
+  date_logged: 2026-05-19
+  finalized_before_singlezone_commercial_hydronic_runs: true
+  testcase: singlezone_commercial_hydronic
+  predictions:
+    mode_none_controller_verdict:
+      expected: FAIL
+      apriori_probability: 0.80
+      rationale: |
+        N=2 evidence shows frozen-controller FAIL on smaller hydronic
+        testcases. A larger commercial testcase is expected to have similar
+        or worse controller transferability because slower building dynamics
+        expose more of the controller's misalignment to non-bestest_air
+        actuator and envelope regimes.
+    mode_full_surrogate_RMSE_improvement_pct:
+      expected_range: [50, 90]
+      apriori_probability_for_range: 0.70
+      rationale: |
+        Both prior hydronic testcases produced at least 60% RMSE_T
+        improvement under full recalibration. A commercial-scale testcase may
+        stress Stage A/B/C beyond the prior operating points, but the inverse
+        calibration framework should still recover meaningful fidelity gains.
+    c_zon_ratio_vs_bestest_air:
+      hypothesis_a_hydronic_family_uniform:
+        expected_range: [1.7, 2.2]
+        apriori_probability: 0.35
+        rationale: |
+          If hydronic-family thermal mass is uniform across the tested
+          single-zone cases, C_zon ratio remains near the observed 1.9x
+          pattern.
+      hypothesis_b_scale_dependent:
+        expected_range: [3.0, 10.0]
+        apriori_probability: 0.50
+        rationale: |
+          If C_zon scales with commercial zone volume, the stretch testcase
+          should yield a substantially higher ratio than the two residential
+          hydronic cases.
+      hypothesis_c_pipeline_failure:
+        apriori_probability: 0.15
+        rationale: |
+          Stage A/B/C may fail to converge on a substantially different
+          physical regime, in which case the secondary finding is about
+          methodology scaling rather than building physics.
+
 # ---------------------------------------------------------------------------
 # Final aggregated result-table append slot
 # ---------------------------------------------------------------------------
