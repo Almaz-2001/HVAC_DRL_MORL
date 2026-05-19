@@ -128,6 +128,7 @@ def parse_state(payload: dict[str, Any]) -> tuple[float, float, float]:
             (
                 "zon_reaTRooAir_y",  # bestest_air
                 "reaTZon_y",  # hydronic testcases
+                "reaTRoo_y",  # bestest_hydronic
                 "reaTRooAir_y",
             ),
         )

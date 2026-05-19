@@ -90,7 +90,7 @@ def parse_hydronic_state(
     prev_action: np.ndarray,
     prev_t_zone: float | None,
 ) -> dict[str, float]:
-    t_zone = k_to_c(get_first_val(payload, ("reaTZon_y", "reaTRooAir_y", "zon_reaTRooAir_y")))
+    t_zone = k_to_c(get_first_val(payload, ("reaTZon_y", "reaTRoo_y", "reaTRooAir_y", "zon_reaTRooAir_y")))
     co2_ppm = get_first_val(payload, ("reaCO2RooAir_y", "zon_reaCO2RooAir_y"))
     p_total_w = sum_existing_vals(
         payload,

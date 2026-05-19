@@ -554,6 +554,111 @@ cell_results:
           regimes: [none, full]
           controller_families: [thermostatic_hybrid]
 
+  - cell_id: bestest_hydronic_none_thermostatic_hybrid
+    date_completed: 2026-05-19
+    status: completed
+    testcase: bestest_hydronic
+    regime: none
+    controller_family: thermostatic_hybrid
+    adapter_used: hydronic_direct_supply_setpoint_adapter_v1
+    seed: 42
+    artifact_paths:
+      pi_summary: outputs/block3_bestest_hydronic/pi_baseline_15min_yearly/pi_yearly_summary.csv
+      rl_summary: outputs/block3_bestest_hydronic/thermostatic_hybrid_l010_adapter_none/thermostatic_hydronic_adapter_yearly_summary.csv
+      adapter_smoke_summary: reports/block3_bestest_hydronic_adapter_smoke_summary.csv
+    measurements:
+      m_s_RL: 0.975954
+      m_s_PI: 0.750180
+      pass_threshold_m_s: 0.937725
+      violation_pct_RL: 67.999752
+      violation_pct_PI: 44.890873
+      energy_kwh_RL: 217.905100
+      energy_kwh_PI: 231.423656
+      energy_delta_pct_vs_PI: -5.841475
+      baseline_gap: 0.300959
+    verdict: FAIL
+    notes: |
+      Frozen bestest_air thermostatic hybrid_l010 routed through the direct
+      hydronic supply-setpoint adapter again saves energy relative to the
+      target-testcase PI baseline but exceeds the 1.25x m_s threshold. This
+      replicates the controller-side transfer FAIL pattern observed on
+      bestest_hydronic_heat_pump.
+
+  - cell_id: bestest_hydronic_full_thermostatic_hybrid
+    date_completed: 2026-05-19
+    status: completed
+    testcase: bestest_hydronic
+    regime: full
+    controller_family: thermostatic_hybrid
+    adapter_used: hydronic_direct_supply_setpoint_adapter_v1
+    seed: 42
+    artifact_paths:
+      telemetry: data/block3_bestest_hydronic/hydronic_adapter_stage_c_15min.csv
+      full_stage_abc: outputs/block3_bestest_hydronic/surrogate_v35_full_stage_abc_allrows_heads/calibration_summary_boptest_v35.json
+    measurements:
+      m_s_RL: 0.975954
+      m_s_PI: 0.750180
+      pass_threshold_m_s: 0.937725
+      violation_pct_RL: 67.999752
+      violation_pct_PI: 44.890873
+      energy_kwh_RL: 217.905100
+      energy_kwh_PI: 231.423656
+      energy_delta_pct_vs_PI: -5.841475
+      baseline_gap: 0.300959
+    verdict: FAIL
+    notes: |
+      Full Stage A/B/C recalibration is evaluated diagnostically for the
+      surrogate component. The live controller KPI remains identical to
+      none because the pre-registered Block 3 scope keeps the controller
+      frozen and uses the same direct supply-setpoint adapter.
+    diagnostic_only_surrogate_fidelity:
+      status: PASS_SURROGATE_FULL_RECALIBRATION
+      interpretation: |
+        Full Stage A/B/C recalibration strongly improves target-testcase
+        predictive fidelity and independently re-identifies hydronic thermal
+        capacitance near the value found on bestest_hydronic_heat_pump.
+      raw_v35_target_RMSE_T_c: 2.666437
+      full_recalibrated_RMSE_T_c: 0.335012
+      RMSE_T_relative_improvement_pct: 87.435959
+      raw_v35_target_MAE_P_w: 783.880615
+      full_recalibrated_MAE_P_w: 84.982208
+      MAE_P_relative_improvement_pct: 89.158782
+      c_zon_initial_bestest_air_j_per_k: 441269.40625
+      c_zon_final_j_per_k: 862247.0625
+      c_zon_relative_change_vs_bestest_air: 1.954015
+      stage_b_epochs_ran: 120
+      stage_c_epochs_ran: 180
+      rows_train_selected: 8256
+      rows_train_all: 8256
+
+  - cell_id: bestest_hydronic_aggregate
+    date_completed: 2026-05-19
+    status: testcase_aggregate
+    testcase: bestest_hydronic
+    controller_verdict_per_regime:
+      none: FAIL
+      full: FAIL
+    surrogate_diagnostic_per_regime:
+      none: "not applicable; frozen bestest_air controller deployed through direct supply-setpoint adapter"
+      full: "STRONG: Stage A/B/C improves RMSE_T by 87.4%; C_zon re-identified at 1.95x bestest_air value"
+    finding_summary: |
+      bestest_hydronic replicates the structural Block 3 pattern observed
+      on bestest_hydronic_heat_pump. The frozen controller transfers poorly
+      on the live BOPTEST KPI despite lower energy consumption than PI, while
+      the full Stage A/B/C surrogate pipeline transfers strongly.
+
+      The re-identified C_zon equals 8.622e+05 J/K, 1.95x the bestest_air
+      value and within 3.3% of the 1.89x ratio observed on
+      bestest_hydronic_heat_pump. This consistency provides independent
+      evidence that hydronic-family testcases occupy a systematically higher
+      thermal-capacitance regime than bestest_air.
+    n2_pattern_status: |
+      Across bestest_hydronic_heat_pump and bestest_hydronic, controller-side
+      none transfer FAILS in both cells, while full surrogate recalibration
+      SUCCEEDS in both cells. Continue to the pre-registered stretch
+      testcase (singlezone_commercial_hydronic) as the falsification probe
+      under option_b_compute_optimized.
+
 # ---------------------------------------------------------------------------
 # Final aggregated result-table append slot
 # ---------------------------------------------------------------------------
