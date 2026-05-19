@@ -659,6 +659,119 @@ cell_results:
       testcase (singlezone_commercial_hydronic) as the falsification probe
       under option_b_compute_optimized.
 
+  - cell_id: singlezone_commercial_hydronic_none_thermostatic_hybrid
+    date_completed: 2026-05-19
+    status: completed
+    testcase: singlezone_commercial_hydronic
+    regime: none
+    controller_family: thermostatic_hybrid
+    adapter_used: commercial_hydronic_supply_valve_adapter_v1
+    seed: 42
+    artifact_paths:
+      pi_summary: outputs/block3_singlezone_commercial_hydronic/pi_baseline_15min_yearly/pi_yearly_summary.csv
+      rl_summary: outputs/block3_singlezone_commercial_hydronic/thermostatic_hybrid_l010_adapter_none/thermostatic_hydronic_adapter_yearly_summary.csv
+      adapter_smoke_summary: reports/block3_singlezone_commercial_hydronic_adapter_smoke_summary.csv
+    measurements:
+      m_s_RL: 0.431462
+      m_s_PI: 0.628170
+      pass_threshold_m_s: 0.785213
+      violation_pct_RL: 34.833829
+      violation_pct_PI: 51.512897
+      energy_kwh_RL: 18301.416142
+      energy_kwh_PI: 13523.096504
+      energy_delta_pct_vs_PI: 35.334508
+      baseline_gap: -0.313145
+    verdict: PASS
+    pre_registered_prediction_status:
+      mode_none_controller_verdict_expected: FAIL
+      observed: PASS
+      status: FALSIFIED
+    notes: |
+      The stretch testcase falsifies the pre-registered expectation that
+      frozen-controller mode=none would fail on the commercial hydronic
+      interface. The controller passes the safety threshold
+      (m_s_RL = 0.431 <= 1.25 x m_s_PI = 0.785) but consumes 35.3% more
+      energy than the PI baseline. The transfer therefore succeeds on the
+      pre-registered safety metric but not on energy efficiency.
+
+  - cell_id: singlezone_commercial_hydronic_full_thermostatic_hybrid
+    date_completed: 2026-05-19
+    status: completed
+    testcase: singlezone_commercial_hydronic
+    regime: full
+    controller_family: thermostatic_hybrid
+    adapter_used: commercial_hydronic_supply_valve_adapter_v1
+    seed: 42
+    artifact_paths:
+      telemetry: data/block3_singlezone_commercial_hydronic/hydronic_adapter_stage_c_15min.csv
+      full_stage_abc: outputs/block3_singlezone_commercial_hydronic/surrogate_v35_full_stage_abc_allrows_heads/calibration_summary_boptest_v35.json
+    measurements:
+      m_s_RL: 0.431462
+      m_s_PI: 0.628170
+      pass_threshold_m_s: 0.785213
+      violation_pct_RL: 34.833829
+      violation_pct_PI: 51.512897
+      energy_kwh_RL: 18301.416142
+      energy_kwh_PI: 13523.096504
+      energy_delta_pct_vs_PI: 35.334508
+      baseline_gap: -0.313145
+    verdict: PASS
+    notes: |
+      Full Stage A/B/C recalibration is evaluated diagnostically for the
+      surrogate component. The live controller KPI is identical to none
+      because the pre-registered Block 3 scope keeps the controller frozen
+      and uses the same commercial hydronic adapter.
+    diagnostic_only_surrogate_fidelity:
+      status: PASS_SURROGATE_FULL_RECALIBRATION
+      interpretation: |
+        Full Stage A/B/C recalibration strongly improves target-testcase
+        predictive fidelity on the commercial stretch testcase. The result
+        supports the pre-registered 50-90% RMSE improvement prediction and
+        supports the hydronic-family uniform C_zon hypothesis rather than
+        the scale-dependent C_zon hypothesis.
+      raw_v35_target_RMSE_T_c: 1.952199
+      full_recalibrated_RMSE_T_c: 0.238005
+      RMSE_T_relative_improvement_pct: 87.808378
+      raw_v35_target_MAE_P_w: 76654.890625
+      full_recalibrated_MAE_P_w: 75652.507812
+      MAE_P_relative_improvement_pct: 1.307657
+      c_zon_initial_bestest_air_j_per_k: 441269.40625
+      c_zon_final_j_per_k: 842505.0625
+      c_zon_relative_change_vs_bestest_air: 1.909276
+      stage_b_epochs_ran: 120
+      stage_c_epochs_ran: 180
+      rows_train_selected: 8256
+      rows_train_all: 8256
+      pre_registered_prediction_status:
+        rmse_improvement_range_50_to_90_pct: SUPPORTED
+        c_zon_hypothesis_a_uniform_1p7_to_2p2: SUPPORTED
+        c_zon_hypothesis_b_scale_dependent_3_to_10: FALSIFIED
+        c_zon_hypothesis_c_pipeline_failure: FALSIFIED
+
+  - cell_id: singlezone_commercial_hydronic_aggregate
+    date_completed: 2026-05-19
+    status: testcase_aggregate
+    testcase: singlezone_commercial_hydronic
+    controller_verdict_per_regime:
+      none: PASS
+      full: PASS
+    surrogate_diagnostic_per_regime:
+      none: "not applicable; frozen bestest_air controller deployed through commercial hydronic adapter"
+      full: "STRONG: Stage A/B/C improves RMSE_T by 87.8%; C_zon re-identified at 1.91x bestest_air value"
+    finding_summary: |
+      The stretch testcase falsifies the expected controller-side FAIL:
+      frozen-controller mode=none passes the safety threshold but requires
+      substantially more energy than PI. Full Stage A/B/C surrogate
+      recalibration also passes, improving RMSE_T by 87.8%.
+
+      Contrary to the scale-dependent C_zon hypothesis, the commercial
+      hydronic testcase re-identifies C_zon at 1.91x the bestest_air value,
+      closely matching the residential hydronic ratios (1.89x and 1.95x).
+      The final N=3 hydronic-family evidence therefore supports a consistent
+      hydronic-family thermal-capacitance regime, while controller-side
+      transferability remains adapter/testcase dependent rather than
+      uniformly failing.
+
 stretch_testcase_predictions:
   date_logged: 2026-05-19
   finalized_before_singlezone_commercial_hydronic_runs: true
@@ -708,10 +821,33 @@ stretch_testcase_predictions:
 # ---------------------------------------------------------------------------
 
 aggregated_results:
-  status: pending                                  # one of: pending / in_progress / closed
-  closed_at: null
-  artifact_path: null                              # to be filled with reports/block3_transfer_matrix.csv
-  verdict_summary: null                            # filled at closure with H1/H2/H3 outcome
+  status: closed
+  closed_at: 2026-05-19
+  artifact_path: reports/block3_transfer_matrix.csv
+  verdict_summary: |
+    H1_strong (mode=none frozen-controller transfer succeeds on all tested
+    testcases) is FALSIFIED: two residential hydronic testcases fail the
+    1.25x PI safety threshold, while the commercial stretch testcase passes.
+
+    H2_medium (partial surrogate-only recalibration rescues controller-side
+    transfer) is FALSIFIED structurally: under the pre-registered frozen
+    controller scope, surrogate recalibration cannot change live controller
+    KPI unless controller fine-tuning is introduced, which is excluded.
+
+    H3_weak has a split verdict. On the surrogate side it is SUPPORTED:
+    full Stage A/B/C recalibration improves RMSE_T on all three hydronic
+    testcases by 60.2%, 87.4%, and 87.8%. On the controller side it is
+    FALSIFIED as an all-testcase claim: full-regime live KPI remains FAIL
+    on the two residential hydronic testcases and PASS on the commercial
+    stretch testcase because the controller remains frozen.
+
+    The final Block 3 finding is a decomposition of transferability rather
+    than a uniform pass/fail story. The Hou-and-Evins inverse surrogate
+    calibration pipeline transfers strongly across the hydronic family and
+    consistently re-identifies C_zon near 1.9x the bestest_air value
+    (1.89x, 1.95x, 1.91x). Controller transferability is not universal:
+    residential hydronic cases fail on safety despite saving energy, while
+    the commercial stretch case passes on safety at a 35.3% energy penalty.
 
 # ---------------------------------------------------------------------------
 # Audit metadata

@@ -78,6 +78,13 @@ def get_first_val(payload: dict[str, Any], keys: tuple[str, ...]) -> float:
     raise KeyError(f"None of the expected BOPTEST keys were found: {keys}")
 
 
+def get_first_val_or_default(payload: dict[str, Any], keys: tuple[str, ...], default: float) -> float:
+    for key in keys:
+        if key in payload:
+            return get_val(payload, key)
+    return float(default)
+
+
 def sum_existing_vals(payload: dict[str, Any], keys: tuple[str, ...]) -> float:
     found = [key for key in keys if key in payload]
     if not found:
@@ -91,7 +98,7 @@ def parse_hydronic_state(
     prev_t_zone: float | None,
 ) -> dict[str, float]:
     t_zone = k_to_c(get_first_val(payload, ("reaTZon_y", "reaTRoo_y", "reaTRooAir_y", "zon_reaTRooAir_y")))
-    co2_ppm = get_first_val(payload, ("reaCO2RooAir_y", "zon_reaCO2RooAir_y"))
+    co2_ppm = get_first_val_or_default(payload, ("reaCO2RooAir_y", "zon_reaCO2RooAir_y"), 400.0)
     p_total_w = sum_existing_vals(
         payload,
         (
@@ -201,9 +208,9 @@ def hydronic_adapter_command(action: np.ndarray, adapter_name: str) -> tuple[dic
             "oveTZonSet_activate": 1,
             "oveTZonSet_u": 294.15,
             "oveTSupSetAir_activate": 1,
-            "oveTSupSetAir_u": 291.15,
+            "oveTSupSetAir_u": float(setpoint_k),
             "ovePum_activate": 1,
-            "ovePum_u": enabled,
+            "ovePum_u": 50000.0 if enabled else 0.0,
             "oveValCoi_activate": 1,
             "oveValCoi_u": enabled,
             "oveValRad_activate": 1,

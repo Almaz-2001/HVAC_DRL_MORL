@@ -225,6 +225,24 @@ def run_scenario(name: str, start_time: float, output_dir: str) -> dict[str, flo
     return {"name": name, **metrics}
 
 
+def load_existing_scenario(name: str, output_dir: str) -> dict[str, float | str] | None:
+    path = os.path.join(output_dir, f"pi_scenario_{name}.csv")
+    if not os.path.exists(path):
+        return None
+    df = pd.read_csv(path)
+    required = {"t_zone", "p_total"}
+    if not required.issubset(df.columns):
+        print(f"  Existing {path} is missing required columns; rerunning.")
+        return None
+    steps_per_scenario = int(round(SCENARIO_DAYS * 86400 / STEP_SEC))
+    if len(df) < steps_per_scenario:
+        print(f"  Existing {path} has {len(df)}/{steps_per_scenario} rows; rerunning.")
+        return None
+    metrics = compute_metrics(df["t_zone"].to_numpy(dtype=float), df["p_total"].to_numpy(dtype=float))
+    print(f"  Reusing existing scenario {name}: {path}")
+    return {"name": name, **metrics}
+
+
 def main() -> None:
     global STEP_SEC, SCENARIO_DAYS, BOPTEST_URL, TESTCASE, T_LOW, T_HIGH, SELECT_TIMEOUT, ADVANCE_TIMEOUT, HTTP_RETRIES
 
@@ -239,6 +257,7 @@ def main() -> None:
     parser.add_argument("--http-retries", type=int, default=HTTP_RETRIES)
     parser.add_argument("--boptest-url", default=BOPTEST_URL)
     parser.add_argument("--testcase", "--testcase-id", dest="testcase", default=TESTCASE)
+    parser.add_argument("--skip-existing", action="store_true", help="Reuse complete per-scenario CSVs already in output_dir.")
     args = parser.parse_args()
 
     STEP_SEC = int(args.step_sec)
@@ -260,6 +279,11 @@ def main() -> None:
     results = []
     start_all = time.time()
     for name, start_time in SCENARIOS.items():
+        if args.skip_existing:
+            existing = load_existing_scenario(name, args.output_dir)
+            if existing is not None:
+                results.append(existing)
+                continue
         results.append(run_scenario(name, start_time, args.output_dir))
 
     elapsed = (time.time() - start_all) / 60.0
