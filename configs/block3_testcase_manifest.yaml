@@ -824,30 +824,74 @@ aggregated_results:
   status: closed
   closed_at: 2026-05-19
   artifact_path: reports/block3_transfer_matrix.csv
-  verdict_summary: |
-    H1_strong (mode=none frozen-controller transfer succeeds on all tested
-    testcases) is FALSIFIED: two residential hydronic testcases fail the
-    1.25x PI safety threshold, while the commercial stretch testcase passes.
-
-    H2_medium (partial surrogate-only recalibration rescues controller-side
-    transfer) is FALSIFIED structurally: under the pre-registered frozen
-    controller scope, surrogate recalibration cannot change live controller
-    KPI unless controller fine-tuning is introduced, which is excluded.
-
-    H3_weak has a split verdict. On the surrogate side it is SUPPORTED:
-    full Stage A/B/C recalibration improves RMSE_T on all three hydronic
-    testcases by 60.2%, 87.4%, and 87.8%. On the controller side it is
-    FALSIFIED as an all-testcase claim: full-regime live KPI remains FAIL
-    on the two residential hydronic testcases and PASS on the commercial
-    stretch testcase because the controller remains frozen.
-
-    The final Block 3 finding is a decomposition of transferability rather
-    than a uniform pass/fail story. The Hou-and-Evins inverse surrogate
-    calibration pipeline transfers strongly across the hydronic family and
-    consistently re-identifies C_zon near 1.9x the bestest_air value
-    (1.89x, 1.95x, 1.91x). Controller transferability is not universal:
-    residential hydronic cases fail on safety despite saving energy, while
-    the commercial stretch case passes on safety at a 35.3% energy penalty.
+  hypothesis_status_final:
+    H1_strong:
+      verdict: FALSIFIED
+      evidence: |
+        Frozen-recipe deployment at mode=none did not produce deployment-ready
+        transfer on N=3 hydronic-family testcases. The two residential
+        hydronic cells FAIL the pre-registered 1.25x PI safety threshold,
+        while the commercial stretch cell is a THRESHOLD PASS but not a
+        deployment-ready pass because it requires 35.3% more energy than PI.
+    H2_medium:
+      verdict: FALSIFIED_BY_STRUCTURAL_DEFINITION
+      evidence: |
+        The pre-registered partial regime recalibrates only surrogate Stage C
+        and keeps the controller frozen. Therefore live controller KPI cannot
+        change relative to mode=none unless controller fine-tuning is added,
+        which is explicitly excluded by scope.deliberately_NOT_claimed.
+    H3_weak_surrogate_side:
+      verdict: SUPPORTED_ON_N3
+      evidence: |
+        Full Stage A/B/C recalibration improves RMSE_T on all three hydronic
+        testcases: 60.2% on bestest_hydronic_heat_pump, 87.4% on
+        bestest_hydronic, and 87.8% on singlezone_commercial_hydronic.
+        This supports transferability of the inverse surrogate-calibration
+        component.
+    H3_weak_controller_side:
+      verdict: FALSIFIED_WITH_REGIME_DEPENDENT_FAILURE_MODES
+      evidence: |
+        Controller transfer is not universally reliable under the frozen-
+        controller scope. Residential hydronic cases fail on comfort/safety
+        despite saving energy. The commercial hydronic case passes the safety
+        threshold but inflates energy by 35.3%. These are distinct operating-
+        regime manifestations of the same controller-adapter mismatch.
+    hierarchy_consistency:
+      verdict: SUPPORTED
+      evidence: |
+        Verdict monotonicity is not violated: surrogate fidelity improves
+        with recalibration depth, while controller-side live KPI remains
+        tied to the frozen controller and adapter as specified by the
+        pre-registered regimes.
+  central_finding: |
+    Block 3 establishes a component-level decomposition of transferability.
+    The surrogate component of the bestest_air recipe is uniformly
+    transferable to the hydronic family under full Stage A/B/C recalibration:
+    C_zon is re-identified at 1.89x, 1.95x, and 1.91x the bestest_air value,
+    and RMSE_T improves by 60-88%. The controller component is not deployment-
+    ready under the frozen-controller scope. Its failure mode is regime-
+    dependent: faster residential hydronic cells fail the safety threshold,
+    while the slower commercial cell satisfies the threshold at a substantial
+    energy penalty. The transferability boundary therefore lies at the
+    controller-adapter interface, not in the surrogate physics representation.
+  secondary_findings:
+    - "C_zon ratio is consistently near 1.9x bestest_air across N=3 hydronic
+       testcases (1.89x, 1.95x, 1.91x), supporting hydronic-family thermal-
+       capacitance consistency across actuator type and scale."
+    - "Full surrogate recalibration is weaker on the heat-pump testcase
+       (60.2% RMSE_T improvement) than on the boiler/commercial hydronic
+       testcases (87.4% and 87.8%), suggesting actuator-coupling nonlinearity
+       affects inverse-calibration quality."
+    - "A single-axis threshold can mask multi-objective trade-offs: the
+       commercial testcase is a pre-registered threshold PASS on m_s but not
+       a deployment-ready pass because energy increases by 35.3% versus PI."
+  block4_future_work_pointer: |
+    The target-recalibrated surrogates are reliable enough to serve as
+    training environments, but Block 3 deliberately excludes target-specific
+    controller fine-tuning. A natural Block 4 experiment is PPO fine-tuning
+    of the frozen bestest_air thermostatic checkpoint on each target
+    Stage A/B/C-recalibrated surrogate, evaluated with both the original
+    m_s threshold and a deployment-pass criterion that also bounds energy.
 
 # ---------------------------------------------------------------------------
 # Audit metadata
