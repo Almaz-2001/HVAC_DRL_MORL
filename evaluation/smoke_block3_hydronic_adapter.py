@@ -59,6 +59,8 @@ def build_conditions(adapter_name: str) -> dict[str, dict[str, float]]:
                 "dh_oveTSupSetHea_u": 291.15,
                 "ovePum_activate": 1,
                 "ovePum_u": 0.0,
+                "oveTSupSetAir_activate": 1,
+                "oveTSupSetAir_u": 288.15,
                 "oveValCoi_activate": 1,
                 "oveValCoi_u": 0.0,
                 "oveValRad_activate": 1,
@@ -70,7 +72,9 @@ def build_conditions(adapter_name: str) -> dict[str, dict[str, float]]:
                 "dh_oveTSupSetHea_activate": 1,
                 "dh_oveTSupSetHea_u": 308.15,
                 "ovePum_activate": 1,
-                "ovePum_u": 1.0,
+                "ovePum_u": 50000.0,
+                "oveTSupSetAir_activate": 1,
+                "oveTSupSetAir_u": 308.15,
                 "oveValCoi_activate": 1,
                 "oveValCoi_u": 1.0,
                 "oveValRad_activate": 1,
@@ -295,8 +299,9 @@ def main() -> None:
     print(f"Saved summary: {summary_path}")
     print(f"Saved summary JSON: {json_path}")
 
-    low_name = "low_supply_override" if adapter_name == "hydronic_direct_supply_setpoint_adapter_v1" else "low_heat_override"
-    high_name = "high_supply_override" if adapter_name == "hydronic_direct_supply_setpoint_adapter_v1" else "high_heat_override"
+    supply_adapter_names = {"hydronic_direct_supply_setpoint_adapter_v1", "commercial_hydronic_supply_valve_adapter_v1"}
+    low_name = "low_supply_override" if adapter_name in supply_adapter_names else "low_heat_override"
+    high_name = "high_supply_override" if adapter_name in supply_adapter_names else "high_heat_override"
     low = summary.set_index("condition").loc[low_name]
     high = summary.set_index("condition").loc[high_name]
     checks = {
