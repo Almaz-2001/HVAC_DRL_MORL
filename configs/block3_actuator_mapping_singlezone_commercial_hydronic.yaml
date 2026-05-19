@@ -163,7 +163,7 @@ smoke_test_protocol:
     - "dh_reaTSupHyd_y or dh_oveTSupSetHea_y should reflect the commanded high/low supply setpoint"
 
 audit:
-  adapter_commit_sha: null
+  adapter_commit_sha: 645626e5ca8d8e6e456885569c244996a0ac5c3b
   pushed_before_smoke_test: false
   smoke_test_result_file: reports/block3_singlezone_commercial_hydronic_adapter_smoke_summary.csv
   smoke_test_result: PENDING
