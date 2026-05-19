@@ -856,7 +856,7 @@ aggregated_results:
 audit:
   pre_registration_commit_sha: 1861e48dc0eacb2e2c466ba0e0d03502d9185723
   block3_open_commit_sha: 1861e48dc0eacb2e2c466ba0e0d03502d9185723
-  block3_close_commit_sha: null                    # filled at aggregated_results.closed_at
+  block3_close_commit_sha: b915bfc635c287dd1da907ce84ce44c81378edd5
   expected_paper_section: "Results III: Transferability and Generalization (paper §7)"
   related_audit_anchors:
     - 93df9b364657ac77bbe3642e4bc277d1eb8a8b60      # MORL pre-registration
