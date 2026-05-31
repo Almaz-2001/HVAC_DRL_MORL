@@ -3,9 +3,19 @@
 from __future__ import annotations
 
 import argparse
+import sys
 import time
 from pathlib import Path
 from typing import Dict, Optional, Sequence
+
+# Self-bootstrap the project root onto sys.path so that
+# `python surrogate/train_surrogate_backbone.py` works from any CWD without
+# requiring PYTHONPATH=/app or the `-m surrogate.train_surrogate_backbone`
+# module form.  Mirrors the bootstrap already present in
+# `surrogate/calibrate_surrogate_v35.py`.
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 import numpy as np
 import pandas as pd

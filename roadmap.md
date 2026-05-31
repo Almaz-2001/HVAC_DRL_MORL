@@ -1,0 +1,927 @@
+# HVAC DRL/MORL Reproduction Roadmap
+
+Date: 2026-05-18
+
+This roadmap is the command-level path to reproduce the current article state:
+
+- Block 1: surrogate fidelity and Hou-and-Evins numerical artifacts.
+- Block 2: thermostatic, HDRL, and MORL control results on `bestest_air`.
+- Paper artifacts: CSV tables, figures, and the Word skeleton in `docs/`.
+
+Use Linux/bash syntax inside the project container (`/app`). Do not paste Windows
+PowerShell backticks into bash. Use `\` for line continuation.
+
+## 0. Runtime Checks
+
+If BOPTEST RTE is not running yet, start it from the BOPTEST runtime folder on
+the host machine:
+
+```powershell
+cd C:\Users\user\Desktop\HVAC_DRL_MORL\boptest_rte
+docker compose up -d
+docker compose ps
+```
+
+Then run the project commands from inside the project container or another
+environment where `http://web:8000` resolves.
+
+```bash
+cd /app
+python3 - <<'PY'
+import torch, gymnasium, stable_baselines3, pandas, numpy, requests
+print("python_env_ok")
+print(requests.get("http://web:8000/version", timeout=20).json())
+PY
+```
+
+If `testcases/bestest_air/select` hangs, restart the BOPTEST RTE lifecycle before
+running yearly validation:
+
+```bash
+python3 - <<'PY'
+import requests, time
+t0 = time.time()
+r = requests.post("http://web:8000/testcases/bestest_air/select", json={}, timeout=120)
+print("status:", r.status_code)
+print("elapsed:", time.time() - t0)
+print(r.text[:500])
+PY
+```
+
+## 0.5. Dependency Table
+
+The structural dependencies between roadmap sections are maintained as a
+separate file, `roadmap_dependencies.md`, in the repository root. That file
+is the single source of truth for which prerequisite sections must already
+be complete before any given section can run. It covers all three blocks
+(Block 1, Block 2, Block 3) and explicitly marks independent sections
+(runtime checks, audit anchors, cleanup workflow, pre-registration
+manifests).
+
+To inspect dependencies before planning a re-run:
+
+```bash
+cat roadmap_dependencies.md
+```
+
+Within each command-bearing section below, dependencies are kept terse
+because the table already lists them; only non-obvious or cross-section
+dependencies are repeated inline.
+
+## 1. Block 1: v3 Direct-TSup Surrogate
+
+Block 1 commands are routed through `evaluation/run_block1.py`. The wrapper
+does not change underlying scripts; it only fixes canonical paths, presets,
+sweep values, and the two-step v3.5 calibration so the roadmap stays short.
+To inspect any command without running compute, add `--dry-run` before the
+sub-command, for example:
+
+```bash
+python3 -B evaluation/run_block1.py --dry-run v3-train
+```
+
+To run the entire Block 1 pipeline end-to-end (data → v3 → v3.5 → rollouts →
+reports → speed benchmark) in one call:
+
+```bash
+python3 -B evaluation/run_block1.py all
+```
+
+The four sub-commands below are the per-stage entry points used during
+incremental re-runs.
+
+Collect the direct supply-temperature dataset:
+
+```bash
+python3 -B evaluation/run_block1.py collect-data
+```
+
+Train the v3 backbone (also renames the checkpoint to the canonical name
+`rc_node_v3_tsupply.pt`; pass `--skip-rename` to keep only the compat name):
+
+```bash
+python3 -B evaluation/run_block1.py v3-train
+```
+
+Defaults are the canonical training hyperparameters (`--epochs 500
+--batch-size 256 --lr 1e-3 --hidden-dim 64 --patience 30`). Override any of
+them on the same line for ablation runs.
+
+Expected canonical model:
+
+```bash
+ls -lh outputs/surrogate_v2/rc_node_v3_tsupply.pt
+```
+
+## 2. Block 1: v3.5 Inverse Calibration
+
+Sequencing note:
+
+- Technically, v3.5 calibration does not require the trained v3 checkpoint.
+- Semantically, v3.5 is the physical extension of the v3 surrogate family and
+  uses the same direct-TSup modeling convention.
+- Stage A/B/C means: Stage A cleans and aligns 15-min BOPTEST telemetry, Stage B
+  solves the inverse grey-box task for `C_zon`, and Stage C calibrates residual
+  heads while preserving the identified physical backbone.
+
+**The canonical v3.5 artifact is built by TWO sequential preset runs.**
+Step 1 (`block1_15min_episodeaware`) runs Stage A + B + C with the
+rollout-heads selection metric — this is where `C_zon` is identified
+(120 Stage-B epochs) and the temperature head is calibrated.  Step 2
+(`block1_15min_power_head_only`) reads `init_summary_json` from Step 1's
+output directory, freezes `C_zon`, and re-runs Stage C with `power_head_only`
+mode (80 epochs) for a tighter power calibration.  Skipping Step 1 on a
+fresh repository is a silent correctness bug — Step 2's preset hard-codes
+the init-JSON path from Step 1's output, so calling Step 2 alone will fail
+with a missing-file error.  The wrapper's `--preset canonical` runs both
+steps in the correct order; `--preset episodeaware` and `--preset
+power_head_only` are available for selective re-runs.
+
+Prepare the 15-min corpus used by v3.5:
+
+```bash
+python3 -B evaluation/run_block1.py prepare-15min
+```
+
+Run the calibrated v3.5 physical twin (both presets in order):
+
+```bash
+python3 -B evaluation/run_block1.py v35-calibrate --preset canonical
+```
+
+Expected summary:
+
+```bash
+ls -lh outputs/surrogate_v35_inverse_boptest_15min_episodeaware/calibration_summary_boptest_v35.json
+ls -lh outputs/surrogate_v35_inverse_boptest_15min_power_head_only/calibration_summary_boptest_v35.json
+```
+
+Validate prepared rollouts for v3 and v3.5 (use `--variant v3` or
+`--variant v35` to run only one side):
+
+```bash
+python3 -B evaluation/run_block1.py validate-rollouts --variant all
+```
+
+## 2.5. Block 1: Corpus-Matched v3 Retraining (Reviewer Mitigation)
+
+Why this section exists:
+
+- The canonical v3 surrogate is trained on a 51,200-row **hourly** corpus
+  (`data/surrogate_v2/boptest_v2_tsupply.csv`); the canonical v3.5 surrogate
+  is trained on a 10,744-row **15-minute** corpus
+  (`data/block_1_2_surrogate_rmse/boptest_block12_15min_prepared.csv`).
+- A reviewer can correctly argue that comparing v3 (24h RMSE ~1.56 °C) to
+  calibrated v3.5 (24h RMSE 0.644 °C) is confounded by these dataset
+  differences: corpus size, time step, season coverage, and policy mix all
+  differ simultaneously.
+- This section retrains v3 on the *same* 10,744-row 15-min corpus used by
+  v3.5.  The v3 model has no hard-coded timestep in its forward pass
+  (`t_next = t_zone + dT(x)`, see `surrogate/rc_node_v2.py`), so it can be
+  trained on 15-min data without modifying the architecture.
+- The resulting *apples-to-apples* comparison isolates the contribution of
+  Stage A/B/C inverse calibration from any corpus effect, which is what
+  reviewers will ask for.
+
+Dependencies:
+
+- This section depends on Section 1 ONLY for the original canonical `v3`
+  checkpoint (used as the reference row in the comparison report).
+- It depends on Section 2 for both the prepared 15-min corpus and the
+  canonical calibrated `v3.5` summary.
+- It does NOT change any Block 2 / Block 3 artifact; the canonical v3 used
+  for downstream PPO training remains the original hourly checkpoint.
+
+Retrain v3 on the 15-min v3.5 corpus (~30-60 min wall-clock on one CPU):
+
+```bash
+python3 -B evaluation/run_block1.py v3-train-15min
+```
+
+Defaults match the canonical v3 training hyperparameters
+(`--epochs 500 --batch-size 256 --lr 1e-3 --hidden-dim 64 --patience 30`)
+so any RMSE difference is attributable to the corpus, not to the optimizer.
+Output: `outputs/surrogate_v3_15min_matched/rc_node_v3_15min_matched.pt`.
+
+Validate the matched-corpus checkpoint on the same prepared rollouts that
+v3 and v3.5 were already evaluated against:
+
+```bash
+python3 -B evaluation/run_block1.py validate-rollouts --variant v3_15min
+```
+
+Or run all three rollout validations (v3, v3_15min, v3.5) in one call:
+
+```bash
+python3 -B evaluation/run_block1.py validate-rollouts --variant matched
+```
+
+Build the corpus-matched comparison report:
+
+```bash
+python3 -B evaluation/run_block1.py build-corpus-matched-report
+```
+
+This produces `reports/block1_corpus_matched_comparison.csv` and
+`reports/block1_corpus_matched_comparison.json` with the four-variant table
+(v3 hourly, v3 15-min matched, raw v3.5, calibrated v3.5) and a structured
+decomposition of the RMSE drop into a `delta_corpus` term (v3 hourly →
+v3 15-min) and a `delta_calibration` term (raw v3.5 → calibrated v3.5).
+The `json` payload includes a single-sentence interpretation suitable for
+quoting verbatim in the §5.3 reviewer-mitigation paragraph of the paper.
+
+Expected artifacts:
+
+```bash
+ls -lh outputs/surrogate_v3_15min_matched/rc_node_v3_15min_matched.pt
+ls outputs/surrogate_v3_15min_matched_rollout_prepared/v3
+cat reports/block1_corpus_matched_comparison.csv
+```
+
+The reviewer-defensible claim is: if `delta_calibration` is several times
+larger than `delta_corpus`, the headline finding "Stage A/B/C inverse
+calibration is responsible for the v3.5 fidelity advantage" survives the
+matched-corpus check.  If they are comparable, the paper's §5.3 framing
+needs to be softened from "calibration drives the gap" to "calibration and
+corpus jointly drive the gap"; the wrapper's report computes the exact
+percentage split so the paper text can quote the correct attribution.
+
+## 3. Block 1: Article-Facing Fidelity Tables and Figures
+
+Transfer-gap diagnostics are intentionally not placed here because they need
+trained controllers from Sections 4 and 5. They are run later in Section 5.5.
+
+Build the Hou-and-Evins numerical artifacts and the real-data article
+figures in one pass:
+
+```bash
+python3 -B evaluation/run_block1.py build-reports
+```
+
+Build the speed benchmark table. This compares the same BOPTEST RTE HTTP loop
+used by the paper against local surrogate stepping. The defaults
+(`--episodes 100 --steps-per-episode 96 --step-sec 900` against
+`http://web:8000`) match the canonical paper protocol:
+
+```bash
+python3 -B evaluation/run_block1.py speed-benchmark
+```
+
+Expected article-facing artifacts:
+
+```bash
+ls reports/hou_evins_*.csv
+ls reports/figures/article_real
+cat reports/speed_benchmark_table.csv
+```
+
+Current headline speed result:
+
+- Hybrid backend: about `1,786.8` env-steps/s on one CPU thread.
+- Conservative speed-up versus the standard BOPTEST RTE HTTP-Docker deployment
+  used in production benchmarking: `85.0x`.
+
+## 4. Block 2: Pure v3 Thermostatic Baseline
+
+Block 2 commands are routed through `evaluation/run_block2.py`. The wrapper
+does not change the underlying scripts; it only fixes the canonical paths,
+feature modes, artifact roots, and sweep values so the roadmap stays short.
+To inspect any command without running compute, add `--dry-run` before the
+subcommand, for example:
+
+```bash
+python3 -B evaluation/run_block2.py --dry-run thermostatic-train --variant pure
+```
+
+Train pure v3 thermostatic PPO:
+
+```bash
+python3 -B evaluation/run_block2.py thermostatic-train --variant pure
+```
+
+Benchmark the pure v3 controller in BOPTEST:
+
+```bash
+python3 -B evaluation/run_block2.py thermostatic-benchmark --variant pure
+```
+
+Expected summary:
+
+```bash
+cat outputs/bestest_air_article7_style_15min/summary.csv
+```
+
+## 4.5. Block 2 Negative Control: Direct v3.5 Warm-Start
+
+This is an explicit negative experiment. It tests whether a policy pretrained
+directly on calibrated v3.5 becomes better after BOPTEST fine-tuning than a
+scratch BOPTEST fine-tune. The frozen result says no: direct v3.5 warm-start is
+worse than scratch.
+
+Dependency:
+
+- Reads the calibrated v3.5 checkpoint from Section 2
+  (`outputs/surrogate_v35_inverse_boptest_15min_power_head_only/`).
+- The launcher performs two PPO training runs internally -- scratch (no
+  warm-start) and warm-start-from-v3.5 -- and benchmarks both on the same
+  BOPTEST scenario window so the result is self-contained within this section.
+
+```bash
+python3 -B evaluation/run_block2.py warmstart
+```
+
+Expected outputs:
+
+```bash
+ls outputs/block2_thermostatic_warmstart_utility
+cat outputs/block2_thermostatic_warmstart_utility/comparison_summary.csv
+```
+
+Article interpretation:
+
+- This is the failure mode that motivates hybridization.
+- The calibrated physical twin is useful as a regularizer, not as a standalone
+  replacement for the smoother control-oriented v3 environment.
+
+## 5. Block 2: Thermostatic Hybrid Sweep
+
+The canonical thermostatic hybrid backend is:
+
+- `surrogate-kind=hybrid_v3_v35`
+- `lambda_temp_disagree=0.10`
+- `lambda_power_disagree=5e-5`
+- 15-min step, comfort band 21-24 C
+
+Train the sweep points:
+
+```bash
+python3 -B evaluation/run_block2.py thermostatic-train --variant hybrid_sweep
+```
+
+Benchmark each sweep point:
+
+```bash
+python3 -B evaluation/run_block2.py thermostatic-benchmark --variant hybrid_sweep
+```
+
+Current canonical result:
+
+- `hybrid_l010` is the thermostatic canonical point.
+- It keeps the energy advantage while avoiding the stronger comfort degradation
+  seen at lower/higher settings.
+
+## 5.5. Block 1.3 / Block 2 Transfer Diagnostics
+
+This section produces the empirical evidence for the fidelity-to-RL gap
+documented in paper §5.4. The final aggregation table
+`reports/hybrid_transfer_comparison.csv` compares THREE controllers side by
+side; one is trained inside this section, two come from earlier sections:
+
+1. pure v3 thermostatic       (trained in Section 4)
+2. hybrid_l010 thermostatic   (trained in Section 5)
+3. direct v3.5 thermostatic   (trained as Step A below; this is the failure
+                               control whose role is to demonstrate why
+                               direct calibrated v3.5 is not a usable RL
+                               training environment)
+
+### Step A. Train the direct-v3.5 thermostatic policy (failure control)
+
+This is the policy that will fail to transfer; its existence is the central
+evidence for the fidelity-to-RL gap. The observation interface intentionally
+uses `comfort_centered` t_zone encoding (not the `raw` encoding of canonical
+hybrid_l010) because that is the configuration in which the failure was
+originally documented.
+
+```bash
+python3 -B evaluation/run_block2.py thermostatic-train --variant v35_direct
+```
+
+### Step B. Validate live BOPTEST closed-loop transfer for all three controllers
+
+```bash
+python3 -B evaluation/run_block2.py thermostatic-transfer --variant all
+```
+
+### Step C. Compute first_divergence_step and action_gap_norm for all three
+
+```bash
+python3 -B evaluation/run_block2.py thermostatic-diagnose --variant all
+```
+
+### Step D. Aggregate into the article-facing evidence table
+
+```bash
+python3 -B evaluation/run_block2.py build-hybrid-evidence
+```
+
+Expected outputs:
+
+```bash
+cat reports/hybrid_transfer_comparison.csv
+ls reports/figures/hybrid_transfer_gap_comparison.png
+```
+
+Current article interpretation:
+
+- Direct v3.5 zero-shot transfer diverges immediately.
+- Hybrid_l010 reduces the transfer gap relative to direct v3.5 and is
+  especially better in the typical heat window.
+- This is transfer evidence within the bestest_air testcase, NOT a claim of
+  universal building transfer (that is Block 3).
+
+## 6. Block 2: HDRL Sweep
+
+HDRL uses the same 15-min step and 21-24 C comfort band. The sweep showed that
+temperature disagreement regularization hurts the hierarchical controller, so the
+best HDRL setting is `lambda_temp_disagree=0.00`.
+
+Train HDRL sweep points:
+
+```bash
+python3 -B evaluation/run_block2.py hdrl-train --variant sweep
+```
+
+Benchmark HDRL models by pointing `--controllers hdrl` to the winter/summer model
+pair produced by the run. Preserve the output folders:
+
+```bash
+python3 -B evaluation/run_block2.py hdrl-benchmark --variant sweep
+```
+
+Expected output folders:
+
+```bash
+ls outputs/block2_hdrl_hybrid_v3_v35_l000
+ls outputs/block2_hdrl_hybrid_v3_v35_l003
+ls outputs/block2_hdrl_hybrid_v3_v35_l005
+ls outputs/block2_hdrl_hybrid_v3_v35_l010
+```
+
+Current conclusion:
+
+- `lambda_temp=0.00` is best for HDRL.
+- This is a negative result about controller-family specificity, not a failed
+  surrogate result.
+
+## 6.5. MORL 5D Observation Failure
+
+This is an observation-interface negative control. The current codebase uses the
+17D TSup-style observation path (`configs/morl_surrogate_ppo/env.yaml` has
+`obs_mode: extended`). Therefore the historical 5D failure is treated as a
+frozen artifact, not rerun by the current command path.
+
+Verify the frozen 5D versus 17D comparison:
+
+```bash
+cat reports/block2_morl_comparison_summary.csv
+```
+
+Frozen comparison:
+
+- MORL 5D basic: `RMSE_T=4.96 C`, `violation=74.5%`, `m_s=1.046`.
+- MORL 17D power-only: `RMSE_T=0.72 C`, `violation=4.9%`, `m_s=0.099`.
+
+If exact 5D rerun is required for audit, check out the pre-17D implementation
+commit from project history and rerun the old MORL pipeline there. Do not claim
+that the current 17D code reruns the old 5D failure.
+
+## 7. Block 2: MORL 17D Power-Only Backend (and Historical Reference)
+
+MORL uses:
+
+- hybrid backend
+- 17D observation interface
+- `lambda_temp_disagree=0.00`
+- `lambda_power_disagree=5e-5`
+- 15-min step
+- comfort band 21-24 C
+
+Historical context (informational only):
+
+- The earliest successful MORL canonical reference used weights
+  `w=(0.80,0.20,0.00)` and obtained `m_s=0.099`, `violation=4.87%`,
+  `energy=248.6 kWh`, `RMSE_T=0.725 C`.
+- That single operating point is NOT regenerated by the current command path
+  in Section 8. The pre-registered Pareto sweep below uses five evenly-spaced
+  weights covering the (comfort, energy) simplex, which subsumes the
+  historical operating point: `w=(0.75,0.25,0.00)` in Section 8 is the
+  nearest sampled neighbour to the historical `(0.80,0.20,0.00)` and serves
+  as the practical-deployment canonical in Section 9.
+- The historical reference is retained only for narrative continuity with
+  earlier project notes; it should not be cited as a separate audit anchor.
+
+## 8. MORL Pareto Sweep
+
+Run the five single-seed Pareto points:
+
+```bash
+python3 -B evaluation/run_block2.py morl-pareto --point all --seed 42
+```
+
+## 9. MORL Canonical Seed Analysis
+
+The pre-registered neutral canonical is `w=(0.50,0.50,0.00)`.
+The practical deployment canonical is `w=(0.75,0.25,0.00)`.
+
+Why a separate `_seedfix` artifact root:
+
+- Section 8 produces single-seed Pareto evidence (five points x seed 42 only)
+  in `outputs/morl_pareto_hybrid_power_only/<tag>`.
+- Section 9 extends two of those Pareto points to N=5 seeds with strengthened
+  seed propagation (torch, numpy, python random, env, action_space, and
+  observation_space all explicitly seeded; the replay test in this section's
+  notes confirmed bit-identical BOPTEST determinism for a fixed checkpoint).
+- The `_seedfix` suffix in the artifact root marks runs that used the
+  strengthened seed-propagation code path. Both directories are preserved
+  because the seed-42 result under the strengthened propagation may differ
+  numerically from the seed-42 result in the original Pareto sweep due to the
+  seed-fix change itself.
+
+Run the N=5 neutral canonical:
+
+```bash
+python3 -B evaluation/run_block2.py morl-canonical --canonical neutral --seeds 42,43,44,45,46
+```
+
+Run the N=5 practical canonical:
+
+```bash
+python3 -B evaluation/run_block2.py morl-canonical --canonical practical --seeds 42,43,44,45,46
+```
+
+Important BOPTEST note:
+
+- Surrogate pretraining can be parallelized.
+- BOPTEST fine-tune and yearly validation should be sequential because the RTE
+  testcase lifecycle is fragile under parallel HTTP sessions.
+
+Current N=5 findings:
+
+- Neutral canonical: `m_s=0.187 +/- 0.078`, `sigma/mean=0.418`.
+- Practical canonical: `m_s=0.139 +/- 0.085`, `sigma/mean=0.613`.
+- BOPTEST replay test is bit-identical for a fixed checkpoint.
+- The action-saturation/seasonal-inversion hypothesis was falsified at N=5.
+- MORL remains promising but not deployment-stable without future stabilization.
+
+## 10. PI Baseline
+
+This section is independent of all other Block 2 controller runs but is
+positioned here for three reasons:
+
+- The article-facing comparison in Section 11 normalises RL controller
+  performance against this PI yearly baseline; running it now leaves Section
+  11 with no missing dependencies.
+- PI yearly evaluation takes roughly four hours on the RTE container; placing
+  it after Section 9 lets it queue behind the heavier MORL seed compute
+  without blocking earlier sections.
+- PI is deterministic; no seed analysis is needed.
+
+Run the reproducible BOPTEST built-in PI yearly baseline:
+
+```bash
+python3 -B evaluation/run_block2.py pi-yearly
+```
+
+Current PI framing:
+
+- This is the default BOPTEST reference, not a custom-tuned strong PI.
+- Current yearly result: `m_s=0.910`, `violation=63.59%`, `energy=104.07 kWh`,
+  `RMSE_T=3.395 C`.
+
+## 11. Rebuild Block 2 Tables and Figures
+
+This section depends on Sections 4, 4.5, 5, 5.5, 6, 6.5, 8, 9, and 10 (see the
+graph in Section 0.5).
+
+```bash
+python3 -B evaluation/run_block2.py build-reports
+```
+
+Expected outputs:
+
+```bash
+ls reports/morl_*canonical*.csv
+ls reports/morl_pareto_front_table.csv
+ls reports/figures/article_real
+ls reports/hou_evins_*.csv
+```
+
+## 12. Rebuild the Word Article Skeleton
+
+```bash
+python3 -B docs/build_hvac_paper_docx.py
+```
+
+Expected output:
+
+```bash
+ls -lh docs/hvac_paper_skeleton_q1_restructured.docx
+```
+
+This document now contains:
+
+- Block 1 surrogate fidelity tables and figures.
+- Block 2 thermostatic/HDRL/MORL results.
+- Hou-and-Evins supplementary tables S1-S11.
+- Post-N=5 MORL falsification result and seasonal variance diagnostic figure.
+
+## 13. Audit Anchors
+
+Do not rewrite these commits when preparing the paper:
+
+- Pre-registration: `93df9b364657ac77bbe3642e4bc277d1eb8a8b60`
+- Post-N=5 falsification: `62dc859d02f5f4a75fa4b55d8477c1d4e6206449`
+
+The corresponding machine-readable protocol file is:
+
+```bash
+cat configs/morl_canonical_selection_log.yaml
+```
+
+These commits preserve the timeline:
+
+1. Predictions were logged before seeds 45/46.
+2. Results were appended later.
+3. The falsification was not retrofitted after the fact.
+
+## 13.5. Pre-Block-3 Cleanup Workflow
+
+Before opening Block 3, keep cleanup commits separate from article/result
+commits. Do not use `git add -A`.
+
+Recommended sequence:
+
+```powershell
+git status --short
+git diff -- docs\build_hvac_paper_docx.py roadmap.md
+
+# Article/roadmap commit only
+git add docs\build_hvac_paper_docx.py docs\hvac_paper_skeleton_q1_restructured.docx roadmap.md
+git diff --cached --stat
+git commit -m "article roadmap: freeze Block 1, Block 2, and Block 3 reproduction path"
+
+# Cleanup/archive commit only, if staged cleanup moves are still pending
+git status --short
+git commit -m "cleanup: archive legacy docs, logs, results, literature, and planning notes"
+```
+
+Rules:
+
+- Keep `.claude/worktrees/` out of git.
+- Keep Word lock files (`~$*.docx`) out of git.
+- Do not mix cleanup moves with scientific result updates.
+- Do not rewrite commits `93df9b3` or `62dc859`.
+
+## 14. Block 3: Transferability Pre-Registration
+
+Block 3 opened only after the Block 1/2 article state was committed. The first
+Block 3 artifact is the pre-registration manifest:
+
+```bash
+configs/block3_testcase_manifest.yaml
+```
+
+The manifest pre-registers, BEFORE any Block 3 BOPTEST run:
+
+- three testcase candidates (`bestest_hydronic_heat_pump`, `bestest_hydronic`,
+  `singlezone_commercial_hydronic`)
+- three recalibration regimes (`none`, `partial` Stage C only, `full` Stage A/B/C)
+- four pre-registered hypotheses (H1_strong, H2_medium, H3_weak surrogate side,
+  H3_weak controller side, plus hierarchy_consistency)
+- a single passfail threshold: `m_s_RL <= 1.25 * m_s_PI` evaluated yearly
+- a bounded extension policy (N=3 max per cell; no N=5 cascade within Block 3)
+- an early-termination clause if H3_weak is falsified on the easiest testcase
+- a self-referential audit anchor (commit SHA of the first manifest commit)
+
+Audit anchor for Block 3 pre-registration: the commit SHA that introduced
+`configs/block3_testcase_manifest.yaml` for the first time. This SHA is logged
+inside the manifest's `audit` block.
+
+## 15. Block 3 Execution: Transferability on Hydronic Family
+
+Block 3 executed three testcases under the pre-registered three-regime protocol.
+Each cell is an append-only `cell_results` entry in the manifest.
+
+### 15.1. Adapter for hydronic actuator interface
+
+`bestest_air` exposes a direct supply-temperature command. The three hydronic
+testcases expose `oveTSet_u`, `oveHeaPumY_u`, `ovePum_u`, `oveFan_u` (heat-pump
+case) or analogous boiler/pump variants. A documented adapter converts the
+frozen direct-TSup policy output to the hydronic setpoint + heat pump / pump /
+fan override commands. Block 3 transfer is therefore explicitly
+adapter-mediated, not literal direct-TSup transfer.
+
+The adapter code is centralized in `evaluation/block3_testcase_adapters.py`.
+The testcase-specific mappings are recorded in:
+
+- `configs/block3_actuator_mapping_bestest_hydronic_heat_pump.yaml`
+- `configs/block3_actuator_mapping_bestest_hydronic.yaml`
+- `configs/block3_actuator_mapping_singlezone_commercial_hydronic.yaml`
+
+A smoke test that verifies low-vs-high override actually moves heat output is
+the first command per testcase below.
+
+### 15.2. Per-testcase command pattern
+
+Unlike Sections 4-11, which call `evaluation/run_block2.py` as a single
+short-command wrapper, Block 3 commands are parameterized by `--testcase`
+and call individual testcase-aware scripts directly. A wrapper would add
+no abstraction at this level because each script is already its own short
+command, parameterized identically across the three testcases.
+
+For each testcase in `{bestest_hydronic_heat_pump, bestest_hydronic, singlezone_commercial_hydronic}`:
+
+```bash
+# Optional: choose a testcase once per shell session
+export TESTCASE=bestest_hydronic
+
+# 1. Adapter smoke test: confirms low/high override maps to physical response
+python3 -B evaluation/smoke_block3_hydronic_adapter.py --testcase ${TESTCASE}
+cat reports/block3_${TESTCASE}_adapter_smoke_summary.csv
+
+# 2. PI baseline: testcase-specific reference for the normaliser
+python3 -B evaluation/yearly_validation_universal_adapter.py \
+  --testcase ${TESTCASE} \
+  --controller pi \
+  --skip-existing
+cat outputs/universal_validation/${TESTCASE}/pi_block3_hydronic/pi_universal_yearly_summary.csv
+
+# 3. mode=none: frozen thermostatic controller through documented adapter
+python3 -B evaluation/yearly_validation_universal_adapter.py \
+  --testcase ${TESTCASE} \
+  --controller thermostatic \
+  --skip-existing
+cat outputs/universal_validation/${TESTCASE}/thermostatic_block3_hydronic/thermostatic_universal_yearly_summary.csv
+
+# 4. Target telemetry for Stage C/full recalibration
+python3 -B evaluation/collect_block3_hydronic_adapter_telemetry.py \
+  --testcase ${TESTCASE}
+ls -lh data/block3_${TESTCASE}/hydronic_adapter_stage_c_15min.csv
+cat data/block3_${TESTCASE}/hydronic_adapter_stage_c_15min.manifest.json
+
+# 5. mode=partial: Stage C heads-only recalibration, frozen bestest_air C_zon
+python3 -B evaluation/run_block3_surrogate_recalibration.py \
+  --testcase ${TESTCASE} \
+  --regime partial
+cat outputs/block3_${TESTCASE}/surrogate_v35_partial_stage_c_allrows_heads/calibration_summary_boptest_v35.json
+
+# 6. mode=full: complete Stage A/B/C on target telemetry
+python3 -B evaluation/run_block3_surrogate_recalibration.py \
+  --testcase ${TESTCASE} \
+  --regime full
+cat outputs/block3_${TESTCASE}/surrogate_v35_full_stage_abc_allrows_heads/calibration_summary_boptest_v35.json
+```
+
+The short commands above use testcase-aware defaults:
+
+- BOPTEST URL: `http://web:8000`
+- control step: `900 s`
+- scenario length: `14 days`
+- hydronic adapter config: selected from `configs/block3_actuator_mapping_*.yaml`
+- yearly output root: `outputs/universal_validation/<testcase>/<controller>_<preset>/`
+- telemetry output: `data/block3_<testcase>/hydronic_adapter_stage_c_15min.csv`
+- recalibration output: `outputs/block3_<testcase>/surrogate_v35_<regime>...`
+
+Manual overrides remain available through `--boptest-url`, `--adapter-config`,
+`--output-dir`, `--output-csv`, `--data`, and `--model`, but the paper-facing
+Block 3 reproduction path should use the short commands unless debugging a
+specific cell.
+
+### 15.3. Per-testcase results
+
+`bestest_hydronic_heat_pump`:
+
+- mode=none controller: `m_s_RL=0.665`, `m_s_PI=0.464`, threshold `0.579` →
+  FAIL (energy `-7.3%` vs PI, comfort violation dominates)
+- mode=partial surrogate: RMSE_T `0.977 -> 0.781 C` (-20.1%), Power MAE
+  `2362 -> 1768 W` (-25.1%), C_zon frozen at `4.413e+05 J/K`, Stage B epochs
+  ran = 0
+- mode=full surrogate: RMSE_T `1.421 -> 0.565 C` (-60.2%), Power MAE
+  `2921 -> 1767 W` (-39.5%), C_zon re-identified at `8.347e+05 J/K`
+  (`1.89x` bestest_air canonical), Stage B epochs ran = 120
+- mode=partial and mode=full controller verdicts: FAIL by structural
+  definition (controller frozen + adapter unchanged → live KPI identical to
+  mode=none)
+
+`bestest_hydronic`:
+
+- mode=none controller: `m_s_RL=0.976`, `m_s_PI=0.7502`, threshold `0.9377` →
+  FAIL (energy `-5.84%` vs PI, comfort violation dominates)
+- mode=full surrogate: RMSE_T `2.666 -> 0.335 C` (-87.4%), Power MAE
+  `784 -> 85 W` (-89.2%), C_zon re-identified at `8.622e+05 J/K`
+  (`1.95x` bestest_air canonical)
+
+`singlezone_commercial_hydronic`:
+
+- mode=none controller: `m_s_RL=0.431`, `m_s_PI=0.628`, threshold `0.785` →
+  THRESHOLD PASS (energy `+35.3%` vs PI, comfort within tolerance but energy
+  penalty substantial)
+- mode=full surrogate: RMSE_T `1.952 -> 0.238 C` (-87.8%), C_zon re-identified
+  at `8.425e+05 J/K` (`1.91x` bestest_air canonical)
+
+### 15.4. Aggregate findings (N=3 hydronic family)
+
+```bash
+cat reports/block3_transfer_matrix.csv
+```
+
+Surrogate component:
+
+- Transferable on N=3 under full Stage A/B/C
+- RMSE_T improvement: 60.2% / 87.4% / 87.8%
+- C_zon ratio vs bestest_air: 1.89x / 1.95x / 1.91x (mean 1.91, spread 3.2%)
+
+Controller component:
+
+- Not deployment-ready on N=3 under frozen-controller scope
+- Failure mode is regime-dependent:
+  - fast dynamics (residential heat pump, residential boiler) -> comfort
+    violation failure (m_s_RL > threshold)
+  - slow dynamics (commercial hydronic) -> threshold-PASS but energy-inflation
+    failure (`+35.3%` vs PI)
+
+Pre-registered hypothesis status at Block 3 closure:
+
+- H1_strong: FALSIFIED (deployment-PASS not achieved on `>=2` of 3 testcases;
+  commercial threshold-PASS does not qualify as deployment-ready)
+- H2_medium: FALSIFIED by structural definition (partial regime keeps
+  controller frozen)
+- H3_weak surrogate side: SUPPORTED on N=3
+- H3_weak controller side: FALSIFIED with regime-dependent failure modes
+- hierarchy_consistency: SUPPORTED (verdict monotone in recalibration depth)
+
+### 15.5. Block 3 closure artefacts
+
+```bash
+ls reports/block3_*_transfer_summary.csv
+cat reports/block3_transfer_matrix.csv
+cat configs/block3_testcase_manifest.yaml | yq '.aggregated_results'
+```
+
+Audit anchor for Block 3 closure: the commit SHA that wrote
+`aggregated_results.status: closed` into the manifest. Logged inside
+`audit.block3_close_commit_sha`.
+
+### 15.6. Block 3 frozen copy bundle
+
+The Block 3 code/data/results snapshot is also packaged as a copy-only bundle:
+
+```bash
+ls block3_transferability_bundle
+cat block3_transferability_bundle/README.md
+cat block3_transferability_bundle/manifests/bundle_manifest.json
+```
+
+The bundle mirrors the Block 1/2 organization:
+
+- `block3_transferability_bundle/code/` — adapter, yearly validation, telemetry, and recalibration scripts
+- `block3_transferability_bundle/configs/` — pre-registration manifest and adapter YAMLs
+- `block3_transferability_bundle/data/` — target hydronic telemetry CSVs
+- `block3_transferability_bundle/outputs/` — yearly validation and surrogate recalibration outputs
+- `block3_transferability_bundle/reports/` — transfer summaries and transfer matrix
+- `block3_transferability_bundle/models/` — frozen thermostatic checkpoints
+
+This is a non-destructive copy bundle. Source paths remain active in
+`evaluation/`, `configs/`, `data/`, `outputs/`, and `reports/`.
+
+## 16. Audit Anchor Chain (Updated)
+
+After Block 3 closure the full audit chain is:
+
+- MORL pre-registration:           `93df9b364657ac77bbe3642e4bc277d1eb8a8b60`
+- MORL post-N=5 falsification:     `62dc859d02f5f4a75fa4b55d8477c1d4e6206449`
+- Block 3 pre-registration:        `<SHA from manifest audit.pre_registration_commit_sha>`
+- Block 3 closure:                 `<SHA from manifest audit.block3_close_commit_sha>`
+
+All four commits must remain untouched when preparing the paper. The
+machine-readable cross-references are in `configs/morl_canonical_selection_log.yaml`
+and `configs/block3_testcase_manifest.yaml`.
+
+## 17. Paper Manuscript Build Path
+
+Once Block 3 is closed:
+
+```bash
+# Article-facing tables and figures (covers Block 1, 2, 3 in one pass)
+python3 -B evaluation/build_hou_evins_q1_gap_tables.py
+python3 -B evaluation/build_hybrid_evidence_closure.py
+python3 -B evaluation/build_morl_pareto_table.py
+python3 -B evaluation/build_morl_canonical_variance_diagnostics.py
+python3 -B evaluation/build_morl_seasonal_variance_inversion.py
+python3 -B evaluation/build_article_real_figures.py
+python3 -B evaluation/build_block3_transfer_matrix.py
+
+# Rebuild the Word skeleton with Block 3 results
+python3 -B docs/build_hvac_paper_docx.py
+```
+
+Final paper checklist:
+
+- All four audit anchor SHAs cited in Methods §4.5 reproducibility statement
+- Section 7 of paper draws cell-by-cell from `cell_results` block of the
+  Block 3 manifest
+- Threats-to-Validity (§8) explicitly mentions the threshold-framework
+  limitation revealed by the commercial-testcase result
+- Cover letter highlights pre-registration discipline (three audit anchors)
+  as the methodological differentiator
+- which metrics define transferability success

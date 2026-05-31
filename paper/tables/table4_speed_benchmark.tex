@@ -1,0 +1,15 @@
+\begin{table}[t]
+  \centering
+  \caption{Throughput comparison on CPU at the same \SI{15}{\minute} control protocol (100 episodes $\times$ 96 steps = 9{,}600 transitions per backend). The live \boptest{} RTE row uses the same HTTP API path that downstream RL training and live closed-loop validation actually use, so the speed-up factor in the last column reflects the practical, not the idealized, ratio. Surrogate timings exclude one-shot model loading. Source: \texttt{reports/speed\_benchmark\_table.csv}.}
+  \label{tab:speed}
+  \begin{tabular}{lrrrr}
+    \toprule
+    Backend & Steps/s & Median step (ms) & P95 step (ms) & Speed-up \\
+    \midrule
+    \boptest{} RTE (HTTP) & 21.0 & 14.915 & 19.251 & 1.0$\times$ \\
+    \texttt{v3} surrogate & 4,626.3 & 0.165 & 0.273 & 220.2$\times$ \\
+    \texttt{v3.5} calibrated & 2,399.5 & 0.359 & 0.495 & 114.2$\times$ \\
+    \texttt{hybrid\_l010} & 1,786.8 & 0.507 & 0.648 & 85.0$\times$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}

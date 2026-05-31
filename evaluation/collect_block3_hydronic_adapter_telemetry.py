@@ -21,9 +21,24 @@ from envs.tsup_features import action_to_t_supply
 
 DEFAULT_BOPTEST_URL = "http://web:8000"
 DEFAULT_TESTCASE = "bestest_hydronic_heat_pump"
-DEFAULT_ADAPTER_CONFIG = "configs/block3_actuator_mapping_bestest_hydronic_heat_pump.yaml"
-DEFAULT_OUTPUT_CSV = "data/block3_bestest_hydronic_heat_pump/hydronic_adapter_stage_c_15min.csv"
 DEFAULT_STEP_SEC = 900
+
+DEFAULT_ADAPTER_CONFIGS = {
+    "bestest_hydronic_heat_pump": "configs/block3_actuator_mapping_bestest_hydronic_heat_pump.yaml",
+    "bestest_hydronic": "configs/block3_actuator_mapping_bestest_hydronic.yaml",
+    "singlezone_commercial_hydronic": "configs/block3_actuator_mapping_singlezone_commercial_hydronic.yaml",
+}
+
+
+def default_adapter_config(testcase_id: str) -> str:
+    try:
+        return DEFAULT_ADAPTER_CONFIGS[testcase_id]
+    except KeyError as exc:
+        raise ValueError(f"No default Block 3 hydronic adapter config for testcase: {testcase_id}") from exc
+
+
+def default_output_csv(testcase_id: str) -> str:
+    return f"data/block3_{testcase_id}/hydronic_adapter_stage_c_15min.csv"
 
 SCENARIOS = {
     "Jan_Winter": 0,
@@ -358,8 +373,8 @@ def main() -> None:
     )
     parser.add_argument("--boptest-url", default=os.environ.get("BOPTEST_URL", DEFAULT_BOPTEST_URL))
     parser.add_argument("--testcase-id", "--testcase", dest="testcase_id", default=DEFAULT_TESTCASE)
-    parser.add_argument("--adapter-config", default=DEFAULT_ADAPTER_CONFIG)
-    parser.add_argument("--output-csv", default=DEFAULT_OUTPUT_CSV)
+    parser.add_argument("--adapter-config", default=None)
+    parser.add_argument("--output-csv", default=None)
     parser.add_argument("--step-sec", type=int, default=DEFAULT_STEP_SEC)
     parser.add_argument("--steps-per-episode", type=int, default=96)
     parser.add_argument("--episodes-per-scenario", type=int, default=3)
@@ -370,12 +385,15 @@ def main() -> None:
     parser.add_argument("--http-retries", type=int, default=3)
     args = parser.parse_args()
 
-    adapter_config = ROOT / args.adapter_config
+    adapter_config_arg = args.adapter_config or default_adapter_config(args.testcase_id)
+    output_csv_arg = args.output_csv or default_output_csv(args.testcase_id)
+
+    adapter_config = ROOT / adapter_config_arg
     if not adapter_config.exists():
         raise FileNotFoundError(f"Adapter config not found: {adapter_config}")
     adapter_name = load_adapter_name(adapter_config)
 
-    output_csv = ROOT / args.output_csv
+    output_csv = ROOT / output_csv_arg
     output_csv.parent.mkdir(parents=True, exist_ok=True)
     client = BOPTESTClient(
         base_url=args.boptest_url,

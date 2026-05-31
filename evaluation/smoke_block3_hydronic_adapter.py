@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import time
 from pathlib import Path
 from typing import Any
@@ -12,13 +13,25 @@ import yaml
 
 
 DEFAULT_TESTCASE = "bestest_hydronic_heat_pump"
-DEFAULT_BOPTEST_URL = "http://localhost:8000"
+DEFAULT_BOPTEST_URL = "http://web:8000"
 DEFAULT_OUTPUT_DIR = Path("reports")
-DEFAULT_ADAPTER_CONFIG = Path("configs/block3_actuator_mapping_bestest_hydronic_heat_pump.yaml")
 STEP_SEC = 900
 SELECT_TIMEOUT = 300
 ADVANCE_TIMEOUT = 60
 HTTP_RETRIES = 3
+
+DEFAULT_ADAPTER_CONFIGS = {
+    "bestest_hydronic_heat_pump": Path("configs/block3_actuator_mapping_bestest_hydronic_heat_pump.yaml"),
+    "bestest_hydronic": Path("configs/block3_actuator_mapping_bestest_hydronic.yaml"),
+    "singlezone_commercial_hydronic": Path("configs/block3_actuator_mapping_singlezone_commercial_hydronic.yaml"),
+}
+
+
+def default_adapter_config(testcase_id: str) -> Path:
+    try:
+        return DEFAULT_ADAPTER_CONFIGS[testcase_id]
+    except KeyError as exc:
+        raise ValueError(f"No default Block 3 hydronic adapter config for testcase: {testcase_id}") from exc
 
 
 def load_adapter_name(path: Path) -> str:
@@ -260,18 +273,22 @@ def build_summary(df: pd.DataFrame) -> pd.DataFrame:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--boptest-url", default=DEFAULT_BOPTEST_URL)
+    parser.add_argument("--boptest-url", default=os.environ.get("BOPTEST_URL", DEFAULT_BOPTEST_URL))
     parser.add_argument("--testcase-id", "--testcase", dest="testcase_id", default=DEFAULT_TESTCASE)
-    parser.add_argument("--adapter-config", type=Path, default=DEFAULT_ADAPTER_CONFIG)
+    parser.add_argument("--adapter-config", type=Path, default=None)
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
     parser.add_argument("--start-time", type=float, default=0.0)
     parser.add_argument("--steps", type=int, default=8)
     args = parser.parse_args()
 
+    adapter_config = args.adapter_config or default_adapter_config(args.testcase_id)
+    if not adapter_config.exists():
+        raise FileNotFoundError(f"Adapter config not found: {adapter_config}")
+
     args.output_dir.mkdir(parents=True, exist_ok=True)
     session = requests.Session()
     session.headers.update({"Content-Type": "application/json"})
-    adapter_name = load_adapter_name(args.adapter_config)
+    adapter_name = load_adapter_name(adapter_config)
     conditions = build_conditions(adapter_name)
 
     version = request_json(session, "GET", f"{args.boptest_url}/version", timeout=20)

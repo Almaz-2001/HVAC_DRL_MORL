@@ -399,27 +399,78 @@ def fig8_hdrl_trace(out_dir: Path, rows: list[dict]) -> None:
 
 
 def fig9_morl_pareto(out_dir: Path, rows: list[dict]) -> None:
-    df = read_csv(ROOT / "reports" / "morl_pareto_front_table.csv")
-    pareto = df[(df["kind"] == "morl_pareto") & (df["complete"].astype(str).str.lower() == "true")].sort_values("w_comfort")
+    pareto_path = ROOT / "reports" / "morl_pareto_front_table.csv"
+    summary_path = ROOT / "reports" / "morl_canonical_seedfix_yearly_summary.csv"
+    df = read_csv(pareto_path)
+    pareto = df[(df["kind"] == "morl_pareto") & (df["complete"].astype(str).str.lower() == "true")].copy()
+    seed42_points = pareto[pareto["canonical_designation"].eq("pareto_point")].sort_values("w_comfort")
+    canonical = pareto[pareto["canonical_designation"].isin(["pre_registered", "practical_deployment"])].copy()
+    reference = df[df["kind"].eq("morl_reference")].copy()
+    tcrit_95_df4 = 2.7764451051977987
+    canonical_stats = []
+    for label, sub in canonical.groupby("label", sort=False):
+        n = len(sub)
+        designation = str(sub["canonical_designation"].iloc[0])
+        canonical_stats.append(
+            {
+                "label": label,
+                "designation": designation,
+                "w_comfort": float(sub["w_comfort"].mean()),
+                "w_energy": float(sub["w_energy"].mean()),
+                "energy_mean": float(sub["energy_kwh_mean"].mean()),
+                "energy_ci95": float(tcrit_95_df4 * sub["energy_kwh_mean"].std(ddof=1) / np.sqrt(n)) if n > 1 else 0.0,
+                "ms_mean": float(sub["ms_mean"].mean()),
+                "ms_ci95": float(tcrit_95_df4 * sub["ms_mean"].std(ddof=1) / np.sqrt(n)) if n > 1 else 0.0,
+                "n": n,
+            }
+        )
+    canonical_stats = pd.DataFrame(canonical_stats).sort_values("w_comfort")
+
     fig, axes = plt.subplots(1, 2, figsize=(12.2, 5.15), gridspec_kw={"width_ratios": [1.05, 1.0]})
     ax, zoom = axes
-    sc = ax.scatter(pareto["energy_kwh_mean"], pareto["ms_mean"], c=pareto["w_comfort"], cmap="viridis", s=105, edgecolor="#222", linewidth=0.8)
-    ax.plot(pareto["energy_kwh_mean"], pareto["ms_mean"], color="#777", linewidth=1.1, alpha=0.5)
-    zoom.scatter(pareto["energy_kwh_mean"], pareto["ms_mean"], c=pareto["w_comfort"], cmap="viridis", s=120, edgecolor="#222", linewidth=0.8)
-    zoom.plot(pareto["energy_kwh_mean"], pareto["ms_mean"], color="#777", linewidth=1.1, alpha=0.5)
+    front_x = pd.concat([seed42_points["energy_kwh_mean"], canonical_stats["energy_mean"]], ignore_index=True)
+    front_y = pd.concat([seed42_points["ms_mean"], canonical_stats["ms_mean"]], ignore_index=True)
+    front_w = pd.concat([seed42_points["w_comfort"], canonical_stats["w_comfort"]], ignore_index=True)
+    front = pd.DataFrame({"energy": front_x, "ms": front_y, "w": front_w}).sort_values("w")
+    sc = ax.scatter(seed42_points["energy_kwh_mean"], seed42_points["ms_mean"], c=seed42_points["w_comfort"], cmap="viridis", s=95, marker="o", edgecolor="#222", linewidth=0.8, label="single-seed sweep (seed42)")
+    ax.scatter(reference["energy_kwh_mean"], reference["ms_mean"], c=reference["w_comfort"], cmap="viridis", s=105, marker="D", edgecolor="#222", linewidth=0.8, label="legacy seed42 reference")
+    ax.plot(front["energy"], front["ms"], color="#777", linewidth=1.1, alpha=0.55)
+    zoom.scatter(seed42_points["energy_kwh_mean"], seed42_points["ms_mean"], c=seed42_points["w_comfort"], cmap="viridis", s=105, marker="o", edgecolor="#222", linewidth=0.8, label="single-seed sweep (seed42)")
+    zoom.scatter(reference["energy_kwh_mean"], reference["ms_mean"], c=reference["w_comfort"], cmap="viridis", s=105, marker="D", edgecolor="#222", linewidth=0.8, label="legacy seed42 reference")
+    zoom.plot(front["energy"], front["ms"], color="#777", linewidth=1.1, alpha=0.55)
+    for axis in (ax, zoom):
+        for _, r in canonical_stats.iterrows():
+            color = "#0072B2" if r["designation"] == "pre_registered" else "#D55E00"
+            axis.errorbar(
+                r["energy_mean"],
+                r["ms_mean"],
+                xerr=r["energy_ci95"],
+                yerr=r["ms_ci95"],
+                fmt="s",
+                markersize=8.5,
+                color=color,
+                ecolor=color,
+                elinewidth=1.6,
+                capsize=4,
+                markeredgecolor="#111111",
+                markeredgewidth=0.8,
+                label=f"N=5 canonical {r['w_comfort']:.2f}/{r['w_energy']:.2f} (95% CI)" if axis is ax else None,
+                zorder=5,
+            )
     base = df[df["kind"] == "baseline"]
     if not base.empty:
         ax.scatter(base["energy_kwh_mean"], base["ms_mean"], marker="X", s=140, color=COLORS["pi"], label="PI baseline")
         zoom.scatter(base["energy_kwh_mean"], base["ms_mean"], marker="X", s=120, color=COLORS["pi"], label="PI baseline")
-    ax.annotate("energy-only\ncollapse", (pareto.iloc[0]["energy_kwh_mean"], pareto.iloc[0]["ms_mean"]), xytext=(15, -5), textcoords="offset points", fontsize=8)
-    ax.annotate("deployable\ncluster", (245, 0.08), xytext=(-115, 45), textcoords="offset points", fontsize=8, arrowprops={"arrowstyle": "->", "color": "#777777", "lw": 0.8})
+    if not seed42_points.empty:
+        ax.annotate("energy-only\ncollapse", (seed42_points.iloc[0]["energy_kwh_mean"], seed42_points.iloc[0]["ms_mean"]), xytext=(15, -5), textcoords="offset points", fontsize=8)
+    ax.annotate("N=5 canonical\nuncertainty", (canonical_stats.iloc[-1]["energy_mean"], canonical_stats.iloc[-1]["ms_mean"]), xytext=(-130, 42), textcoords="offset points", fontsize=8, arrowprops={"arrowstyle": "->", "color": "#777777", "lw": 0.8})
     label_offsets = {
         "comfort_025_energy_075": (-10, 12),
         "comfort_050_energy_050": (8, 4),
         "comfort_075_energy_025": (-52, -2),
         "comfort_100_energy_000": (-48, -18),
     }
-    for _, r in pareto[pareto["w_energy"] < 1.0].iterrows():
+    for _, r in pd.concat([seed42_points, reference], ignore_index=True).query("w_energy < 1.0").iterrows():
         dx, dy = label_offsets.get(str(r["label"]), (6, 6))
         zoom.annotate(
             f"{r['w_comfort']:.2f}/{r['w_energy']:.2f}",
@@ -429,18 +480,28 @@ def fig9_morl_pareto(out_dir: Path, rows: list[dict]) -> None:
             fontsize=8,
             arrowprops={"arrowstyle": "-", "color": "#777777", "lw": 0.5},
         )
+    for _, r in canonical_stats.iterrows():
+        dx, dy = label_offsets.get(str(r["label"]), (8, 4))
+        zoom.annotate(
+            f"{r['w_comfort']:.2f}/{r['w_energy']:.2f}\nN={int(r['n'])}",
+            (r["energy_mean"], r["ms_mean"]),
+            xytext=(dx, dy),
+            textcoords="offset points",
+            fontsize=8,
+            arrowprops={"arrowstyle": "-", "color": "#777777", "lw": 0.5},
+        )
     ax.set_xlim(-12, 280)
-    ax.set_ylim(-0.06, max(1.72, float(pareto["ms_mean"].max()) * 1.05))
+    ax.set_ylim(-0.06, max(1.72, float(seed42_points["ms_mean"].max()) * 1.05))
     zoom.set_xlim(214, 268)
-    zoom.set_ylim(-0.02, 0.21)
-    style_ax(ax, "Full front incl. safety collapse", "yearly energy (kWh)", "m_s, lower is better")
-    style_ax(zoom, "Zoom: practical operating region", "yearly energy (kWh)", "m_s")
+    zoom.set_ylim(-0.02, 0.34)
+    style_ax(ax, "Full front incl. safety collapse", "mean monthly energy (kWh)", "m_s, lower is better")
+    style_ax(zoom, "Zoom: practical operating region", "mean monthly energy (kWh)", "m_s")
     cb = fig.colorbar(sc, ax=axes.ravel().tolist(), fraction=0.035, pad=0.025)
     cb.set_label("comfort preference weight")
-    ax.legend(frameon=False)
-    fig.suptitle("MORL yearly Pareto front", fontsize=14, weight="bold")
+    ax.legend(frameon=False, fontsize=8, loc="upper right")
+    fig.suptitle("MORL yearly Pareto front with N=5 canonical uncertainty", fontsize=14, weight="bold")
     png, pdf = save(fig, out_dir, "block2_morl_pareto_energy_vs_ms")
-    manifest(rows, "block2_morl_pareto_energy_vs_ms", "complete", [ROOT / "reports" / "morl_pareto_front_table.csv"], "Real five-point MORL Pareto table plus PI baseline.", png, pdf)
+    manifest(rows, "block2_morl_pareto_energy_vs_ms", "complete", [pareto_path, summary_path], "Seed42 sweep points plus N=5 canonical mean +/- 95% CI from seedfix runs; PI baseline included.", png, pdf)
 
 
 def fig10_morl_radar(out_dir: Path, rows: list[dict]) -> None:

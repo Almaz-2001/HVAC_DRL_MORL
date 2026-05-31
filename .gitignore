@@ -1,39 +1,135 @@
-# Python
+# =============================================================================
+# .gitignore for HVAC_DRL_MORL — Q1 paper submission repository
+# =============================================================================
+# Strategy:
+#   - INCLUDE: code, configs, reports/*.csv (audit evidence), paper sources, DOCX
+#   - EXCLUDE: large training outputs, model checkpoints, raw data files
+#   - Large artifacts (models, training traces, raw BOPTEST corpora) should be
+#     published separately on Zenodo with a DOI cross-referenced from README.md
+# =============================================================================
+
+# ─── Python ───
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
 .Python
+*.egg-info/
+*.egg
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 
-# Virtual environment
+# ─── Virtual environments ───
 .venv/
 venv/
 env/
+ENV/
 
-# Outputs — большие файлы, не коммитим
-outputs/
+# ─── Node / npm ───
+node_modules/
+package-lock.json
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-# Модели и данные
-*.zip
-*.csv
-*.png
-*.fmu
-
-# Jupyter
-.ipynb_checkpoints/
-*.ipynb
-
-# VS Code
+# ─── IDE / OS ───
 .vscode/
-
-# OS
+.idea/
+*.swp
+*.swo
 .DS_Store
 Thumbs.db
+desktop.ini
 
-# Docker volumes
+# ─── Claude / agent state ───
+.claude/
+.claude-cache/
+
+# =============================================================================
+# Heavy training artifacts (regenerable from code + configs)
+# Publish on Zenodo if reviewers need them for verification.
+# =============================================================================
+
+# Training output directories — all PPO/HDRL/MORL run artifacts
+outputs/
+
+# Model checkpoints (large binary files)
+models/
+*.pt
+*.pth
+*.pkl
+*.h5
+*.onnx
+
+# BOPTEST simulator binaries
+*.fmu
+
+# Training logs (TensorBoard, etc.)
+logs/
+*.tfevents.*
+runs/
+
+# =============================================================================
+# Large raw data files (publish on Zenodo)
+# =============================================================================
+
+# Surrogate training corpora — 51,200 hourly + 15-min BOPTEST corpora (~50 MB)
+data/surrogate_v2/boptest_v2_*.csv
+data/block_1_2_surrogate_rmse/*.csv
+data/raw/
+
+# Docker volume mounts
 docker/volumes/
 boptest_rte/data/
-
-# Логи
-*.log
 boptest_rte/
+
+# =============================================================================
+# Jupyter
+# =============================================================================
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# =============================================================================
+# Temporary / draft / one-off patch files
+# =============================================================================
+*.tmp
+*.bak
+*.log
+*~
+$null
+docs/_tmp_*
+docs/patch_*.py           # one-off DOCX patch scripts (history preserved via git log)
+
+# =============================================================================
+# Sensitive / secrets — NEVER commit
+# =============================================================================
+.env
+.env.local
+*.pem
+*.key
+credentials.json
+secrets/
+
+# =============================================================================
+# Files explicitly KEPT (not excluded — listed here for clarity, not as patterns):
+# =============================================================================
+#   reports/*.csv        — audit evidence (Block 1/2/3 KPI artifacts)
+#   reports/*.json       — audit evidence (decomposition, per-seed)
+#   reports/*.md         — narrative reports
+#   reports/figures/*.png — paper figures
+#   configs/*.yaml       — training configs + pre-registration manifests
+#   configs/**/*.yaml    — nested configs
+#   paper/               — LaTeX source + supplementary + figures
+#   paper/main.pdf       — compiled paper PDF
+#   paper/figures/*.png  — paper figures
+#   paper/supplementary/ — Hou-Evins Tables S1-S11
+#   docs/*.docx          — paper DOCX drafts (block1/2/3 complete + skeleton + memo)
+#   docs/HVAC_Abstract.pdf — author abstract version
+#   docs/build_*.js      — reproducible DOCX build scripts
+#   docs/build_*.py      — reproducible Python build scripts (NOT patch_*.py)
+#   *.tex                — LaTeX sources
+#   *.bib                — bibliography
+#   *.md                 — Markdown docs (README, roadmap, etc.)
+#   Dockerfile           — container definition
+#   requirements.txt     — Python dependencies
