@@ -1,0 +1,39 @@
+\section{Conclusion}
+\label{sec:conclusion}
+
+\textbf{What is solved.} We show that a physically calibrated surrogate
+with explicit zone thermal capacitance $\czon$ is a strong
+\emph{predictive twin} ($24$-hour rollout temperature RMSE of
+$\SI{0.64}{\celsius}$) but fails as a closed-loop RL training
+environment (live RMSE above $\SI{4}{\celsius}$). The resolution is a
+hybrid construction in which the calibrated twin enters the policy
+training loss only as a soft physical regulariser. The resulting
+backend sustains $1{,}787$ environment steps per second on a single
+CPU thread --- an $85\times$ speed-up over the standard \boptest{}
+RTE HTTP--Docker deployment --- while restoring live closed-loop RMSE
+below $\SI{0.65}{\celsius}$ on both peak and typical heating windows.
+The optimal regularisation strength is controller-family specific
+(thermostatic $\lambda_{\mathrm{temp}}=0.10$,
+HDRL and 17-D MORL $\lambda_{\mathrm{temp}}=0.00$), and each value
+is explained by a structural property of the corresponding policy
+architecture. A reproducible \boptest-based protocol with full
+\cite{HouEvins2024} compliance evidence is provided as Supplementary
+Tables S1--S11; four git-anchored pre-registration commits bound the
+timeline against post-hoc adjustment.
+
+\textbf{What is open.} The Block~3 transferability study extends the
+single-testcase Block~1 and Block~2 results to three \boptest{}
+hydronic testcases and reports a component-level decomposition: the
+surrogate component transfers structurally ($\czon$ ratio
+$1.91\pm0.03$ on $N=3$), while the frozen direct-supply-temperature
+controller fails on all three when routed through a mechanical
+hydronic adapter. The transferability bottleneck therefore lies in
+the controller-adapter interface, not in the surrogate's physics
+representation capacity. Cross-climate generalisation, denser MORL
+preference sweeps, and a controller fine-tune step on the
+target-recalibrated surrogate (the natural Block~4 follow-up) are
+explicitly deferred so as not to expand the present manuscript beyond
+its pre-registered scope. The claim boundaries are stated tightly in
+Section~\ref{sec:discussion} and the discussion section flags the
+threshold-versus-deployment-pass distinction as a methodological
+observation worth carrying into future transferability studies.

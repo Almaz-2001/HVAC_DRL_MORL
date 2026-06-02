@@ -1,0 +1,205 @@
+\section{Experimental Setup}
+\label{sec:experimental_setup}
+
+\subsection{Testbed and serving layer}
+\label{ssec:exp_testbed}
+
+All experiments use the \boptest{} \texttt{bestest\_air} testcase, a
+single-zone air-side HVAC reference building. \boptest{} is served through
+the \texttt{boptest\_rte} container, which exposes the standard \boptest{}
+HTTP API to both surrogate training and live closed-loop validation.
+The \texttt{bestest\_air} envelope is a single thermal zone
+($48\,\mathrm{m}^{2}$ floor area, lightweight construction following the
+ANSI/ASHRAE 140 BESTEST 600 baseline), heated by an idealised air-side
+unit that accepts a supply-temperature command in
+$[20,60]\,^{\circ}\mathrm{C}$. Weather is drawn from the \boptest{}
+default TMY file for Brussels, Belgium, with a $15$-minute control
+interval and a comfort band of $[21,24]\,^{\circ}\mathrm{C}$ throughout
+the heating season. The Block~3 hydronic testcases share this
+single-zone envelope class but differ in actuator interface; the
+testcase manifest is summarised in Table~\ref{tab:architecture} of
+Section~\ref{ssec:res1_architecture} and detailed in
+Section~\ref{sec:results_transfer}.
+
+\subsection{Datasets and sample generation}
+\label{ssec:exp_datasets}
+
+Three transition corpora support the experiments. The
+\texttt{v3} hourly corpus is the original logging frequency of the
+direct-supply-temperature trajectories and is used only to bootstrap
+the data-driven surrogate; the \texttt{v3.5} prepared $15$-minute
+corpus is the canonical training set after the Stage~A preprocessing
+of Section~\ref{ssec:method_v35}; and the \texttt{v3.5} collected
+$15$-minute corpus is the raw form of the same trajectories before
+preprocessing, retained for ablation. Supplementary Table~S1 lists the
+provenance, parameter ranges, and physical rationale of each corpus,
+and Supplementary Table~S2 documents the numerical justification of
+the chosen sample sizes (including the learning-curve check that
+fixes the canonical corpus at $\sim\!2{\times}10^{5}$ transitions).
+The canonical artefact for the calibrated twin is the prepared
+$15$-minute corpus; the hourly corpus is used only for the
+\texttt{v3} pre-training run referenced in
+Section~\ref{ssec:method_v3}.
+
+\subsection{Preprocessing, scaling and feature engineering}
+\label{ssec:exp_preprocessing}
+
+Preprocessing follows the Stage~A pipeline documented in
+Supplementary Table~S3 (latency compensation, bias removal, power
+affine normalisation, rolling denoise, causal $\Delta T$
+recomputation). Per-channel scaling parameters and the reverse
+transform used at inference time are listed in Supplementary
+Table~S7. Pairwise input independence is verified in Supplementary
+Table~S5 through Pearson correlation and mutual-information checks;
+no input pair exceeds the documented thresholds.
+
+\subsection{Evaluation Protocol}
+\label{ssec:exp_eval_protocol}
+
+The evaluation protocol is fixed across all controller families and
+\textbf{never varies} between Section~\ref{sec:results_fidelity} and
+Section~\ref{sec:results_control}.
+
+\paragraph{Scenarios.}
+Two live \boptest{} closed-loop windows are used as the primary transfer
+benchmarks:
+\begin{itemize}
+    \item \texttt{peak\_heat\_window}: simulated start
+    $t_{\mathrm{start}} = 14$~days after $1$~January, duration
+    $14$~days, capturing the coldest contiguous window of the Brussels
+    TMY file.
+    \item \texttt{typical\_heat\_window}: simulated start
+    $t_{\mathrm{start}} = 108$~days after $1$~January, duration
+    $14$~days, capturing a milder average heating period.
+\end{itemize}
+Yearly validation uses the full \boptest{} year with KPI windows defined by
+the \boptest{} specification.
+
+\paragraph{Simulation step and comfort band.}
+The simulation step is fixed at $\Delta t = \SI{900}{\second}$ (\SI{15}{\minute}).
+The comfort band is $[T_{\mathrm{low}}, T_{\mathrm{high}}] = [\SI{21}{\celsius}, \SI{24}{\celsius}]$.
+
+\paragraph{Metrics.}
+\begin{itemize}
+    \item $\msmetric$: the \boptest{} composite KPI combining thermal
+    discomfort and energy use; lower is better.
+    \item \texttt{violation\,\%}: fraction of simulation steps spent outside
+    the comfort band.
+    \item \texttt{energy}: total final energy consumption in kWh.
+    \item \texttt{RMSE\_T}: root-mean-square error of zone temperature
+    against a reference trajectory; reported separately for one-step
+    replicative validity and for multi-horizon predictive rollout.
+    \item \texttt{first\_divergence\_step}: the first simulation step at
+    which the surrogate-trained policy's trajectory diverges from the live
+    \boptest{} trajectory by more than a fixed threshold (transfer-realism
+    diagnostic).
+\end{itemize}
+
+\paragraph{Statistical reporting.}
+\begin{itemize}
+    \item Predictive validity numbers (Section~\ref{sec:results_fidelity})
+    report bootstrap $95\%$ confidence intervals over rollout windows,
+    inherited directly from
+    \texttt{outputs/surrogate\_v35\_rollout\_prepared\_15min\_power\_head\_only/calibrated\_v35/horizon\_metrics.csv}.
+    \item Canonical controller results (Section~\ref{sec:results_control})
+    are reported as \mbox{$\mathrm{mean} \pm \mathrm{std}$} over
+    $N=3$ random seeds (\texttt{42}, \texttt{43}, \texttt{44}) for the
+    thermostatic hybrid, the pure \texttt{v3} baseline, and the MORL
+    canonical configuration. HDRL is reported single-seed; this is
+    acknowledged as a limitation in Section~\ref{sec:discussion}.
+\end{itemize}
+
+\subsection{Reproducibility statement}
+\label{ssec:exp_reproducibility}
+
+All code, configuration, trained models, and the eleven supplementary
+tables are released through the project repository and the associated
+archival deposit; the URL and DOI are listed on the manuscript
+metadata page. The pre-registered audit chain comprises four
+git-anchored commits:
+(a)~MORL canonical-selection pre-registration
+(\texttt{93df9b3});
+(b)~MORL post-$N{=}5$ canonical falsification
+(\texttt{62dc859});
+(c)~Block~3 transferability pre-registration
+(commit recorded in the manifest field
+\texttt{audit.pre\_registration\_commit\_sha} of
+\texttt{configs/block3\_testcase\_manifest.yaml}); and
+(d)~Block~3 closure
+(\texttt{audit.block3\_close\_commit\_sha}).
+The \boptest{} version is \texttt{0.7.0}; the testcase identifiers
+are \texttt{bestest\_air}, \texttt{bestest\_hydronic\_heat\_pump},
+\texttt{bestest\_hydronic}, and
+\texttt{singlezone\_commercial\_hydronic}. The software stack is
+Python~$3.11$, PyTorch~$2.1$, NumPy~$1.26$, and Stable-Baselines3
+$2.2$ \citep{Raffin2021SB3}. All experiments run on a single CPU
+thread (Intel Core~i7-class, $32$~GB RAM, no GPU required); random
+seeds are fixed in \texttt{configs/seeds.yaml}. Numerical values in
+Tables~\ref{tab:architecture}--\ref{tab:control} are reproduced
+automatically from the corresponding CSVs in \texttt{reports/} by
+\texttt{paper/build\_paper\_tables.py}, so every cell in the main
+tables is traceable to a deterministic source file.
+
+\subsection{Runtime characteristics}
+\label{ssec:exp_runtime}
+
+A throughput comparison between the live \boptest{} RTE HTTP loop and
+the three surrogate backends is reported in Table~\ref{tab:speed}. All
+backends were exercised at the same \SI{15}{\minute} control protocol
+on a single CPU thread, with 100 episodes of 96 transitions each
+(9{,}600 total transitions per backend). Surrogate timings exclude
+one-shot model loading.
+
+The live \boptest{} RTE HTTP backend reaches \num{21.0} environment
+steps per second --- the same path that downstream RL training and live
+closed-loop validation use, including HTTP serialization overhead,
+Flask request handling, JSON encoding, and Docker container isolation.
+The control-oriented \texttt{v3} surrogate reaches \num{4626.4} steps/s
+($220.2\times$ speed-up), the calibrated physical twin \texttt{v3.5}
+reaches \num{2399.5} steps/s ($114.2\times$), and the canonical hybrid
+backend reaches \num{1786.8} steps/s ($85.0\times$). The hybrid is
+slower than \texttt{v3} alone because it evaluates both networks plus
+the disagreement terms in Eq.~\eqref{eq:hybrid_loss} on every step;
+$85\times$ is the practical speed-up factor relevant for the rest of
+the paper, since all canonical RL training is done on the hybrid
+backend.
+
+\paragraph{Scope of the comparison.}
+The $85\times$ figure compares the surrogate to the \emph{standard
+\boptest{} RTE deployment} --- the HTTP--Docker stack used by the
+\boptest{} community for production benchmarking and used here for all
+downstream live closed-loop validation. This comparison conflates two
+costs: the intrinsic Modelica/FMU simulation cost and the deployment
+overhead (HTTP roundtrip, JSON serialization, Flask request handling,
+container isolation). To isolate the simulation cost, we additionally
+implemented a benchmark of direct FMU loading via the \texttt{fmpy}
+co-simulation interface (script
+\texttt{evaluation/build\_speed\_benchmark\_fmu\_direct.py}). The
+\boptest{} \texttt{bestest\_air} FMU
+(\texttt{boptest\_rte/testcases/bestest\_air/models/wrapped.fmu})
+ships with a Linux \texttt{x86\_64} binary only
+(\texttt{binaries/linux64/wrapped.so}); the archive contains no
+Windows or macOS native binary, which is the reason \boptest{} is
+conventionally deployed in a Linux container. Because all measurements
+in this study were collected on a Windows host (matching the host of
+the live HTTP benchmark for cross-comparability), the direct FMU
+benchmark cannot be run in-process on the same machine without a
+Linux runtime. The script is committed with explicit reproducibility
+instructions for WSL2 Ubuntu and Docker, and the platform constraint
+is logged at
+\texttt{reports/speed\_benchmark\_fmu\_direct\_platform\_log.txt}.
+
+We accordingly frame the reported speed-up as a comparison against the
+\emph{practical \boptest{} deployment configuration} rather than
+against bare FMU evaluation. A direct FMU--surrogate comparison
+remains a deferred reproducibility item: when executed on a Linux
+host, it will produce a third row in Table~\ref{tab:speed} that
+isolates the deployment-overhead component of the current $85\times$
+figure. We do not anticipate the surrogate losing its speed advantage,
+because the surrogate forward pass is a fixed-cost tensor evaluation
+($\sim$\SI{0.5}{\milli\second} on CPU) whereas the FMU integrates a
+constrained nonlinear Modelica system per step; however, the precise
+ratio against bare FMU is not currently reported and is acknowledged
+as a limitation in Section~\ref{sec:discussion}.
+
+\input{tables/table4_speed_benchmark}

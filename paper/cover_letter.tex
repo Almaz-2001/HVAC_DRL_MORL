@@ -1,0 +1,133 @@
+\documentclass[11pt,a4paper]{letter}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{microtype}
+\usepackage{hyperref}
+
+\signature{Almaz Sapargali \\
+           Al-Farabi Kazakh National University \\
+           Faculty of Information Technology and Artificial Intelligence \\
+           Almaty, Kazakhstan \\
+           \texttt{almaz.sapargali2001@gmail.com}}
+
+\address{Almaz Sapargali \\
+         Faculty of Information Technology and AI \\
+         Al-Farabi Kazakh National University \\
+         71 al-Farabi Avenue, Almaty 050040, Kazakhstan \\
+         \texttt{almaz.sapargali2001@gmail.com}}
+
+\date{\today}
+
+\begin{document}
+
+\begin{letter}{Editor-in-Chief \\
+               \textit{Results in Engineering} \\
+               Elsevier}
+
+\opening{Dear Editor,}
+
+We are pleased to submit our manuscript entitled
+\textbf{``When Predictive Surrogates Fail as RL Environments: A
+Calibrated Physical Twin as Soft Regularizer for HVAC Control''}
+for consideration as a research article in \textit{Results in
+Engineering}.
+
+\paragraph{Why this work belongs in \textit{Results in Engineering}.}
+The journal's scope explicitly includes reproducible
+engineering-software contributions in energy systems and building
+control, evaluated on standardised benchmarks. Our work addresses a
+real obstacle in deploying reinforcement-learning (RL) controllers to
+heating, ventilation and air-conditioning (HVAC) systems: standard
+RL training pipelines depend on neural-network surrogates whose
+predictive accuracy is routinely reported as a quality indicator, but
+whose usefulness as closed-loop training environments is rarely
+verified. We show that the two properties can decouple sharply, and
+we provide a reproducible recipe that resolves the resulting failure
+mode. All experiments use the open BOPTEST testbed; all code,
+configuration, trained models, and the eleven supplementary
+compliance tables (S1--S11) are released alongside the manuscript.
+
+\paragraph{Novelty in four points.}
+\begin{enumerate}
+  \item \textbf{An explicit negative result with mechanistic
+        explanation.} A physically calibrated RC-NeuralODE twin with
+        identifiable zone thermal capacitance ($C_\mathrm{zon}$)
+        achieves a $0.64\,^{\circ}\mathrm{C}$ 24-hour rollout RMSE
+        (versus $1.47\,^{\circ}\mathrm{C}$ uncalibrated) yet
+        \emph{collapses} as a stand-alone RL training environment,
+        producing live closed-loop RMSE above
+        $4\,^{\circ}\mathrm{C}$. We trace this to a structural
+        difference between predictive and closed-loop usage: residual
+        errors that average out under one-step prediction accumulate
+        into a positive-feedback loop under closed-loop training.
+  \item \textbf{A hybrid resolution.} We repurpose the calibrated
+        twin as a frozen \emph{soft physical regulariser} that enters
+        the policy training loss but never the rollout forward pass.
+        The resulting backend sustains 1{,}787 environment steps per
+        second on a single CPU thread --- an $85\times$ speed-up over
+        the standard BOPTEST RTE HTTP--Docker deployment --- and
+        restores live closed-loop RMSE below
+        $0.65\,^{\circ}\mathrm{C}$.
+  \item \textbf{A controller-family-specific finding.} The optimal
+        regularisation strength is not universal: $\lambda_\mathrm{temp}=0.10$
+        for thermostatic PPO but $\lambda_\mathrm{temp}=0.00$ for
+        hierarchical RL and 17-dimensional MORL, with each value
+        explained by observation-geometry and policy-hierarchy
+        mechanisms. We report this as a falsification of the implicit
+        ``one $\lambda$ fits all'' assumption found in much of the
+        prior literature.
+  \item \textbf{Pre-registered transferability decomposition.}
+        Block~3 of the study cross-validates the recipe on three
+        BOPTEST hydronic testcases under a manifest committed
+        \emph{before} any non-source run. The surrogate component
+        transfers structurally (identified $C_\mathrm{zon}$ ratio of
+        $1.91 \pm 0.03$ across $N=3$ testcases), while the frozen
+        controller, routed through a mechanical hydronic adapter,
+        fails on all three --- with comfort-violation failure on the
+        residential testcases and energy-inflation failure on the
+        commercial one. This component-level decomposition of transfer
+        is, to our knowledge, the first of its kind for surrogate-based
+        HVAC RL.
+\end{enumerate}
+
+\paragraph{Reproducibility and protocol compliance.}
+The full pipeline follows the surrogate-development protocol of
+Hou \& Evins (2024), with $15$ of the $17$ Reporting-Level-3 items
+documented quantitatively in Supplementary Tables S1--S11. Four
+git-anchored pre-registration commits (MORL canonical selection,
+MORL post-$N{=}5$ falsification, Block~3 pre-registration, Block~3
+closure) bound the timeline against post-hoc adjustment.
+
+\paragraph{Suggested reviewers.}
+We suggest the following non-conflicted reviewers based on their
+recent contributions to RL-HVAC, surrogate modelling, or BOPTEST
+benchmarking. The authors have no personal, professional, or
+financial relationship with any of them.
+\begin{itemize}
+  \item Davide Coraci (Politecnico di Torino) --- staged RC
+        calibration for building-energy surrogates.
+  \item Yan Wang (Carnegie Mellon University) --- integral safety
+        metric for HVAC control benchmarking.
+  \item David Blum (Lawrence Berkeley National Laboratory) ---
+        BOPTEST testbed maintainer and lead author.
+\end{itemize}
+We also welcome alternative reviewers chosen at the Editor's
+discretion.
+
+\paragraph{Originality and conflicts.}
+The manuscript has not been published, has not been submitted
+elsewhere, and is not under review at any other journal. The author
+declares no competing financial interest or personal relationship
+that could be perceived as having influenced this work.
+
+We thank you for your consideration and look forward to the reviewers'
+comments.
+
+\closing{Sincerely,}
+
+\end{letter}
+
+\end{document}

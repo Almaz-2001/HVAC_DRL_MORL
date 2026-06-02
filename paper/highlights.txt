@@ -1,0 +1,10 @@
+Highlights for "When Predictive Surrogates Fail as RL Environments: A
+Calibrated Physical Twin as Soft Regularizer for HVAC Control"
+(Results in Engineering submission).
+
+Format: bullet points, each <= 85 characters including spaces.
+
+* Calibrated physical twin halves rollout RMSE yet fails as a stand-alone RL env.
+* Hybrid loss uses the twin as a frozen soft regulariser; live RMSE drops 6x.
+* Optimal lambda is controller-family specific: 0.10 PPO, 0.00 HDRL, 0.00 MORL.
+* Pre-registered C_zon transfers across 3 BOPTEST hydronic testcases (1.91x).
