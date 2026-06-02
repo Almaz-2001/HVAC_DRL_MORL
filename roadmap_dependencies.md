@@ -36,7 +36,7 @@ means the section is independent of compute closure.
 |---------|----------------------------------------------------------|---------------------------------------------|------------------------------|
 | 11      | Rebuild Block 2 Tables and Figures                       | 3, 4, 4.5, 5, 5.5, 6, 6.5, 8, 9, 10         | 12                           |
 | 12      | Rebuild the Word Article Skeleton                        | 11                                          | (final manuscript)           |
-| 17      | Paper Manuscript Build Path                              | 11, 12, 15                                  | (final manuscript)           |
+| 17      | Paper Manuscript Build Path + Artifact Consolidation     | 11, 12, 15                                  | `paper_artifacts/` canonical paper package |
 
 ## Independent sections (no compute closure)
 
@@ -64,6 +64,11 @@ means the section is independent of compute closure.
   pre-registration), and the Block 2 frozen models referenced in the
   manifest (Sections 5 and 9). All three must be in place before any
   Section 15 cell runs.
+- **Section 17 is the only paper-facing artifact consolidation step**:
+  raw model/run artifacts remain in `outputs/` (ignored by Git), compact
+  evidence is written to `reports/*.csv`, and the GitHub-facing package is
+  assembled under `paper_artifacts/` by
+  `evaluation/organize_paper_artifacts.py`.
 - **Independent sections have no compute-closure dependency** but still have
   a temporal ordering inside the roadmap (e.g., audit anchors in Section 13
   presuppose the MORL canonical work of Section 9 has been committed).

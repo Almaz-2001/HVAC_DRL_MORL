@@ -6,7 +6,21 @@ This roadmap is the command-level path to reproduce the current article state:
 
 - Block 1: surrogate fidelity and Hou-and-Evins numerical artifacts.
 - Block 2: thermostatic, HDRL, and MORL control results on `bestest_air`.
-- Paper artifacts: CSV tables, figures, and the Word skeleton in `docs/`.
+- Block 3: hydronic-family transferability with pre-registered adapters.
+- Paper artifacts: canonical CSV evidence, tables, and figures in
+  `paper_artifacts/`; manuscript DOCX drafts in `docs/`.
+
+Paper artifact dataflow:
+
+```text
+outputs/        raw run artifacts, large, ignored by Git
+reports/*.csv   compact computed evidence from outputs, tracked by Git
+paper_artifacts final paper-facing package: figures, tables, CSV evidence, manifests
+```
+
+Do not commit bulk `outputs/` or generated figure variants under
+`reports/figures/`. The canonical GitHub-facing paper package is
+`paper_artifacts/`.
 
 Use Linux/bash syntax inside the project container (`/app`). Do not paste Windows
 PowerShell backticks into bash. Use `\` for line continuation.
@@ -271,7 +285,6 @@ Expected article-facing artifacts:
 
 ```bash
 ls reports/hou_evins_*.csv
-ls reports/figures/article_real
 cat reports/speed_benchmark_table.csv
 ```
 
@@ -602,7 +615,6 @@ Expected outputs:
 ```bash
 ls reports/morl_*canonical*.csv
 ls reports/morl_pareto_front_table.csv
-ls reports/figures/article_real
 ls reports/hou_evins_*.csv
 ```
 
@@ -902,18 +914,46 @@ and `configs/block3_testcase_manifest.yaml`.
 Once Block 3 is closed:
 
 ```bash
-# Article-facing tables and figures (covers Block 1, 2, 3 in one pass)
+# Compact evidence tables and intermediate report CSVs
 python3 -B evaluation/build_hou_evins_q1_gap_tables.py
 python3 -B evaluation/build_hybrid_evidence_closure.py
 python3 -B evaluation/build_morl_pareto_table.py
 python3 -B evaluation/build_morl_canonical_variance_diagnostics.py
 python3 -B evaluation/build_morl_seasonal_variance_inversion.py
-python3 -B evaluation/build_article_real_figures.py
 python3 -B evaluation/build_block3_transfer_matrix.py
 
-# Rebuild the Word skeleton with Block 3 results
+# Rebuild the Word skeleton with Block 3 results, if regenerating from source
 python3 -B docs/build_hvac_paper_docx.py
+
+# Consolidate the canonical GitHub-facing paper package
+python3 -B evaluation/organize_paper_artifacts.py
 ```
+
+The canonical paper package after this step is:
+
+```bash
+ls paper_artifacts/figures/main
+ls paper_artifacts/figures/supplementary
+ls paper_artifacts/tables/main
+ls paper_artifacts/csv/reports
+cat paper_artifacts/manifests/main_figures_manifest.csv
+cat paper_artifacts/manifests/paper_artifacts_inventory.csv
+```
+
+Expected canonical counts:
+
+- `paper_artifacts/figures/main/`: 12 main figures, each as PNG and PDF
+  (`24` files).
+- `paper_artifacts/tables/main/`: 7 main-paper tables exported from
+  `docs/hvac_paper_final_q1.docx`.
+- `paper_artifacts/csv/reports/`: compact report-level CSV evidence used by
+  the paper.
+- `paper_artifacts/manifests/`: main-figure manifest and full artifact
+  inventory.
+
+`reports/figures/` is legacy/generated output and is ignored by Git. Old figure
+variants are archived under `draft/legacy_archive/figure_variants_archive/`;
+they are not the paper-facing artifact location.
 
 Final paper checklist:
 
@@ -925,3 +965,15 @@ Final paper checklist:
 - Cover letter highlights pre-registration discipline (three audit anchors)
   as the methodological differentiator
 - which metrics define transferability success
+
+Git staging for the paper package must remain explicit:
+
+```bash
+git add .gitignore evaluation/organize_paper_artifacts.py paper_artifacts
+git add -u reports/figures/article_real
+git status --short
+```
+
+Do not use `git add -A` for the paper-artifact cleanup because the repository
+may also contain unrelated model-output deletions, Word lock files, or legacy
+Sinergym archive changes.
