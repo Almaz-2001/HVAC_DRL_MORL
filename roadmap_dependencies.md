@@ -43,6 +43,7 @@ means the section is independent of compute closure.
 | Section | Title                                                    | Role                                        |
 |---------|----------------------------------------------------------|---------------------------------------------|
 | 0       | Runtime Checks                                           | Container health / BOPTEST RTE lifecycle    |
+| 3.1     | Boundary: why direct-v3.5 failure and hybridization are in Block 2 | Explanatory bridge; no compute; maps Block 1 artifacts to Block 2 controller-backend tests |
 | 13      | Audit Anchors                                            | Reference list of pre-registration commits  |
 | 13.5    | Pre-Block-3 Cleanup Workflow                             | Repository hygiene before Block 3 opens     |
 | 14      | Block 3: Transferability Pre-Registration                | Manifest; must be committed before Section 15 runs |
@@ -60,6 +61,11 @@ means the section is independent of compute closure.
 - **Section 6.5 is a frozen artifact**: the 5D MORL failure is preserved as
   a reference CSV in `reports/`; the current 17D code path does not
   regenerate it, so it has no compute prerequisites.
+- **Section 3.1 is not an execution step**: direct-v3.5 failure and the
+  hybrid backend are intentionally placed in Block 2 because they require
+  trained controllers and live BOPTEST transfer. They consume Block 1
+  artifacts (`v3` rollout checkpoint and calibrated `v3.5` reference), but
+  they are not additional Block 1 surrogate-calibration commands.
 - **Section 15 has two manifest-style prerequisites**: Section 14 (Block 3
   pre-registration), and the Block 2 frozen models referenced in the
   manifest (Sections 5 and 9). All three must be in place before any
