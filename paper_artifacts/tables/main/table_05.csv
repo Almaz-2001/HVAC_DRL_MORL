@@ -1,0 +1,6 @@
+Family / policy,Best backend or variant,Primary result,m_s / variance,Verdict
+Thermostatic PPO,hybrid_l010,Peak/typical RMSE 0.633 / 0.612 C,m_s 0.0866 / 0.0411,Hybrid regularization supported
+Direct v3.5 PPO,standalone calibrated v3.5,Live RMSE 4.32 / 4.40 C,m_s > 1.0,Negative control
+HDRL,lambda_temp=0,Temperature regularizer hurts hierarchy,best at lambda=0,Controller-family specificity
+MORL 17D,power-only hybrid,Pareto sweep usable after 17D interface,canonical N=5 high variance,Promising but not stable
+MORL N=5 test,neutral/practical canonicals,Replay deterministic; action-saturation hypothesis falsified,sigma/mean > threshold,Report with limitations

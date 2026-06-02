@@ -1,0 +1,5 @@
+Surrogate/backend,Architecture,Input dim,Output,Physical structure,Parameters,Training corpus,Calibration,Role in RL
+v3,Compact dual-head MLP,8,"dT, HVAC power",No explicit physics,"8,482",hourly + matched 15-min check,Supervised,Primary rollout environment
+raw v3.5,RC-NeuralODE + residual heads,15-min prepared,"T_next, power",C_zon backbone,~50k,"10,744 rows",None,Architecture-only negative baseline
+calibrated v3.5,RC-NeuralODE + residual heads,15-min prepared,"T_next, power",identified C_zon,~50k,"10,744 rows",Stage A/B/C,Predictive twin and frozen teacher
+hybrid,v3 rollout + frozen v3.5 teacher,policy obs,rollout + disagreement,soft physical regularizer,v3 + v3.5,same source corpus,lambda weights,Canonical thermostatic backend

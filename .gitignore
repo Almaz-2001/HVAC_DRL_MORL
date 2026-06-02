@@ -54,6 +54,18 @@ desktop.ini
 # Training output directories — all PPO/HDRL/MORL run artifacts
 outputs/
 
+# Working drafts and legacy archives (not for paper repo)
+draft/
+
+# Self-contained bundles (duplicates of outputs/ + reports/, archive on Zenodo)
+block1_surrogate_fidelity_bundle/
+block2_hybrid_branch_bundle/
+block3_transferability_bundle/
+paper_canonical_bundle/
+
+# Old results/ directory (superseded by reports/)
+results/
+
 # Model checkpoints (large binary files)
 models/
 *.pt
@@ -79,6 +91,12 @@ data/surrogate_v2/boptest_v2_*.csv
 data/block_1_2_surrogate_rmse/*.csv
 data/raw/
 
+# Block 3 testcase data (large; archive on Zenodo)
+data/block3_bestest_hydronic/
+data/block3_bestest_hydronic_heat_pump/
+data/block3_singlezone_commercial_hydronic/
+data/surrogate/
+
 # Docker volume mounts
 docker/volumes/
 boptest_rte/data/
@@ -101,6 +119,10 @@ $null
 docs/_tmp_*
 docs/patch_*.py           # one-off DOCX patch scripts (history preserved via git log)
 
+# Legacy/generated figure output directory. Final paper-facing figures, tables,
+# CSV evidence, and manifests are consolidated under paper_artifacts/.
+reports/figures/
+
 # =============================================================================
 # Sensitive / secrets — NEVER commit
 # =============================================================================
@@ -117,7 +139,7 @@ secrets/
 #   reports/*.csv        — audit evidence (Block 1/2/3 KPI artifacts)
 #   reports/*.json       — audit evidence (decomposition, per-seed)
 #   reports/*.md         — narrative reports
-#   reports/figures/*.png — paper figures
+#   paper_artifacts/      — canonical paper-facing figures, tables, CSV evidence, manifests
 #   configs/*.yaml       — training configs + pre-registration manifests
 #   configs/**/*.yaml    — nested configs
 #   paper/               — LaTeX source + supplementary + figures

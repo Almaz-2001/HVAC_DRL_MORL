@@ -1,0 +1,6 @@
+Hypothesis,Pre-registered claim,Operational criterion,Verdict,Evidence
+H1 strong,Frozen recipe transfers directly,mode=none PASS on >=2/3 without severe KPI penalty,Falsified,Residential hydronic cases fail; commercial passes m_s but +35.3% energy.
+H2 medium,Partial surrogate recalibration is sufficient,Stage C only improves controller verdict,Falsified structurally,"Controller frozen, so live KPI cannot change from none."
+H3 weak surrogate side,Full recalibration gives useful target twin,RMSE_T improves under full Stage A/B/C,Supported,60.2-87.8% RMSE_T improvement across N=3.
+H3 weak controller side,Full surrogate recalibration rescues frozen controller,Controller PASS after full,Falsified/split,"Surrogate succeeds, controller remains regime-dependent."
+MORL action-saturation,N=3 seasonal inversion persists at N=5,Feb sigma <0.005 and winter ratio >20x,Falsified,Feb sigma rose and inversion collapsed at N=5.

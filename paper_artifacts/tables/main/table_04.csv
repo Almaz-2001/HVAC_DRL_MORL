@@ -1,0 +1,7 @@
+Metric / variant,Raw or baseline,Calibrated / matched,Absolute change,Relative / interpretation
+1-step RMSE_T,0.384 C,0.235 C,-0.149 C,-38.9% after Stage A/B/C
+24h rollout RMSE_T,1.466 C raw v3.5,0.644 C calibrated v3.5,-0.822 C,-56.1% within v3.5 family
+Power MAE,810 W,482 W,-328 W,-40.5% after power-head refinement
+C_zon,4.200e5 J/K prior,4.413e5 J/K,+2.13e4 J/K,+5.1%; physically plausible update
+v3 hourly,1.557 C,0.876 C v3 15-min,-0.681 C,74.6% of v3-to-v3.5 gap is corpus shift
+v3 15-min to v3.5,0.876 C,0.644 C,-0.232 C,25.4% of gap is Stage A/B/C calibration

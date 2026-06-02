@@ -1,0 +1,7 @@
+Component,Definition used in main experiments,Why it matters
+Observation,"17D TSup-style state: physical variables, cyclic time, ambient forecast, previous action/history",MORL 5D failed; 17D recovers usable preference-conditioned control.
+Action,Continuous normalized action mapped to supply-temperature command 18-35 C plus fan/intensity channel,Keeps controller compatible with bestest_air source testcase.
+Reward,Comfort + energy + smoothness; MORL scalarizes comfort/energy/safety weights,"Separates thermostatic, HDRL, and MORL objectives."
+Thermostatic PPO,PPO final-policy live BOPTEST evaluation; lambda_temp sweep,Primary positive hybrid result.
+HDRL,Hierarchical PPO variant; lambda_temp sweep,Tests controller-family specificity.
+MORL,Preference-conditioned pretrain/finetune; canonical N=5 seeds,Tests Pareto trade-offs and seed variance.

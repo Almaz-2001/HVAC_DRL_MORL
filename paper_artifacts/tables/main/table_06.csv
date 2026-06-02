@@ -1,0 +1,4 @@
+Testcase,None,Full,m_s RL,m_s PI,Energy delta,Full RMSE gain,C_zon ratio,Interpretation
+bestest_hydronic_heat_pump,FAIL,FAIL,0.665,0.464,-7.3%,60.2%,1.89x,Residential hydronic heat-pump transfer fails on controller safety but succeeds on full surrogate recalibration.
+bestest_hydronic,FAIL,FAIL,0.976,0.750,-5.8%,87.4%,1.95x,Residential hydronic transfer replicates controller-side FAIL and surrogate-side PASS.
+singlezone_commercial_hydronic,PASS,PASS,0.431,0.628,35.3%,87.8%,1.91x,Commercial stretch falsifies expected controller FAIL: safety passes but energy increases substantially; surrogate-side PASS and C_zon ratio remains near 1.9x.
