@@ -294,6 +294,41 @@ Current headline speed result:
 - Conservative speed-up versus the standard BOPTEST RTE HTTP-Docker deployment
   used in production benchmarking: `85.0x`.
 
+### 3.1. Boundary: why direct-v3.5 failure and hybridization are in Block 2
+
+Block 1 stops at **digital-twin fidelity**:
+
+- v3 direct-TSup surrogate is trained and validated as a fast rollout model.
+- v3.5 is calibrated and validated as a physically informed predictive twin.
+- Corpus-matched v3 retraining separates data-resolution effects from
+  Stage A/B/C calibration effects.
+- Hou-and-Evins tables and speed benchmark establish predictive validity and
+  training feasibility.
+
+The negative result "direct calibrated v3.5 is not a usable PPO rollout
+environment" is **not** a Block 1 result.  It requires a trained controller and
+live BOPTEST transfer, so it appears in Block 2:
+
+- Section 4.5: `python3 -B evaluation/run_block2.py warmstart`
+- Section 5.5 Step A: `python3 -B evaluation/run_block2.py thermostatic-train --variant v35_direct`
+- Section 5.5 Step B/C/D: transfer, diagnose, and aggregate the
+  fidelity-to-RL gap.
+
+The hybrid backend is also a Block 2 controller-training backend, not a
+separate Block 1 surrogate checkpoint.  It is assembled at PPO training time
+from the existing Block 1 artifacts:
+
+- v3 rollout dynamics: `outputs/surrogate_v2/rc_node_v3_tsupply.pt`
+- calibrated v3.5 reference: `outputs/surrogate_v35_inverse_boptest_15min_power_head_only/`
+- hybrid loss terms: `lambda_temp_disagree` and `lambda_power_disagree`
+
+Therefore hybridization starts in Section 5, not Section 2:
+
+```bash
+python3 -B evaluation/run_block2.py thermostatic-train --variant hybrid_sweep
+python3 -B evaluation/run_block2.py thermostatic-benchmark --variant hybrid_sweep
+```
+
 ## 4. Block 2: Pure v3 Thermostatic Baseline
 
 Block 2 commands are routed through `evaluation/run_block2.py`. The wrapper
