@@ -306,13 +306,18 @@ Block 1 stops at **digital-twin fidelity**:
   training feasibility.
 
 The negative result "direct calibrated v3.5 is not a usable PPO rollout
-environment" is **not** a Block 1 result.  It requires a trained controller and
-live BOPTEST transfer, so it appears in Block 2:
+environment" is **not** a Block 1 result. It requires a trained controller and
+live BOPTEST transfer, so it appears only after the first Block 2 controller
+baseline has been established.
 
-- Section 4.5: `python3 -B evaluation/run_block2.py warmstart`
-- Section 5.5 Step A: `python3 -B evaluation/run_block2.py thermostatic-train --variant v35_direct`
-- Section 5.5 Step B/C/D: transfer, diagnose, and aggregate the
-  fidelity-to-RL gap.
+The intended Block 2 sequence is:
+
+1. Section 4: train and benchmark the **pure v3 thermostatic PPO** baseline.
+2. Section 4.5: run the **direct v3.5 warm-start negative control**.
+3. Section 5: run the **hybrid v3/v3.5 sweep** motivated by that negative
+   result.
+4. Section 5.5: run transfer-gap diagnostics that compare pure v3, direct
+   v3.5, and hybrid side by side.
 
 The hybrid backend is also a Block 2 controller-training backend, not a
 separate Block 1 surrogate checkpoint.  It is assembled at PPO training time
@@ -322,14 +327,13 @@ from the existing Block 1 artifacts:
 - calibrated v3.5 reference: `outputs/surrogate_v35_inverse_boptest_15min_power_head_only/`
 - hybrid loss terms: `lambda_temp_disagree` and `lambda_power_disagree`
 
-Therefore hybridization starts in Section 5, not Section 2:
+Therefore **do not run hybrid commands immediately after Block 1**. The next
+executable section after Block 1 is Section 4, the pure v3 controller baseline.
+Hybridization starts only in Section 5, after the direct-v3.5 negative control
+in Section 4.5 has documented why direct use of the calibrated twin is not a
+sufficient RL-training backend.
 
-```bash
-python3 -B evaluation/run_block2.py thermostatic-train --variant hybrid_sweep
-python3 -B evaluation/run_block2.py thermostatic-benchmark --variant hybrid_sweep
-```
-
-## 4. Block 2: Pure v3 Thermostatic Baseline
+## 4. Block 2: First Control Baseline -- Pure v3 Thermostatic PPO
 
 Block 2 commands are routed through `evaluation/run_block2.py`. The wrapper
 does not change the underlying scripts; it only fixes the canonical paths,
@@ -340,6 +344,15 @@ subcommand, for example:
 ```bash
 python3 -B evaluation/run_block2.py --dry-run thermostatic-train --variant pure
 ```
+
+Why this section comes first:
+
+- Block 1 showed that v3 is the fast control-oriented rollout surrogate.
+- Before testing whether v3.5 helps or hurts control, we need the baseline PPO
+  controller trained only on v3.
+- This section does **not** use the hybrid backend and does **not** use v3.5.
+  It establishes the reference controller for the later negative-control and
+  hybrid comparisons.
 
 Train pure v3 thermostatic PPO:
 
@@ -366,6 +379,17 @@ directly on calibrated v3.5 becomes better after BOPTEST fine-tuning than a
 scratch BOPTEST fine-tune. The frozen result says no: direct v3.5 warm-start is
 worse than scratch.
 
+This section must be completed **before** the hybrid sweep in Section 5. The
+hybrid backend is not an arbitrary extra model; it is the response to this
+negative result. The logic is:
+
+```text
+v3 works as a control-oriented rollout baseline
+calibrated v3.5 improves predictive fidelity
+direct v3.5 warm-start hurts PPO utility
+therefore use v3 for rollout and v3.5 only as a frozen disagreement regularizer
+```
+
 Dependency:
 
 - Reads the calibrated v3.5 checkpoint from Section 2
@@ -373,6 +397,10 @@ Dependency:
 - The launcher performs two PPO training runs internally -- scratch (no
   warm-start) and warm-start-from-v3.5 -- and benchmarks both on the same
   BOPTEST scenario window so the result is self-contained within this section.
+- The v3.5-pretrained model created inside this section is used only as an
+  initialization checkpoint for the subsequent BOPTEST fine-tune. It is **not**
+  the standalone direct-v3.5 zero-shot controller used in Section 5.5 transfer
+  diagnostics.
 
 ```bash
 python3 -B evaluation/run_block2.py warmstart
@@ -390,8 +418,22 @@ Article interpretation:
 - This is the failure mode that motivates hybridization.
 - The calibrated physical twin is useful as a regularizer, not as a standalone
   replacement for the smoother control-oriented v3 environment.
+- Do not confuse this section's warm-start checkpoint with Section 5.5's
+  `v35_direct` diagnostic checkpoint:
+
+```text
+Section 4.5 warm-start model:
+  calibrated v3.5 pretraining -> BOPTEST fine-tune -> compare with scratch
+
+Section 5.5 v35_direct model:
+  calibrated v3.5 training only -> zero-shot/live-transfer diagnostics
+```
 
 ## 5. Block 2: Thermostatic Hybrid Sweep
+
+Run this section only after Sections 4 and 4.5. It tests the engineering fix
+for the direct-v3.5 negative result: keep v3 as the rollout dynamics and use
+calibrated v3.5 only as a soft physical censor in the reward.
 
 The canonical thermostatic hybrid backend is:
 
@@ -439,6 +481,13 @@ evidence for the fidelity-to-RL gap. The observation interface intentionally
 uses `comfort_centered` t_zone encoding (not the `raw` encoding of canonical
 hybrid_l010) because that is the configuration in which the failure was
 originally documented.
+
+This command intentionally trains a separate artifact from the Section 4.5
+warm-start checkpoint. Section 4.5 asks whether v3.5 pretraining helps after
+BOPTEST fine-tuning; this Step A asks whether a standalone v3.5-trained policy
+has usable live-transfer behavior before any BOPTEST fine-tune. Both consume
+the same calibrated v3.5 surrogate, but they answer different experimental
+questions.
 
 ```bash
 python3 -B evaluation/run_block2.py thermostatic-train --variant v35_direct
@@ -511,31 +560,75 @@ Current conclusion:
 - This is a negative result about controller-family specificity, not a failed
   surrogate result.
 
-## 6.5. MORL 5D Observation Failure
+## 6.5. MORL 5D Observation Failure  it is observation-interface negative control
 
-This is an observation-interface negative control. The current codebase uses the
-17D TSup-style observation path (`configs/morl_surrogate_ppo/env.yaml` has
-`obs_mode: extended`). Therefore the historical 5D failure is treated as a
-frozen artifact, not rerun by the current command path.
+This is an observation-interface negative control. The canonical Block 2 MORL
+path uses the 17D TSup-style observation interface
+(`configs/morl_surrogate_ppo/env.yaml` has `obs_mode: extended`).
 
-Verify the frozen 5D versus 17D comparison:
 
-```bash
-cat reports/block2_morl_comparison_summary.csv
+
+```text
+configs/morl_surrogate_ppo_5d/env.yaml
+obs_mode: basic
 ```
 
-Frozen comparison:
+This constructed preset uses the same current backend and reward machinery as
+the 17D path, but forces the 5D basic TSup observation vector. 
 
-- MORL 5D basic: `RMSE_T=4.96 C`, `violation=74.5%`, `m_s=1.046`.
-- MORL 17D power-only: `RMSE_T=0.72 C`, `violation=4.9%`, `m_s=0.099`.
+Run the constructed 5D legacy preset for the practical comparison point
+(`w=(0.75,0.25,0.00)`, seed 42):
 
-If exact 5D rerun is required for audit, check out the pre-17D implementation
-commit from project history and rerun the old MORL pipeline there. Do not claim
-that the current 17D code reruns the old 5D failure.
+```bash
+python3 -B evaluation/run_block2.py morl-5d --point comfort_075_energy_025 --seed 42
+```
 
-## 7. Block 2: MORL 17D Power-Only Backend (and Historical Reference)
+Expected constructed output root:
 
-MORL uses:
+```bash
+ls outputs/morl_5d_legacy_rerun
+```
+
+Build the current-code constructed 5D versus 17D comparison table:
+
+```bash
+python3 -B evaluation/run_block2.py build-morl-5d-comparison
+cat reports/block2_morl_5d_reconstructed_comparison.csv
+```
+
+Current constructed result (`w=(0.75,0.25,0.00)`, seed 42):
+
+- constructed 5D: `RMSE_T=2.721 C`, `violation=37.77%`, `m_s=0.680`,
+  `energy=195.93 kWh`.
+- 17D reference: `RMSE_T=0.72 C`, `violation=4.9%`, `m_s=0.099`.
+
+Scientific interpretation:
+
+```text
+The constructed 5D run confirms that the basic 5D observation interface
+remains substantially weaker than the 17D interface under the current codebase,
+The constructed 5D run is therefore reported as the
+current-code reproducibility evidence for the MORL observation-interface
+ablation.
+```
+
+Paper placement:
+
+- Main paper: use constructed 5D as reproducible evidence for the
+  observation-interface ablation..
+- Do not use constructed 5D results to rewrite the pre-registered 17D
+  canonical seed analysis; the N=5 17D audit chain remains unchanged.
+
+Optional full constructed 5D preference sweep (supplement only, not required
+for the main-paper claim):
+
+```bash
+python3 -B evaluation/run_block2.py morl-5d --point all --seed 42
+```
+
+## 7. Block 2: MORL 17D Power-Only Backend
+
+MORL17D also uses:
 
 - hybrid backend
 - 17D observation interface
@@ -544,29 +637,56 @@ MORL uses:
 - 15-min step
 - comfort band 21-24 C
 
-Historical context (informational only):
+Important scope note:
 
-- The earliest successful MORL canonical reference used weights
-  `w=(0.80,0.20,0.00)` and obtained `m_s=0.099`, `violation=4.87%`,
-  `energy=248.6 kWh`, `RMSE_T=0.725 C`.
-- That single operating point is NOT regenerated by the current command path
-  in Section 8. The pre-registered Pareto sweep below uses five evenly-spaced
-  weights covering the (comfort, energy) simplex, which subsumes the
-  historical operating point: `w=(0.75,0.25,0.00)` in Section 8 is the
-  nearest sampled neighbour to the historical `(0.80,0.20,0.00)` and serves
-  as the practical-deployment canonical in Section 9.
-- The historical reference is retained only for narrative continuity with
-  earlier project notes; it should not be cited as a separate audit anchor.
+- Both the reconstructed 5D run in Section 6.5 and the canonical 17D runs in
+  Sections 8-9 use the **hybrid surrogate backend** (`hybrid_v3_v35`).
+- In MORL, "power-only" means the calibrated v3.5 reference is used only through
+  the power-disagreement term:
+
+```text
+lambda_temp_disagree  = 0.00
+lambda_power_disagree = 5e-5
+```
+
+- There is no separate MORL `lambda_temp_disagree` sweep in the audit trail.
+  The temperature-disagreement sweep was run for thermostatic PPO (Section 5)
+  and HDRL (Section 6). MORL was then evaluated under the fixed power-only
+  hybrid setting to avoid reopening another controller-family-specific
+  hyperparameter search.
+- Therefore, the MORL claim is **not** "lambda_temp=0.00 and
+  lambda_power=5e-5 are globally optimal for MORL"; the claim is narrower:
+  under the fixed power-only hybrid backend, the 17D observation interface
+  substantially outperforms the reconstructed 5D interface and supports the
+  Pareto/canonical analysis.
 
 ## 8. MORL Pareto Sweep
+
+Purpose:
+
+- This section maps the single-seed MORL comfort-energy Pareto landscape under
+  the fixed 17D power-only hybrid backend defined in Section 7.
+- It runs five pre-defined weight points with seed 42 only. This is the
+  structured search stage, not the statistical robustness stage.
+- The result of this section is used to select two canonical operating points:
+  the neutral canonical `w=(0.50,0.50,0.00)` and the practical-deployment
+  canonical `w=(0.75,0.25,0.00)`.
 
 Run the five single-seed Pareto points:
 
 ```bash
-python3 -B evaluation/run_block2.py morl-pareto --point all --seed 42
+python3 -B evaluation/run_block2.py morl-17d --point all --seed 42
 ```
 
 ## 9. MORL Canonical Seed Analysis
+
+Purpose:
+
+- This section takes the two canonical points selected from the Section 8
+  Pareto sweep and reruns each of them on N=5 seeds.
+- It is the robustness/audit stage: it estimates seed variance, supports
+  Pareto error bars, and checks that the canonical points are not single-seed
+  artifacts.
 
 The pre-registered neutral canonical is `w=(0.50,0.50,0.00)`.
 The practical deployment canonical is `w=(0.75,0.25,0.00)`.
@@ -674,6 +794,16 @@ This document now contains:
 
 ## 13. Audit Anchors
 
+Purpose:
+
+- Section 13 is not a compute section. It records the Block 2 audit backbone
+  used to protect the MORL canonical analysis from cherry-picking and post-hoc
+  reinterpretation.
+- The audit chain separates what was promised before the final seed expansion
+  from what was observed after N=5.
+- The paper should cite this chain when discussing MORL seed variance,
+  falsified seasonal/action-saturation hypotheses, and the narrowed MORL claim.
+
 Do not rewrite these commits when preparing the paper:
 
 - Pre-registration: `93df9b364657ac77bbe3642e4bc277d1eb8a8b60`
@@ -690,6 +820,29 @@ These commits preserve the timeline:
 1. Predictions were logged before seeds 45/46.
 2. Results were appended later.
 3. The falsification was not retrofitted after the fact.
+
+Concrete logic:
+
+- Section 8 first maps the MORL Pareto landscape on seed 42.
+- Before expanding the canonical points to additional seeds, commit
+  `93df9b3` freezes the canonical plan: selected points, expectations,
+  seed-extension logic, and PASS/FAIL interpretation rules.
+- Section 9 then runs the N=5 canonical seed analysis for `w=(0.50,0.50,0.00)`
+  and `w=(0.75,0.25,0.00)`.
+- After the N=5 results are known, commit `62dc859` appends the observed seed
+  variance and falsification outcome without rewriting the pre-registration.
+
+Reviewer-facing protection:
+
+- Weight selection: the canonical MORL points were not chosen after observing
+  all seeds.
+- Seed transparency: weak or high-variance seeds were not hidden.
+- Negative-result integrity: the seasonal/action-saturation hypothesis and
+  deployment-stability expectation were allowed to fail.
+- Claim discipline: the paper claim is narrowed to "17D MORL under the fixed
+  power-only hybrid backend is substantially stronger than reconstructed 5D and
+  gives a useful Pareto structure, but N=5 canonical variance remains too high
+  for deployment-stability claims."
 
 ## 13.5. Pre-Block-3 Cleanup Workflow
 

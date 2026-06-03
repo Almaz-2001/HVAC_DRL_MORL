@@ -244,13 +244,13 @@ def hdrl_benchmark_command(variant: str) -> list[str]:
     )
 
 
-def morl_pipeline_command(*, artifact_root: str, weights: str, seed: int) -> list[str]:
+def morl_pipeline_command(*, artifact_root: str, weights: str, seed: int, config_dir: str = "configs/morl_surrogate_ppo") -> list[str]:
     return cmd(
         PY,
         "-B",
         ROOT / "training" / "run_morl_surrogate_pipeline.py",
         "--config-dir",
-        "configs/morl_surrogate_ppo",
+        config_dir,
         "--mode",
         "full",
         "--seed",
@@ -300,6 +300,10 @@ def build_hybrid_evidence_commands() -> list[list[str]]:
     return [[PY, "-B", str(ROOT / "evaluation" / "build_hybrid_evidence_closure.py")]]
 
 
+def build_morl_5d_comparison_commands() -> list[list[str]]:
+    return [[PY, "-B", str(ROOT / "evaluation" / "build_morl_5d_reconstructed_comparison.py")]]
+
+
 def expand_variants(value: str, variants: list[str]) -> list[str]:
     return variants if value == "all" else [value]
 
@@ -337,12 +341,21 @@ def main() -> None:
     p.add_argument("--point", choices=[*MORL_POINTS.keys(), "all"], default="all")
     p.add_argument("--seed", type=int, default=42)
 
+    p = sub.add_parser("morl-17d")
+    p.add_argument("--point", choices=[*MORL_POINTS.keys(), "all"], default="all")
+    p.add_argument("--seed", type=int, default=42)
+
+    p = sub.add_parser("morl-5d")
+    p.add_argument("--point", choices=[*MORL_POINTS.keys(), "all"], default="comfort_075_energy_025")
+    p.add_argument("--seed", type=int, default=42)
+
     p = sub.add_parser("morl-canonical")
     p.add_argument("--canonical", choices=["neutral", "practical", "all"], required=True)
     p.add_argument("--seeds", default="42,43,44,45,46")
 
     sub.add_parser("pi-yearly")
     sub.add_parser("build-hybrid-evidence")
+    sub.add_parser("build-morl-5d-comparison")
     sub.add_parser("build-reports")
 
     args = parser.parse_args()
@@ -369,6 +382,28 @@ def main() -> None:
     elif args.command == "morl-pareto":
         points = list(MORL_POINTS) if args.point == "all" else [args.point]
         commands = [morl_pipeline_command(artifact_root=f"outputs/morl_pareto_hybrid_power_only/{p}", weights=MORL_POINTS[p], seed=args.seed) for p in points]
+    elif args.command == "morl-17d":
+        points = list(MORL_POINTS) if args.point == "all" else [args.point]
+        commands = [
+            morl_pipeline_command(
+                artifact_root=f"outputs/morl_pareto_hybrid_power_only/{p}",
+                weights=MORL_POINTS[p],
+                seed=args.seed,
+                config_dir="configs/morl_surrogate_ppo",
+            )
+            for p in points
+        ]
+    elif args.command == "morl-5d":
+        points = list(MORL_POINTS) if args.point == "all" else [args.point]
+        commands = [
+            morl_pipeline_command(
+                artifact_root=f"outputs/morl_5d_legacy_rerun/{p}",
+                weights=MORL_POINTS[p],
+                seed=args.seed,
+                config_dir="configs/morl_surrogate_ppo_5d",
+            )
+            for p in points
+        ]
     elif args.command == "morl-canonical":
         canonicals = list(CANONICALS) if args.canonical == "all" else [args.canonical]
         for canonical in canonicals:
@@ -379,6 +414,8 @@ def main() -> None:
         commands = [pi_yearly_command()]
     elif args.command == "build-hybrid-evidence":
         commands = build_hybrid_evidence_commands()
+    elif args.command == "build-morl-5d-comparison":
+        commands = build_morl_5d_comparison_commands()
     elif args.command == "build-reports":
         commands = build_reports_commands()
     else:
