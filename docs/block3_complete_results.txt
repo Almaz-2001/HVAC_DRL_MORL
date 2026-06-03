@@ -1,0 +1,420 @@
+
+Block 3 Complete Results
+Pre-registered transferability of the v3+v3.5 hybrid recipe to three BOPTEST hydronic-family testcases (bestest_hydronic_heat_pump, bestest_hydronic, singlezone_commercial_hydronic) under three pre-registered recalibration regimes (none / partial / full).
+All numbers cross-checked against project artifacts (CSV/JSON/YAML) and audit anchors on 2026-05-28.
+§1.  Methodology, pre-registration, and reading order
+§1.1  Reading order
+Block 1 established the surrogate-level claim: the v3 control-oriented surrogate and the calibrated v3.5 physical twin offer complementary strengths. Block 2 established the controller-level claim on bestest
+air: the hybrid recipe (v3 dynamics + v3.5 disagreement reward-shaping) produces the strongest controller, with controller-family-specific λ values fixed at λ
+temp = 0.10, λ
+pwr = 5×10⁻⁵ for thermostatic PPO. **Block 3 asks: does this recipe transfer to BOPTEST testcases other than bestest
+air?**
+The Block 3 narrative follows the pre-registration / outcome / hypothesis closure structure:
+§2 Pre-registration protocol — manifest, testcases, regimes, controllers, audit anchors.
+§3 Actuator-interface adaptation — three per-testcase adapter configs.
+§4 Transfer matrix — the headline result across testcase × regime × KPI.
+§5 Primary testcase (bestest_hydronic_heat_pump) — detailed per-regime breakdown.
+§6 Secondary testcase (bestest_hydronic) — replication of the primary pattern.
+§7 Stretch testcase (singlezone_commercial_hydronic) — pre-registered predictions and surprises.
+§8 C_zon consistency analysis — the hydronic-family uniform-mass hypothesis.
+§9 Hypothesis closure — H1_strong / H2_medium / H3_weak (surrogate, controller).
+§10 Pre-registered predictions vs observed outcomes — Popperian audit trail.
+§11 Synthesis and Block 4 implications.
+§1.2  Pre-registration anchors (verified via git log)
+Block 3 is 
+pre-registered
+: the manifest `configs/block3
+testcase
+manifest.yaml` (4 KB pre-registration + 38 KB results append-only blocks) was committed BEFORE any non-bestest
+air BOPTEST run was executed. Pre-registration logged on **2026-05-18**; protocol identifier **block3
+transferability_v1**. The full audit chain (commit messages verbatim from `git log --oneline`):
+**93df9b3** — pre-registration: seed45/46 falsification predictions for practical canonical
+**62dc859** — post-N5 result: action-saturation hypothesis falsified
+**1861e48** — Block 3 pre-registration: transferability testcase manifest  ← Block 3 pre-registration manifest
+**2f9d596** — Block 3 audit: record pre-registration commit SHA
+**eb7091e** — Block 3 pre-registration: hydronic heat-pump actuator adapter
+**46fbaa9** — Block 3 pre-registration: bestest_hydronic direct supply adapter
+**645626e** — Block 3 pre-registration: stretch testcase predictions and commercial hydronic adapter  ← stretch predictions PRE-registered before runs
+**7ada793** — Block 3 audit: record close commit SHA
+**cb7025f** — Block 3 interpretation: component-level transferability and threshold-pass caveat
+The pre-registration block in the manifest is 
+bit-identical
+ between its first commit (1861e48) and the close (7ada793) — only the result-appendix sections are appended. Auditors verify against the parent commit&apos;s diff. This protects the falsifiability of Block 3&apos;s hypotheses: any number reported below was predictable but not predicted before the run.
+§1.3  Claim boundary (manifest scope.deliberately_NOT_claimed)
+Block 3 deliberately does NOT claim:
+universal building generalisation
+cross-climate generalisation (single weather file source)
+transfer to fundamentally different HVAC topologies (e.g., VRF, radiant)
+continual learning across multiple buildings without forgetting
+The intended claim is narrower: 
+the hybrid recipe transfers to closely related BOPTEST testcases under explicitly stated recalibration conditions and controller-interface compatibility
+.
+§1.4  Testcase selection (pre-registered)
+Three single-zone hydronic testcases were pre-selected to span an increasing difficulty gradient relative to bestest_air. Selection criteria (fixed before inspecting any candidate response):
+(a) single-zone or single-zone-like envelope
+(b) heating-capable HVAC (cooling optional)
+(c) actuator interface compatible with direct supply-temperature command OR overridable with documented mapping
+(d) at least one structural difference from bestest_air (actuator, source, envelope size, or climate) so transfer is non-trivial
+Table 1 — Pre-registered testcase selection. 
+ From configs/block3_testcase_manifest.yaml testcase_candidates block.
+Role
+Testcase
+Structural difference vs bestest_air
+Adapter config
+PRIMARY
+bestest_hydronic_heat_pump
+Hydronic loop driven by a heat pump (not air supply).
+hydronic_t_supply_to_setpoint_v1
+SECONDARY
+bestest_hydronic
+Hydronic distribution with boiler/radiator heat source instead of heat pump.
+hydronic_direct_supply_setpoint_adapter_v1
+STRETCH
+singlezone_commercial_hydronic
+Substantially larger commercial zone volume; C_zon expected order-of-magnitude different a priori.
+commercial_hydronic_supply_valve_adapter_v1
+§1.5  Recalibration regimes (pre-registered)
+Three regimes characterise the transferability gradient from &quot;frozen-everything&quot; to &quot;fully re-calibrated surrogate, frozen controller&quot;. The controller is 
+always frozen
+ by manifest scope; this isolates the transferability of the calibration pipeline itself.
+Table 2 — Recalibration regimes. 
+ From configs/block3_testcase_manifest.yaml recalibration_regimes block. Excluded by manifest: controller re-fine-tune on new testcase.
+Regime
+Surrogate action
+Controller action
+Compute (min/testcase)
+none
+frozen from bestest_air canonical
+frozen from Block 2 canonical (no fine-tune on new testcase)
+~30
+partial
+Stage C only; Stage A and Stage B frozen
+frozen from Block 2 canonical
+~90
+full
+Stage A + Stage B + Stage C from scratch
+frozen from Block 2 canonical
+~240
+§1.6  Controller families and pass threshold
+The thermostatic
+hybrid family is the principal Block 3 controller: frozen checkpoint `models/ppo
+thermostatic
+hybrid
+v3
+v35
+l010.zip` (Block 2 canonical hybrid
+l010, λ
+temp = 0.1, λ
+pwr = 5e-5) with no fine-tuning on the new testcase. The pass threshold is **m
+s
+RL ≤ 1.25 × m
+s
+PI** for the testcase&apos;s BOPTEST built-in PI controller; threshold is computed per-testcase, not global, because PI&apos;s m
+s varies by testcase. The threshold value 1.25 was pre-registered in the manifest, not chosen post hoc to match results.
+§2.  Actuator-interface adaptation
+bestest
+air exposes a **direct supply-temperature** actuation interface (the agent commands an air supply setpoint in 18–35 °C). The three hydronic testcases expose **different actuator types**: the heat pump testcase has a heat-pump setpoint-and-enable interface; the residential hydronic testcase has a boiler/radiator direct supply-setpoint interface; and the commercial hydronic testcase has a supply-valve interface. Without adaptation, the bestest
+air-trained policy&apos;s action output would land on undefined BOPTEST actuator signals, and the comparison would not be a transfer test — it would be a programming error.
+Each testcase gets a per-testcase 
+actuator adapter config
+ that maps the policy&apos;s continuous t_supply action onto the testcase&apos;s actuator interface. These configs are pre-registered separately (anchors eb7091e / 46fbaa9 / 645626e) so the mapping cannot be tuned post-hoc.
+**bestest_hydronic_heat_pump**: adapter `hydronic_t_supply_to_setpoint_v1` (config: configs/block3_actuator_mapping_bestest_hydronic_heat_pump.yaml)
+**bestest_hydronic**: adapter `hydronic_direct_supply_setpoint_adapter_v1`
+**singlezone_commercial_hydronic**: adapter `commercial_hydronic_supply_valve_adapter_v1`
+§3.  Block 3 transfer matrix — the headline
+The transfer matrix is the single-table summary of Block 3 across the three testcases. Read row-by-row, each row tells the controller-side story (mode=none and mode=full verdicts; m
+s
+RL vs m
+s
+PI; energy delta) and the surrogate-side story (full Stage A/B/C verdict; raw vs full RMSE
+T; C
+zon ratio vs bestest_air).
+Table 3 — Block 3 transfer matrix. 
+ Source: reports/block3_transfer_matrix.csv. Green = PASS; red = FAIL; yellow = threshold/conditional. Pass threshold per row = 1.25 × m_s_PI for that testcase.
+Testcase
+Adapter
+mode=none ctrl
+mode=full ctrl
+m_s RL
+m_s PI
+Pass threshold
+Energy Δ% vs PI
+Surrogate (full)
+Raw RMSE_T °C
+Full RMSE_T °C
+RMSE % gain
+C_zon ratio
+bestest_hydronic_heat_pump
+hydronic_t_supply_to_setpoint_v1
+FAIL
+FAIL
+0.665
+0.464
+0.579
+-7.27%
+PASS
+1.421
+0.565
+60.21%
+1.892×
+bestest_hydronic
+hydronic_direct_supply_setpoint_adapter_v1
+FAIL
+FAIL
+0.976
+0.750
+0.938
+-5.84%
+PASS
+2.666
+0.335
+87.44%
+1.954×
+singlezone_commercial_hydronic
+commercial_hydronic_supply_valve_adapter_v1
+PASS
+PASS
+0.431
+0.628
+0.785
++35.33%
+PASS
+1.952
+0.238
+87.81%
+1.909×
+Figure 1. Block 3 transfer verdict heatmap across three testcases × {mode=none, mode=full} for the thermostatic
+hybrid controller and the corresponding surrogate. Cell colour encodes the pass-threshold verdict against the pre-registered 1.25 × m
+s
+PI bound._
+§4.  Primary testcase — bestest_hydronic_heat_pump
+Predicted: easiest of the three
+ (closest neighbour to bestest
+air; same envelope class but with hydronic actuator + heat pump). PI yearly baseline: m
+s = 0.464; violation = 34.7%; energy = 361.9 kWh. Pass threshold: m
+s
+RL ≤ 0.580 (= 1.25 × m
+s
+PI).
+Mode=none (frozen recipe): m
+s = 0.665 (1.43× PI), violation = 50.0%, energy = 335.6 kWh (saves 7.3% over PI&apos;s 361.9 kWh, but fails comfort). **Controller verdict: FAIL** (m
+s
+RL = 0.665 &gt; 0.580). The frozen bestest
+air controller does NOT transfer comfort-safely to the heat-pump testcase.
+Partial regimes give surrogate-side signal but cannot rescue the controller.
+ Three partial variants were tried in the surrogate-side falsification probe (Stage C top-5% excitation, Stage C all-rows power-head-only, Stage C all-rows heads-only); they vary in surrogate fidelity gain but all leave the live controller KPI unchanged (because the controller is frozen by manifest scope).
+Table 4 — Primary testcase per-regime detail (controller frozen across all rows). 
+ Source: reports/block3_bestest_hydronic_heat_pump_transfer_summary.csv. m_s does not vary across rows because controller is frozen; what varies is surrogate fidelity.
+Regime / artifact
+RMSE_T °C
+Power MAE W
+m_s
+Status
+PI baseline (yearly)
+—
+—
+0.464
+REFERENCE
+mode=none (frozen)
+—
+—
+0.665
+FAIL_CONTROL
+partial: Stage C top-5%
+1.006
+2336
+0.665
+FAIL_CONTROL_DIAGNOSTIC_SURROGATE_FAIL
+partial: Stage C all-rows / power-head
+0.977
+1765
+0.665
+FAIL_CONTROL_PARTIAL_POWER_SUCCESS
+partial: Stage C all-rows / heads-only
+0.781
+1768
+0.665
+FAIL_CONTROL_CONDITIONAL_PASS_SURROGATE
+full: Stage A/B/C all-rows
+0.565
+1767
+0.665
+FAIL_CONTROL_PASS_SURROGATE_FULL
+Full Stage A/B/C re-calibration
+: RMSE
+T improves from 0.565 °C to baseline-on-this-testcase, a 60.2% reduction; power MAE improves by 39.5%. Re-identified C
+zon = 835 kJ/K, or 
+1.892×
+ the bestest_air value (4.413×10⁵ J/K). Surrogate verdict: 
+PASS
+. Controller verdict: still FAIL (controller is frozen).
+§5.  Secondary testcase — bestest_hydronic
+Predicted: mid-difficulty
+ (hydronic distribution with boiler/radiator source instead of heat pump). PI yearly: m
+s = 0.750; violation = 44.9%; energy = 231.4 kWh. Pass threshold: m
+s_RL ≤ 0.938.
+Mode=none: m
+s = 0.976 (1.30× PI), violation = 68.0%, energy = 217.9 kWh. **Controller verdict: FAIL** — m
+s exceeds the pre-registered 1.25× PI threshold; the secondary testcase 
+replicates the primary FAIL pattern
+, confirming that the failure is not specific to heat-pump actuators.
+Full Stage A/B/C
+: RMSE
+T improves by **87.4%** (2.67 → 0.335 °C), power MAE by 89.2%. C
+zon = 862 kJ/K = 
+1.954×
+ bestest_air. Surrogate verdict: 
+PASS
+; controller verdict: still FAIL. The N=2 evidence at this point: controller-FAIL + surrogate-PASS pattern replicates.
+§6.  Stretch testcase — singlezone_commercial_hydronic
+Predicted: hardest of the three
+ (commercial zone volume an order of magnitude larger than bestest
+air; C
+zon a priori expected to scale with volume → hypothesis B = scale-dependent C_zon, a-priori probability 0.50). The stretch testcase exists specifically to 
+probe the falsification boundary
+ — to find where the hybrid recipe fails.
+PI yearly: m
+s = 0.628; violation = 51.5%; energy = 13523.1 kWh (note the larger absolute energy of a commercial zone). Pass threshold: m
+s_RL ≤ 0.785.
+Mode=none: m_s = 0.431 (0.69× PI — i.e., the RL agent&apos;s comfort is *better* than PI&apos;s). 
+Controller verdict: PASS
+ — but with two important caveats:
+**Energy: +35.3% over PI.** The RL agent achieves better comfort but consumes 18,301 kWh vs PI&apos;s 13,523 kWh. Following the manifest&apos;s pre-registered interpretation, this is a **threshold-pass, not a deployment-ready pass**: the m_s safety bound is satisfied but the energy footprint is not deployment-ready.
+**This outcome falsifies a pre-registered prediction.** Pre-registered (`645626e`) expectation for mode=none controller verdict was **FAIL** with a-priori probability **0.80**, on the rationale that larger building dynamics would expose more controller misalignment. The observed PASS-with-energy-penalty refutes this prediction. The manifest&apos;s hypothesis-resolution paragraph (committed at audit anchor `7ada793`) reports this as the expected falsifiability behaviour.
+Full Stage A/B/C
+: RMSE
+T improves by **87.8%** (1.95 → 0.238 °C). C
+zon = 843 kJ/K = 
+1.909×
+ bestest_air. Surrogate verdict: PASS.
+The C_zon result is a major Popperian surprise.
+ A-priori, the manifest assigned probability 
+0.50
+ to hypothesis B (commercial-scale C
+zon 3–10× larger) and only **0.35** to hypothesis A (uniform hydronic-family 1.7–2.2× larger). The observed C
+zon ratio = 1.909× falls 
+inside the lower-probability hypothesis A range
+, 
+falsifying
+ hypothesis B. The hydronic-family C
+zon appears to be a property of the heating system type, not of the zone volume. This is reported in §8 as the C
+zon consistency analysis.
+§7.  C_zon consistency — the hydronic-family uniform-mass hypothesis
+Table 5 — C_zon re-identification across N=4 testcases (bestest_air baseline + 3 hydronic). 
+ Sources: reports/block3_transfer_matrix.csv c_zon_ratio_vs_bestest_air column; Block 1 §2.2 for bestest_air baseline.
+Testcase
+C_zon (J/K)
+Ratio vs bestest_air
+bestest_air (Block 1 §2.2)
+4.413e+5 J/K
+1.000 × (baseline)
+bestest_hydronic_heat_pump (PRIMARY)
+8.347e+5 J/K
+1.892 ×
+bestest_hydronic (SECONDARY)
+8.622e+5 J/K
+1.954 ×
+singlezone_commercial_hydronic (STRETCH)
+8.425e+5 J/K
+1.909 ×
+Hydronic-family mean ± std
+846 kJ/K
+1.918 ± 0.032 (range 1.89 – 1.95)
+Across the three hydronic testcases, C
+zon re-identification by Stage A/B/C falls within a tight **1.89 – 1.95** range — mean 1.918 ± 0.032 × bestest
+air. This is the strongest single physical finding of Block 3: the calibrated thermal capacitance of the hydronic-family single-zone testcases is approximately uniform, and is approximately twice the bestest_air air-zone thermal capacitance.
+Figure 2. C
+zon re-identified by full Stage A/B/C on each hydronic testcase, normalised by the bestest
+air baseline. The three hydronic ratios cluster within ±2% of 1.92×, despite testcase 3 having an order-of-magnitude larger zone volume. Pre-registered hypothesis B (volume-dependent C
+zon, a-priori 0.50) is falsified; hypothesis A (uniform hydronic-family, a-priori 0.35) is confirmed._
+Why this matters scientifically
+: the inverse calibration framework re-identifies a physically meaningful parameter that is 
+transferable
+ across the hydronic family without scaling with the obvious zone-size proxy. This generalises the calibration component of the v3.5 surrogate beyond a single building.
+§8.  Hypothesis closure
+The manifest pre-registered four hypotheses with explicit operational definitions. Block 3 closes all four with the verdicts below; the evidence column references the row(s) of the transfer matrix that drive each verdict.
+Table 6 — Hypothesis closure. 
+ Source: configs/block3_testcase_manifest.yaml `aggregated_results.hypothesis_status_final` block (appended after Block 3 close — audit anchor 7ada793).
+Hypothesis
+Claim
+Verdict
+Evidence
+H1_strong
+Frozen-recipe deployment at mode=none produces deployment-ready transfer on hydronic family
+FALSIFIED
+Frozen deployment FAILS pre-registered 1.25× PI safety threshold on N=2 of N=3 (primary + secondary). Stretch is a THRESHOLD PASS only — m_s_RL = 0.431 ≤ 0.785 — but uses 35.3% more energy than PI, so not deployment-ready.
+H2_medium
+Partial Stage C recalibration is sufficient to recover controller transfer
+FALSIFIED_BY_STRUCTURAL_DEFINITION
+Partial regime recalibrates only surrogate Stage C; the controller is frozen by manifest scope. Therefore live controller KPI cannot change vs mode=none unless controller fine-tuning is added (explicitly excluded by scope.deliberately_NOT_claimed).
+H3_weak (surrogate side)
+Full Stage A/B/C recalibration produces a usable surrogate on the new testcase
+SUPPORTED on N=3
+60.2% (primary) / 87.4% (secondary) / 87.8% (stretch) RMSE_T improvement under full recalibration. C_zon re-identified consistently in 1.89–1.95× range vs bestest_air. Inverse surrogate-calibration component transfers.
+H3_weak (controller side)
+Frozen controller transfers given a valid actuator adapter
+FALSIFIED with regime-dependent failure modes
+Controller transfer is not universally reliable under the frozen-method scope. Residential hydronic (primary + secondary) fails comfort; commercial stretch passes safety but at large energy cost.
+Headline reading
+: the surrogate-side (inverse calibration) of the v3.5 pipeline transfers to the hydronic family with strong RMSE
+T improvements (60–88%) and a near-uniform C
+zon re-identification. The controller-side (frozen bestest_air policy through a per-testcase actuator adapter) is 
+not universally
+ deployment-ready: it fails comfort on residential hydronic cases and passes only conditionally on the commercial case (with a +35% energy penalty).
+§9.  Pre-registered predictions vs observed outcomes — Popperian audit
+The stretch testcase carried 
+specific numerical pre-registered predictions
+ with a-priori probabilities (audit anchor 645626e, logged 2026-05-19, before any singlezone
+commercial
+hydronic BOPTEST episode ran). Reporting the predicted-vs-observed mapping is the central Popperian discipline of Block 3: if the predictions had all been confirmed, that would be a much weaker result than mixed confirmation + falsification.
+Table 7 — Stretch testcase pre-registered predictions vs observed outcomes. 
+ Source: configs/block3_testcase_manifest.yaml `stretch_testcase_predictions` block.
+Prediction
+Pre-registered expectation
+A-priori probability
+Actual outcome
+Verdict
+mode=none controller verdict
+FAIL
+0.80
+PASS
+FALSIFIED
+mode=full surrogate RMSE % gain
+[50, 90] %
+0.70
+87.81 %
+CONFIRMED
+C_zon hypothesis A (uniform hydronic)
+[1.7, 2.2] ×
+0.35
+1.909 ×
+CONFIRMED
+C_zon hypothesis B (scale-dependent)
+[3, 10] ×
+0.50
+1.909 ×
+FALSIFIED
+C_zon hypothesis C (pipeline failure)
+Stage A/B/C fails to converge
+0.15
+Stage A/B/C converged in all 3
+FALSIFIED
+Two surprises were registered.
+ (1) The pre-registered mode=none controller FAIL prediction (a-priori 0.80) was falsified: the stretch testcase PASSED on comfort safety. This is mitigated by the +35% energy penalty, but it does refute the literal prediction. (2) The pre-registered C
+zon scale-dependent hypothesis B (a-priori 0.50) was falsified in favour of the lower-probability uniform hypothesis A (a-priori 0.35). **Two predictions were confirmed.** (3) Full-recalibration surrogate RMSE improvement landed inside the pre-registered [50, 90]% range. (4) C
+zon hypothesis A range [1.7, 2.2]× contained the observed 1.909×.
+Falsifiable physics
+: both surprises shifted us toward hypotheses we had a-priori assigned lower probability. This is the desired direction of scientific progress: pre-registered alternatives were genuinely competing, and the evidence settled them without post-hoc rationalisation.
+§10.  Synthesis and Block 4 implications
+§10.1  What Block 3 establishes
+**Surrogate-side transferability of v3.5 inverse calibration is supported on N=3** — Stage A/B/C produces 60–88% RMSE_T improvement on each new testcase, with consistent C_zon re-identification within a tight band.
+**Hydronic-family uniform C_zon hypothesis is supported** (1.89–1.95× bestest_air, mean 1.92×, σ=0.032). The C_zon does not scale with zone volume in the tested range.
+**Controller-side frozen transfer is falsified on N=3** — residential hydronic fails comfort; commercial stretch fails energy threshold (despite passing safety). Frozen-method transfer is not deployment-ready.
+**Pre-registered claim boundary holds** — Block 3 deliberately did not claim universal building generalisation or continual learning. The negative controller-side result is exactly the kind of result the manifest was designed to surface honestly.
+§10.2  Block 4 implications
+The honest reading after Block 3 close points to four concrete future-work items, each falsifiable in its own right:
+**Controller fine-tuning on target testcase**: Block 3 deliberately froze controllers. Block 4 can ask whether 100k-step BOPTEST live-finetune (as in Block 2 MORL §1.7) recovers comfort on the residential hydronic cases.
+**Hybrid-family-specific λ values**: the bestest_air-optimal λ_temp = 0.10 may not be optimal for the hydronic actuator regime. A small λ sweep on the heat-pump testcase would parallel Block 2 §5 (HDRL sweep).
+**Extended N for C_zon uniformity**: N=3 hydronic suggests uniform C_zon × 1.92, but a wider sample (heat-pump + boiler-radiator + valve + radiant + VRF) would establish whether the uniformity is hydronic-family or HVAC-family-wide.
+**Energy-aware reward augmentation for the stretch regime**: the commercial testcase&apos;s +35% energy penalty suggests adding an energy term whose weight depends on the building scale, or a constraint-style energy ceiling, would shift the threshold-pass into a deployment-ready pass.
+Block 3 Complete Results — cross-checked 2026-05-28 against configs/block3_testcase_manifest.yaml, configs/block3_actuator_mapping_*.yaml, reports/block3_transfer_matrix.csv, reports/block3_*_transfer_summary.csv, reports/block3_hydronic_family_n2_summary.csv, outputs/block3_*/pi_baseline_15min_yearly/pi_yearly_summary.csv, outputs/block3_*/thermostatic_hybrid_l010_adapter_none/, and git log audit anchors 1861e48, 2f9d596, eb7091e, 46fbaa9, 645626e, 7ada793, cb7025f.

@@ -1,0 +1,1463 @@
+                                                                    Energy & Buildings 329 (2025) 115254
+
+                                                                     Contents lists available at ScienceDirect
+
+
+                                                                         Energy & Buildings
+                                                           journal homepage: www.elsevier.com/locate/enbuild
+
+
+
+
+  A scalable approach for real-world implementation of deep reinforcement
+  learning controllers in buildings based on online transfer learning: The
+  HiLo case study
+  Davide Coraci a, , Alberto Silvestri b, , Giuseppe Razzano a , Davide Fop a, , Silvio Brandi a ,
+                                                                                                                                              ,∗
+  Esther Borkowski b,d, , Tianzhen Hong c, , Arno Schlueter b, , Alfonso Capozzoli a,
+  a
+    Politecnico di Torino, Department of Energy, TEBE research group, BAEDA Lab, Corso Duca degli Abruzzi 24, Torino, 10129, Italy
+  b
+    Architecture and Building Systems, ETH Zurich, Stefano-Franscini, Platz 5, Zurich, 8049, Switzerland
+  c
+    Building Technology and Urban Systems Division, Lawrence Berkeley National Laboratory, One Cyclotron Road, Berkeley, CA 94720, USA
+  d
+    Department of Applied Mathematics and Computer Science, Technical University of Denmark, Richard Petersens Plads, Building 424, Kongens Lyngby, 2800, Denmark
+
+
+
+
+  A R T I C L E            I N F O                          A B S T R A C T
+
+  Keywords:                                                 In recent years, Transfer Learning (TL) has emerged as a promising solution to scale Deep Reinforcement Learning
+  Transfer learning                                         (DRL) controllers for building energy management, addressing challenges related to DRL implementation as high
+  Real implementation                                       data requirements and reliance on surrogate models. Moreover, most TL applications are limited to simulations,
+  Deep reinforcement learning
+                                                            not revealing their real performance in actual buildings. This paper explores the implementation of an online TL
+  Building HVAC control
+  Energy eﬃciency
+                                                            methodology combining imitation learning and fine-tuning to transfer a DRL controller between two real oﬃce
+                                                            environments.
+                                                            Pre-trained in simulation using a calibrated digital twin, the DRL controller reduces energy consumption
+                                                            and improves indoor temperature control when managing the operation of a Thermally Activated Building
+                                                            System in one of the two oﬃces both in simulation and in the real field. Afterwards, the DRL controller is
+                                                            transferred to the other oﬃce following the online TL methodology. The proposed approach outperforms a DRL
+                                                            controller implemented without pre-training, and Rule-Based and Proportional-Integral controllers, achieving
+                                                            energy savings between 6 and 40% and improving indoor temperature control between 30 and 50%. These
+                                                            ﬁndings underscore the eﬃcacy of the online TL methodology as a viable solution to enhance the scalability of
+                                                            DRL controllers in real buildings.
+
+
+
+
+  Nomenclature                                                                                   𝑏occ          Occupancy boolean variable
+                                                                                                 𝐸tabs         Energy consumption associated with the TABS operation
+  𝛼             Boltzmann temperature coeﬃcient                                                                [kWh]
+  𝛽             Temperature term weight of reward function                                       𝑓𝑜𝑐𝑐          Occupancy fraction over each control time step
+  𝑄̇ sol        Solar radiation [W/m2 ]                                                          𝑛viol,occ,daily Cumulative sum of daily occurrences of temperature viola­
+  𝑄̇ tabs       Heating power delivered by TABS [kW]                                                           tion
+  𝛾             Discount factor                                                                  𝑟             Reward function
+  𝜇             DRL Learning rate                                                                𝑟𝐸            Energy term of reward function
+  𝑇i            Upper limit of temperature comfort range [◦ C]                                   𝑟𝑇            Temperature term of reward function
+  𝑇viol,daily   Mean value of the daily average temperature violation rate                       𝑇i            Indoor air temperature [◦ C]
+  𝜃             Reward scaling factor                                                            𝑇o            Outdoor air temperature [◦ C]
+  𝑇i            Lower limit of temperature comfort range [◦ C]                                   𝑇viol,daily Cumulative sum of daily temperature violation [◦ C]
+
+
+      * Corresponding author.
+        E-mail address: alfonso.capozzoli@polito.it (A. Capozzoli).
+
+  https://doi.org/10.1016/j.enbuild.2024.115254
+  Received 9 September 2024; Received in revised form 14 December 2024; Accepted 27 December 2024
+
+Available online 3 January 2025
+0378-7788/© 2025 The Authors. Published by Elsevier B.V. This is an open access article under the CC BY-NC-ND license (http://creativecommons.org/licenses/by-
+nc-nd/4.0/).
+D. Coraci, A. Silvestri, G. Razzano et al.
+                                                                                                                          Energy & Buildings 329 (2025) 115254
+𝑢𝑡           Percentage opening of the valve                                     conditions such as weather patterns, electricity costs and grid require­
+                                                                                 ments [10].
+Acronyms                                                                             In this regard, the adoption of advanced control approaches based
+                                                                                 on Art­ficial Intelligence (AI) can overcome the limitations of traditional
+AI           Art­ficial Intelligence                                             control strategies [11], due to their predictive and adaptive capabilities
+BESS         Battery Energy Storage System                                       allowing for increased energy flexibility in buildings, a key factor in
+DRL          Deep Reinforcement Learning                                         optimally managing energy systems according to occupant needs and to
+DTW          Dynamic Time Warping                                                the dynamic boundary conditions existing in real buildings [12].
+FDD          Fault Detection and Diagnosis                                           Among advanced control strategies, Reinforcement Learning (RL)
+FMI          Functional Mock-up Interface                                        has emerged as a promising solution due to its capability to automati­
+FMU          Functional Mock-up Unit                                             cally enhance system operations, taking into account multiple objectives
+GA           Genetic Algorithm                                                   and adjusting to dynamic conditions autonomously with minimal hu­
+HVAC         Heating, Ventilation and Air Conditioning                           man intervention, which are highly-requested features for controllers
+HVRF         Hybrid Variable Refrigerant Flow                                    managing HVAC [13]. RL operates on a trial-and-error basis, where a
+IEA          International Energy Agency                                         control agent learns a near-optimal control policy through direct inter­
+IL           Imitation Learning                                                  action with the environment, guided by a reward mechanism [14].
+KPI          Key Performance Indicator                                               Deep Reinforcement Learning (DRL) is the most widely utilised con­
+MAPE         Mean Absolute Percentage Error                                      trol algorithm within the RL domain, eﬀectively addressing complex
+ML           Machine Learning                                                    control tasks, particularly in scenarios where multiple states and ac­
+MPC          Model Predictive Control                                            tions should be d­fined to properly represent the control problems, as
+NEST         Next Evolution in Sustainable building Technologies                 in real-world buildings [15]. The implementation of DRL for HVAC sys­
+ODBC         Open DataBase Connectivity                                          tems demonstrates optimal performance when applied to manage the
+PI           Proportional-Integral                                               operation mode of thermal energy systems [16,17] and storage systems
+PID          Proportional-Integral-Derivative                                    [18], supply water temperature [19] and mass flow rate [20], fan speed
+PIRs         Passive Infrared Sensors                                            [21] and indoor air temperature setpoints [22,23].
+PLC          Programmable Logic Controller                                           The online and oﬄine training methodologies are two diﬀerent train­
+POMDP        Partially Observable Markov Decision Process                        ing strategies for enabling the interaction between the DRL-based agent
+PV           Photovoltaic                                                        and the controlled environment to retrieve the near-optimal control
+RBC          Rule-Based Controller                                               policy [24]. The online training strategy entails learning the optimal
+RC           Resistance-Capacitance                                              control policy while actively controlling the system [25]. However, this
+RL           Reinforcement Learning                                              approach is not eﬃcient due to the considerable training time needed
+RMSE         Root Mean Squared Error                                             for the DRL controller to interact with the environment to reach a
+RTP          Real-Time Pricing                                                   near-optimal policy, primarily because of its initial poor performance.
+                                                                                 Therefore, the oﬄine training approach is the most employed in build­
+SAC          Soft Actor-Critic
+                                                                                 ing energy management DRL applications [25]. This training strategy is
+TABS         Thermally Activated Building System
+                                                                                 carried out in a simulation environment, and it requires the deﬁnition of
+TL           Transfer Learning
+                                                                                 a surrogate model that emulates the dynamics of the controlled environ­
+TOU          Time-Of-Use
+                                                                                 ment. Although the oﬄine training approach for DRL agents has shown
+TPE          Tree-structured Parzen Estimator
+                                                                                 impressive results, it faces signiﬁcant challenges related to scalability
+VAV          Variable Air Volume
+                                                                                 and generalisability. Due to the unique features of each building, the
+                                                                                 design of data-driven or physics-based surrogate models becomes neces­
+1. Introduction
+                                                                                 sary. Developing data-driven surrogate models necessitates a minimum
+                                                                                 amount of monitoring data for the controlled building, while making
+    The building sector is one of the major contributors to total world en­      physics-based models can be a time-intensive endeavour as it requires
+ergy consumption considering it requires 40% of energy and contributes           access to comprehensive building information (which may not always
+by nearly 25% to global 𝐶𝑂2 emissions [1]. The International Energy              be available) and domain expertise [24].
+Agency (IEA) states that buildings are ``a source of enormous untapped ef­           To tackle these practical challenges, Transfer Learning (TL) appears
+ﬁciency potential'' [2] and ``this decade is crucial for implementing measures   as a promising solution to enhance the scalability of DRL controllers,
+to achieve targets planned by 2030 to make energy systems smarter, more          enabling their implementation in real-world buildings. TL is a Machine
+connected, eﬃcient, and resilient'' [3]. In this context, building energy        Learning (ML) technique where a model initially trained to tackle a spe­
+management measures emerge as a potential solution for enhancing the             cific task (i.e., source task) in a particular domain is leveraged to address
+operation of energy systems to decrease energy costs related to build­           a new task (i.e., target task) [26]. This new task shares similarities with
+ing operation and to enhance indoor comfort conditions for occupants             the original task, either within the same domain or across diﬀerent do­
+[4,5].                                                                           mains [27]. In recent years, TL has been increasingly applied in building
+    In buildings, Heating, Ventilation and Air Conditioning (HVAC) sys­          energy management across various domains, such as load prediction
+tems are the major contributors to energy consumption, demanding                 [28,29], occupancy detection and activity recognition [30,31], building
+approximately 60% of the total energy [6]. In recent years, diﬀerent             dynamics [32,33], and Fault Detection and Diagnosis (FDD) [34,35].
+measures have been proposed to enhance the eﬃciency of HVAC sys­                     The earliest instances of TL are recent compared to other DRL ap­
+tem, such as the introduction of energy-e˙icient energy systems coupled          plications in the field of building energy management. Introducing a TL
+with the implementation of advanced control strategies [7].                      strategy for DRL controllers in buildings presents several ben­fits. These
+    Nowadays, HVAC systems in buildings are typically controlled by              include boosting the direct deployment of these controllers in real build­
+straightforward control strategies like Rule-Based Controller (RBC) or           ings with adequate performance from the initial implementation stages,
+Proportional-Integral-Derivative (PID) controllers [8] that are often sub­       enhancing their scalability by eliminating the need to develop surro­
+optimal since they can not optimise multi-objective control problems             gate models and expanding their application in buildings with limited
+due to their reactive nature [9]. Moreover, RBC and PID controllers are          historical data. In addition to TL, other knowledge reuse approaches
+unable to dynamically adjust their control policies to changing boundary         have been d­fined in the literature, such as Imitation Learning (IL). IL
+
+
+                                                                             2
+D. Coraci, A. Silvestri, G. Razzano et al.
+                                                                                                                    Energy & Buildings 329 (2025) 115254
+involves a control agent learning an optimal strategy for a specific task    (TABS) supply circuit. Afterwards, the pre-trained DRL controller was
+by observing the behaviour of an expert controller [36]. During this pro­    deployed in the real source oﬃce to test its performance and allow it
+cess, the control agent accesses the transitions generated by the expert,    to continue learning according to real building dynamics and boundary
+which detail the action selected by the expert controller and the result­    conditions. A benchmarking process was carried out for the DRL con­
+ing changes in state-spaces.                                                 troller to compare its performance with RBC and Proportional-Integral
+    In recent years the number of contributions on TL for DRL con­           (PI)-based controllers.
+troller applications has increased. In [37], TL was employed for transfer­       Thus, the DRL controller implemented in the oﬃce was transferred
+ring a DRL-based control policy between diﬀerent buildings. The DRL          to the real target oﬃce. The performance of the online TL implemented
+controller managed the supply temperature setpoint of a chiller. This        in the target oﬃce was benchmarked against that of a DRL-based con­
+method achieved an average reduction of 40% in the duration of the           troller implemented without any pre-training (i.e., online DRL), as well
+warm-up period related to the implementation of DRL controllers while        as against controllers based on traditional strategies such as RBC and PI.
+reducing on average by 50% the cumulative reward for target buildings.           Based on the previous considerations, the novelties of this paper can
+Moreover, Nweye et al. [38] introduced a TL approach incorporating IL        be summarised as follows:
+to emulate the behaviour of a RBC considering measured data for five
+months. Thus, weight initialisation was carried out for training the DRL       • An online TL procedure was implemented to transfer a DRL con­
+controllers before their deployment in an energy community. Results              troller pre-trained in simulation and later applied to the real source
+indicate that DRL control policy sharing within buildings in the energy          oﬃce. To the best of the authors’ knowledge, the real implementa­
+community led to similar performance and reduced training time com­              tion of TL for DRL controllers has not been explored in the literature
+pared to the no-TL scenario.                                                     before.
+    The next section discusses the novelty and contributions of this pa­       • An implementation framework ensuring a high level of interoper­
+per, while other related works concerning the application of TL for DRL          ability with the building and its actuation and measurement systems
+controllers in buildings are included in Appendix A.                             has been developed to ensure the correct and continuous opera­
+                                                                                 tion of the energy systems within the building. Furthermore, this
+1.1. Novelty and contributions of the paper                                      methodology has been designed to be easily scalable across diﬀer­
+                                                                                 ent buildings. The DRL controller implemented in the source oﬃce
+    Several applications discussed in the literature consider a TL ap­           and transferred to the target oﬃce uses a limited number of vari­
+proach for DRL controllers with fine-tuning over multiple episodes.              ables easily measurable in real buildings.
+However, this does not find practical applications because it would re­        • A benchmarking framework has been developed to compare the
+quire, depending on the type of application, several heating/cooling             performance of the real controller implemented in the source oﬃce
+seasons (i.e., each epoch corresponds to a season in reality). In this           and the controller transferred to the target oﬃce with the perfor­
+framework, the TL applications developed so far for DRL controllers              mance of controllers belonging to three diﬀerent families: RBC, PI
+have only been evaluated in simulation environments, where building              and online DRL. In this case, a digital twin was developed for each
+surrogate models were developed to emulate their real-world perfor­              oﬃce to implement the forementioned benchmark controllers and
+mance.                                                                           replicate the behaviour of the real implemented DRL-based con­
+    In this context, the online TL approach could be a viable solution to        trollers.
+evaluate the real-world implementation of DRL control strategies since
+it allows for better performance from the early stages of implementation,       The paper follows this structure: Section 2 provides information
+signiﬁcantly increasing their scalability and enabling more practical ap­    about the case study, while Section 3 presents the methodological frame­
+plications.                                                                  work employed for training, implementing and transferring the DRL
+    Implementing a TL strategy in real buildings must consider several       controller. Section 4 elaborates on the implementation details, cover­
+aspects similar to those related to the DRL real implementation. These       ing digital twin development and building controller implementation.
+aspects include the need to ensure the continuous and proper function­       Results are discussed in Section 5, while Sections 6 and 7 delve into the
+ing of the existing systems and the need to develop an adequate bench­       implications of the research findings and suggest future directions.
+marking method to quantify whether the performance of the transferred
+controller is better than that of traditionally implemented controllers in   2. Case study and control problem
+real buildings.
+    Following these considerations, this paper aims to demonstrate the           The Next Evolution in Sustainable building Technologies (NEST)
+practicality and eﬀectiveness of applying online TL to DRL controllers       building, operated by the Swiss Federal Laboratories for Materials Sci­
+in real-world scenarios, bridging the gap between theoretical research       ence and Technology (EMPA), stands as a versatile research and inno­
+and real-world application while discussing the encountered implemen­        vation hub situated in Dübendorf, Switzerland [41]. It brings together
+tation challenges.                                                           collaborators from academic institutions, industry and the public sector.
+    Speciﬁcally, this paper evaluates the real implementation of the on­     The architecture of NEST includes a main backbone supporting three
+line TL methodology in a building located in Switzerland, where a DRL        platforms that host a variety of research and innovation modules.
+controller was transferred between two oﬃces. The developed online TL            Fig. 1 shows the HiLo (High Performance -- Low Emissions) unit [42],
+approach was homogeneous and transductive, according to the class­fi­        a cutting-edge research space dedicated to the advancement and evalu­
+cation d­fined in [39,40] and discussed in Appendix B, as the DRL con­       ation of building technologies. HiLo is a living laboratory enriched with
+trollers operating in the two oﬃces had the same domain (i.e., action­       an extensive sensor network, ensuring an ideal setting for the implemen­
+space and state-space) and the same objective (i.e., reward function).       tation of controllers.
+For each oﬃce, a digital twin is developed in Modelica for pre-training          The HiLo unit is built on two floors. The lower floor is divided into
+and further benchmarking purposes.                                           two similar oﬃce spaces, while an open-space area is on the upper floor.
+    The developed process involved transferring a pre-trained control        In this study, the two oﬃces on the lower level are considered: Oﬃce1
+policy based on the Soft Actor-Critic (SAC) algorithm. Theoretical foun­     and Oﬃce2, both depicted in Fig. 1. Oﬃce1 is positioned on the south­
+dations for DRL controllers are detailed in Appendix B. The aim of the       west corner, spanning an area of 22.94 m2 , while Oﬃce2 lays on the
+implemented DRL controller is to minimise energy consumption while           southeast side with an area of 22.08 m2 . Both oﬃces feature three dif­
+optimising indoor temperature conditions by regulating the opening           ferent HVAC systems: a mechanical ventilation with heat recovery, a
+percentage of the valve in the Thermally Activated Building System           Hybrid Variable Refrigerant Flow (HVRF) system and a ceiling-mounted
+
+
+                                                                         3
+D. Coraci, A. Silvestri, G. Razzano et al.
+                                                                                                                            Energy & Buildings 329 (2025) 115254
+
+
+
+
+                                                               Fig. 1. Case study representation.
+
+
+integrated TABS. In this work, only the latter HVAC system, i.e., the
+TABS is considered, being the only one with full control access. The main
+diﬀerence between the HVAC systems of the two oﬃces is that the venti­
+lation system in Oﬃce2 is integrated into the TABS. In addition, contrary
+to the conventional passive shading system in Oﬃce1, Oﬃce2 features
+an adaptive solar facade that dynamically adjusts to modulate solar ra­
+diation, thereby facilitating local energy generation, passive heating and
+shading, and enhancing daylight penetration [43].
+    The data collected by the onsite sensors is stored in an MS-SQL
+database. In this study, only the indoor and outdoor temperature sen­
+sors, solar radiation sensors and occupancy detectors, a subset of the
+available data points, are used, reproducing typical data access con­
+straints found in conventional buildings, as described in [44]. Oﬃce1
+is a single-person oﬃce which is occasionally used as a meeting space,
+while Oﬃce2 is normally used by two people. Generally, both oﬃces are
+occupied during working hours, from Monday to Saturday between 7:00
+and 21:00. During these time ranges, the temperature is kept between
+21◦ C and 23 ◦ C in Oﬃce1 and between 23◦ C and 25 ◦ C in Oﬃce2. The
+temperature acceptability ranges of the two oﬃces diﬀered for two rea­
+sons concerning the indoor temperature preferences of the occupants
+and the system requirements. As d­fined above, in Oﬃce2 the ventila­
+tion system is integrated with the TABS. This increases the temperature
+of the air supplied by the ventilation system to ensure indoor air quality
+from the 𝐶𝑂2 concentration perspective, compared to the temperature
+of the air supplied in Oﬃce1 by the ventilation system. Therefore, the
+temperature acceptability range in Oﬃce2 is d­fined as [23, 25] ◦ C.
+    The valve is regulated at five-minute intervals. This control directly
+i­fluenced the water flow rate through the TABS and the thermal power
+output in each oﬃce. Notably, the valve operated using a changeover                           Fig. 2. Methodological framework adopted in this work.
+mechanism, with the inlet temperature maintained constant and heated
+by the central heating water supply.
+                                                                                  stage, the source DRL controller performance is compared with that of
+3. Methodology                                                                    the baseline RBC controller implemented in the real building. Details
+                                                                                  about this methodological step can be found in Section 4.3.
+    This section delineates the methodological framework of this paper,
+structured into four stages as shown in Fig. 2.                                   3.2. Implementation of DRL controller in source oﬃce
+
+3.1. Pre-training of DRL source controller in the HiLo digital twin                   The second phase of the methodology involves the implementation
+                                                                                  of the pre-trained DRL controller in the source oﬃce.
+     In the initial phase of the methodology, the DRL controller in the               The DRL controller is implemented in the source oﬃce, continually
+source oﬃce zone is pre-trained in simulation, but diﬀerently from [44]           learning from ongoing interaction with the real building and iteratively
+it is employed a digital twin based on a detailed Resistance-Capacitance          updating and r­fining its control policy.
+(RC) model and developed in Modelica. The DRL agent is pre-trained                    As in [44], the implementation adheres to the infrastructure pro­
+to manage the opening percentage of the valve in the TABS circuit for             vided by NEST, ensuring eﬀective communication and control for the
+the source oﬃce, employing a co-simulation environment integrating                HVAC system of the building, including a fail-safe mechanism to ensure
+Modelica and Python that facilitated interaction between the controller           continuous and correct operation of the HVAC system.
+and the digital twin. Throughout the pre-training process of the source               Thus, a performance benchmark for the DRL controller is carried
+DRL controller, an automated procedure is conducted to identify the               out by using the digital twin developed in Modelica for the source oﬃce
+best co­figuration of hyperparameters for the DRL controller. At this             with the RBCs and PI controllers.
+
+
+                                                                            4
+D. Coraci, A. Silvestri, G. Razzano et al.
+                                                                                                                            Energy & Buildings 329 (2025) 115254
+3.3. Implementation of online transfer learning in target oﬃce                   Table 1
+                                                                                 Metrics for calibrated models of the two oﬃces.
+   The third stage of the methodological framework entails the im­                 Zone     Indoor temperature RMSE [◦ C]      Energy consumption MAPE [%]
+plementation of the online TL strategy, where the DRL control policy               Oﬃce1    0.62                               9.9
+implemented in the source oﬃce is transferred to the target oﬃce. The              Oﬃce2    0.65                               9.2
+online TL strategy includes imitation learning, weight-initialisation and
+ﬁne-tuning.
+   The implementation of online TL in the target oﬃce integrates the           equal to the value estimated from the building geometry, a multiplier
+same fail-safe mechanism developed for the source oﬃce. Further details        for the thermal capacity was introduced for the tuning process. These
+about the online TL implementation are provided in Section 4.4.1.              parameters were selected as being the most directly i­fluencing the dy­
+                                                                               namic response of the building, and were tuned through a trial and error
+3.4. Performance benchmarking of online transfer learning in target oﬃce       process. Fine-tuning these parameters allowed to adjust the time con­
+digital twin                                                                   stant of both the building and the TABS, thus better fitting the output
+                                                                               variables pr­file with the sensor measurements. In particular, the final
+    The last stage of the methodology benchmarks the performance of            value of the multiplying factor for scaling the sensible thermal mass of
+the online TL strategy against an online DRL controller, three PI con­         the volume was equal to 3. This value is often signiﬁcantly larger than
+trollers with diﬀerent temperature setpoints, as well as two diﬀerent          1, as it has to account for internal thermal masses [47].
+RBCs. The benchmark for online TL with RBCs is provided to compare                 The calibrated model showed satisfactory performance, as can be
+the performance of the former with conventional controllers commonly           seen in Fig. 3 for Oﬃce1 for the period 15 to 28 November 2023. The
+used in real buildings. Speciﬁcally, two diﬀerent RBCs are evaluated,          upper plot compares the measured zone temperature to the simulation
+one of which emulated the operation of the baseline controller imple­          result. The second and third subplots compare respectively the thermal
+mented in the real building. The benchmark controllers are implemented         power delivered by the TABS and the return water temperature result­
+using the digital twin developed in Modelica for the target oﬃce, con­         ing from the simulation to that measured on the field. It must be noted
+sidering the same real-world conditions as those in which the online TL        that from the comparison between the real and simulated measurements
+controller operated.                                                           for the thermal power delivered by the TABS that the two pr­files were
+    Further details on online DRL control strategy can be found in Sec­        similar. Moreover, the return temperature reading was meaningful only
+tion 4.4.                                                                      when the heating system was in ON mode; indeed, the model perfor­
+                                                                               mance with respect to the heating system dynamics was evaluated on
+4. Implementation                                                              the prediction error of the heating power consumption, which was null
+                                                                               when the system is OFF. The lower plot shows the boundary conditions
+4.1. Digital twins development                                                 pr­files during the considered time window, those variables being the
+                                                                               outdoor air temperature, the adjacent zone temperature and the global
+    A detailed white-box model of the controlled system was developed          horizontal solar radiation. Moreover, Table 1 shows the metrics em­
+to train the DRL controller and benchmark the performance of diﬀer­            ployed to evaluate the performance of the model calibration process of
+ent controllers after the real implementation. The model was developed         the two oﬃces. In detail, Root Mean Squared Error (RMSE) and Mean
+in Modelica [45] by using the Buildings library [46]. The model com­           Absolute Percentage Error (MAPE) are used to evaluate the performance
+prises both the dynamic characteristics of the adaptive solar facade and       related to indoor temperature calibration and energy consumption, re­
+a detailed description of the HVAC system. The facade model was made           spectively. The energy consumption was closely related to the return
+of lumped parameter elements: a sub-model computed the mass and                temperature, as the supply temperature and flow rate measured in the
+energy balance in the zone air volume, while facade opaque elements,           real field were used as inputs. The response of the models of both of­
+namely the ceiling, the floor and the vertical partitions separating the       ﬁces is acceptable, showing performance in the range of 0.6 ◦ C of RMSE
+zone with the adjacent zones and the external environment, were mod­           for indoor temperature and MAPE between 9 and 10% for energy con­
+elled as a series of thermal resistances and capacities, each accounting       sumption.
+for a construction layer. The model included thermal bridges and a de­             The Modelica model was exported as a Functional Mock-up Unit
+tailed description of the thermal gains due to the transparent envelope        (FMU), according to the Functional Mock-up Interface (FMI) standard
+elements. The TABS model accounted for its water mass content, the             [48]. The standard allows to interface models built with diﬀerent soft­
+thermal capacity and resistance of the concrete layers in which pipes          ware tools with each other and with programming language code. In
+were embedded, and the pressure drop of the pipes themselves, thus             the present case, the model FMU was interfaced with a primary code
+providing a realistic estimation of the heat exchange with the zone.           written in the Python language, in order to allow control signals to be
+    Model parameter values were inferred from available building de­           sent to the emulator, which would in turn send feedback measurements
+scriptions and drawings; then, some of those parameters were selected          back to the primary code. The FMI standard allows such an interaction
+for the calibration process, in which their value was fine-tuned to match      to be performed at each simulation timestep, enabling the simultaneous
+the pr­file of the selected output variables with the actual measured pro­     interaction between the emulator and the controller.
+ﬁles. The output variables of choice were the zone air temperature and
+the return water temperature of the TABS to ensure that the model prop­        4.2. DRL controller design
+erly described both the zone and TABS thermal dynamics. Internal gains
+due to people occupancy were estimated combining the available mon­                This section describes the main features of the implemented DRL
+itored occupancy fraction with properly selected values of convective          controller (i.e., state-space, action-space and reward function).
+and radiant gain per person, according to the expected oﬃce activity               The formulation of the action-space and the reward function is the
+carried out by the occupants. As far as non HVAC-related appliances, a         same as in the recent work developed by Silvestri et al. [44] for the
+realistic usage schedule was inferred from the occupancy pattern.              same building, while the state space is mod­fied to provide an improved
+    The parameters selected to be tuned were the TABS, the internal air        version ensuring better performance for DRL controller.
+volume thermal capacities and the thermal resistance accounting for the            The DRL controller was developed by employing the latest version
+thermal bridges of the building facade. In particular, the Modelica em­        of the Stable-Baselines library [49].
+ulator modelled the internal air volume as lumped object on which to               Since the SAC was employed as DRL algorithm, the action-space is
+apply mass and energy balance equations. While the air mass was kept           continuous and d­fined as:
+
+
+                                                                           5
+D. Coraci, A. Silvestri, G. Razzano et al.
+                                                                                                                              Energy & Buildings 329 (2025) 115254
+
+
+
+
+Fig. 3. Comparison for Oﬃce1 of real and simulated indoor temperature, TABS thermal power and TABS return temperature after model calibration. (For interpretation
+of the colours in the figure(s), the reader is referred to the web version of this article.)
+
+
+𝐴 ∶ 0 ≤ 𝑢𝑡 ≤ 1                                                            (1)      perature acceptability range. As per the other variables discussed so far,
+                                                                                   information concerning indoor air temperature was integrated into the
+     During each 5-minutes control time step 𝑡, the valve opening percent­
+                                                                                   state space at the present control time step 𝑡, along with two lagged
+age 𝑢𝑡 is chosen by the agent. This feature is proportional to the fraction
+                                                                                   values (15 minutes and 30 minutes before), enabling the evaluation of
+of the nominal heating power 𝑄̇ tabs supplied by the TABS. When the
+                                                                                   temperature evolution within the building over time and considering the
+control action 𝑢𝑡 chosen by the agent is lower than 0.1, its value is set
+                                                                                   impact of building thermal dynamics [50]. This approach augments the
+to 0, according to the operational characteristics of the TABS.
+                                                                                   capacity of DRL controller to extract the dynamics of the environment
+     The state-space of the DRL agent included 23 variables that were
+                                                                                   from the state-space. To conclude, information regarding the presence of
+measured in the case study building and d­fined in Table 2 with a de­
+                                                                                   occupants was expressed through three distinct variables: the occupancy
+tail on the evaluation time step and on their corresponding lower and
+                                                                                   fraction over each five-minute control time step 𝑓occ , time to occupancy
+upper bounds employed to re-scale the variables through min-max nor­
+                                                                                   start and time to occupancy end. 𝑓𝑜𝑐𝑐 was integrated to inform the DRL
+malisation.                                                                        agent about the presence of the occupants, thereby indicating poten­
+     Similar to [44], Outdoor Air Temperature 𝑇o and Global Solar Radiation        tial additional indoor gains that could reduce the energy demand for
+𝑄̇ sol were included within the state space as they are fundamental due to         TABS. The remaining two variables denote the time until the next oc­
+their i­fluence on building heating energy consumption and indoor tem­             cupancy pattern change. When the building was unoccupied, time to
+perature. These variables were evaluated on the current time step 𝑡 and            occupancy start indicated the number of time steps remaining before the
+for the previous 15 and 30 minutes. Moreover, hourly outdoor temper­               arrival time of occupants (equal to zero when the building is occupied).
+ature predictions were provided for the next 6 hours. Diﬀerently from              Conversely, during occupied periods, time to occupancy end denoted the
+[44], the power supplied by the TABS to the environment 𝑄̇ tabs was in­            number of time steps until the departure time of occupants (equal to
+cluded in the state-space considering only two historical measurements,            zero during off-occupancy periods).
+15 and 30 minutes before, as it was proportional to the control action 𝑢𝑡              In this paper, the reward function was d­fined as the combination
+and this could lead to possible ove­fitting for the DRL controller. To en­         of two opposing terms, energy-related 𝑟E and temperature-related 𝑟T ,
+sure an adaptive deﬁnition, the information about Indoor temperature did           weighted by employing the reward factor 𝛽 > 0 and employing a reward
+not consider its absolute value but the temperature diﬀerence relative to          scaling factor 𝜃 , similar to [44]. The reward formulation 𝑟 follows a
+the two temperature limits of the acceptability temperature range (i.e.,           similar structure to the one employed in [44] and it is d­fined as follows:
+𝑇i − 𝑇i and 𝑇i − 𝑇i ). By combining these two variables, the DRL agent
+comprehended the status of indoor temperature compared to the tem­                 𝑟 = −𝜃 ⋅ (𝑟E + 𝛽 ⋅ 𝑟T )                                                       (2)
+
+
+                                                                             6
+D. Coraci, A. Silvestri, G. Razzano et al.
+                                                                                                                                                 Energy & Buildings 329 (2025) 115254
+                                         Table 2
+                                         Variables included in the state-space.
+                                           Variable                  Min value    Max value    Unit             Timestep
+                                           𝑇o                        261.15       293.15       K                t-30min, t-15min, t, t+1h, ..., t+6h
+                                           𝑄̇ sol                    0            800          𝑊 ∕(𝑚2 ⋅ 𝐾)      t-30min, t-15min, t
+                                           𝑄̇ tabs                   0            0.9          kW               t-30min, t-15min
+                                                                                               ◦
+                                           𝑇i − 𝑇i                   -5           5              C              t-30min, t-15min, t
+                                           𝑇i − 𝑇i                   -5           5            ◦C               t-30min, t-15min, t
+                                           Time to occupancy start   0            407          -                t
+                                           Time to occupancy end     0            169          -                t
+                                           Occupancy fraction 𝑓occ   0            1            -                t
+
+
+
+    The energy-related term 𝑟E was equal to 𝐸tabs [kWh], representing                              [54]. Therefore, designating a criterion for selecting the best solution
+the energy consumption attributed to the operation of the TABS, which                              among these optimal choices became necessary. The criterion adopted in
+was directly proportional to the control action 𝑢𝑡 . The temperature­                              this study was based on the minimum distance from the point with coor­
+related term 𝑟T quant­fied the squared deviation of the zone temperature                           dinates corresponding to the minimum values of both objective function
+from the desired temperature limits, and its formulation depended on                               terms, d­fined as the ideal point [55]. In this framework, the Euclidean
+the presence of occupants during occupancy hours, indicated by 𝑏occ :                              distance between ideal and Pareto front points was calculated consider­
+       {                                                                                           ing a plane with coordinates [𝐸tabs , 𝑇viol,daily ]. In the Euclidean distance
+          0                                                  if 𝑏occ = 0                           calculation, no specific weighting was applied, since each term was con­
+𝑟T =                                                                                    (3)
+          max(0, 𝑇i − 𝑇i )2 + max(0, 𝑇i − 𝑇i )2              if 𝑏occ = 1                           sidered equally.
+                                                                                                       Twenty agents trained for 20 episodes, where each episode corre­
+    During non-working hours, the value of 𝑟T was equal to 0.
+                                                                                                   sponds to 90 days, from 1 December 2023 to 28 February 2024, were
+                                                                                                   considered during the hyperparameters optimisation procedure.
+4.3. Setup of DRL controller pre-training process
+                                                                                                       Ideally, all possible combinations of the hyperparameters would be
+    This section delves into the setup of the DRL controller during the                            evaluated to identify the optimal co­figuration. However, this approach
+pre-training phase carried out by using the digital twin developed in                              would be computationally prohibitive. Thus, twenty trials were selected
+Modelica to emulate the building dynamics. In this study, the latest ver­                          to adequately explore the hyperparameter space while balancing com­
+sion of the SAC algorithm developed in the Stable-Baselines library [49]                           putational costs. This approach aligns with the methodology used in
+was employed. The performance of DRL controllers was i­fluenced by                                 [39] who adopted a similar number of trials in a comparable context.
+numerous hyperparameters that required adequate tuning [51]. Thus,                                     The performance achieved per each trial at the end of the training
+an automated hyperparameter optimisation procedure is executed using                               phase by each set of DRL hyperparameters was computed by consid­
+the Python library Optuna [52]. The Tree-structured Parzen Estimator                               ering the Euclidean distance between the DRL performance the ideal
+(TPE) algorithm [53] was chosen as the sampling optimisation method                                point. The best set of hyperparameters was retrieved by considering the
+for Optuna. The optimisation process was carried out to retrieve the opti­                         minimum Euclidean distance and by comparing the performance of each
+mal co­figuration of hyperparameters that ensured the most favourable                              set against that of the 𝑅𝐵𝐶1 baseline controller implemented in the real
+balance between decreasing the average daily energy consumption as­                                Oﬃce1 in HiLo, described in Section 4.4.2. Comparing each set of hyper­
+sociated with TABS operation 𝐸tabs and improving indoor temperature                                parameters against the performance of 𝑅𝐵𝐶1 was conducted to ensure
+control for the DRL agent. The performance in terms of temperature                                 that each chosen co­figuration demonstrated an improvement over the
+control was evaluated by assessing the mean value of the daily average                             baseline control strategy. This validation step was necessary because
+temperature violation rate 𝑇viol,daily , computed as:                                              minimising Euclidean distance alone does not guarantee that each con­
+                                                                                                   ﬁguration performs better than the baseline controller. The values and
+                 𝑇viol,daily                                                                       range of DRL controller hyperparameters considered during the optimi­
+𝑇viol,daily =                                                                           (4)
+                𝑛viol,occ,daily                                                                    sation process are included in Table C.7 in Appendix C.
+where 𝑇viol,daily was the cumulative daily sum of temperature violations
+                                                                                                   4.4. Benchmark control strategies
+and 𝑛viol,occ,daily is the daily temperature violations occurrences. The
+cumulative daily sum of temperature violations 𝑇viol,daily [◦ C] was com­
+                                                                                                      This section discusses the implementation details of the online TL
+puted per day as d­fined in Equation (5), during the simulated testing
+phase 𝑡 ∈ [0, 𝑡𝑁 ], 𝑡𝑁 corresponds to the number of daily timesteps (i.e.,                         and of the control strategies employed to benchmark the performance
+288 steps).                                                                                        of DRL and online TL controllers.
+
+                𝑡𝑁
+                ∑                                                                                  4.4.1. DRL-based control strategies
+𝑇viol,daily =         𝑏occ,𝑡 ⋅ 𝑇viol,𝑡                                                  (5)            The developed online TL strategy involves weight-initialisation, fine­
+                𝑡=0
+                                                                                                   tuning and imitation learning. Weight-initialisation enables knowledge
+where 𝑏occ,𝑡 was a Boolean variable equal to 1 when the thermal zone                               transfer by sharing between the source and target DRL controllers
+was occupied, while 𝑇viol,𝑡 indicated the temperature violation calcu­                             the neural network parameters. Initially, the pre-trained source agent
+lated per each control time step as follows:                                                       weights of Actor and Critic networks are employed to initialise those of
+                                                                                                   target controllers. Afterwards, the neural network weights are updated
+          ⎧𝑇i − 𝑇i            if 𝑇i < 𝑇i
+          ⎪                                                                                        during a fine-tuning process that enables the adjustment of the agent
+𝑇viol,𝑡 = ⎨0                  if 𝑇i ≤ 𝑇i ≤ 𝑇i                                           (6)        to the unknown conditions specific to the target oﬃce (e.g. variations
+          ⎪
+          ⎩𝑇i − 𝑇i            if 𝑇i > 𝑇i                                                           in indoor temperature preferences of occupants). Before the fine-tuning
+                                                                                                   process started, an IL phase take place, where transitions obtained from
+   𝑇i and 𝑇i represented respectively the upper and lower bounds of the                            the RBC operation, implemented in the real oﬃce 2 for 14 days from 15
+temperature acceptability range.                                                                   November to 28 November 2023, are employed to initialise the mem­
+   Considering the multi-objective nature of the hyperparameter opti­                              ory buffer of the online TL agent. This approach has proven eﬀective in
+misation problem, multiple solutions exist in the optimal Pareto-front                             improving the ability of the online TL agent to learn the action-space­
+
+
+                                                                                           7
+D. Coraci, A. Silvestri, G. Razzano et al.
+                                                                                                                                    Energy & Buildings 329 (2025) 115254
+reward function relationship during the initial days of online TL real                 Table 3
+implementation, as the control problem is the same in source and tar­                  Time and indoor temperature conditions in RBCs for the pre­
+get domains as well as due to the adaptive deﬁnition of the state space                switch ON phase.
+of the DRL controllers, as d­fined in Section 4.2.                                       Combination           Time period                   Indoor temperature
+    In addition to the online TL strategy developed in this paper, an­                   1                     𝑡𝑠𝑡𝑎𝑟𝑡 − 6 ≤ 𝑡 < 𝑡𝑠𝑡𝑎𝑟𝑡 − 5   𝑇i − 𝑇i ≥ 1 ◦ 𝐶
+other DRL-based control strategy was considered to evaluate online TL                    2                     𝑡𝑠𝑡𝑎𝑟𝑡 − 5 ≤ 𝑡 < 𝑡𝑠𝑡𝑎𝑟𝑡 − 3   𝑇i − 𝑇i ≥ 0.5 ◦ 𝐶
+performance, i.e., online DRL controller. The online DRL control strat­                  3                     𝑡 ≥ 𝑡𝑠𝑡𝑎𝑟𝑡 − 3                𝑇i − 𝑇i ≥ 0 ◦ 𝐶
+egy involves the control agent learning the optimal policy while actively
+managing the system without prior knowledge of its dynamics [25].
+The main advantage of the online DRL strategy is its model-free nature,           Two diﬀerent RBCs were used to evaluate the performance of the
+which eliminates the need for a surrogate model of the environment            DRL controller implemented in the source oﬃce and the online TL con­
+to be controlled. However, during the early training stages, the limited      troller in the target oﬃce. These RBCs operate on weekdays during occu­
+knowledge of the agent increases the risk of suboptimal performance. In       pied periods and according to an On-Off control strategy, fully opening
+this context, the IL approach is employed as in online TL to initialise the   or closing the valve based on indoor temperature and time of day condi­
+memory buffer of the online DRL strategy. The online TL controller was        tions outlined in Table 3. These combinations were determined through
+implemented in real-time on Oﬃce2, while the online DRL agent was             a sensitivity analysis, during which various thresholds were tested to
+implemented in simulation employing the digital twin of the Oﬃce2.            minimise temperature violations in the initial stages of the occupancy
+The automated optimisation of hyperparameters was not conducted for           period [44]. The conditions related to the time period refer to the time
+the DRL-based controllers, as it necessitated training the controllers over   of day, indicated as t in Table 3. The diﬀerence between 𝑡start and the
+multiple episodes, such as in the source DRL agent [39]. However, this        values listed under each time period combination is measured in hours.
+approach contrasted with the online DRL and online TL strategies devel­       Therefore, the values reported in Table 3 (i.e., 6, 5 and 3) represent the
+oped in this study, which were implemented respectively for only one          time of the day in hours.
+episode (aiming to represent direct implementation in a real building)            Following the pre-switch ON phase lasting at 𝑡𝑠𝑡𝑎𝑟𝑡 = 7:00, the two
+and directly in the real oﬃce. Therefore, the hyperparameters 𝜃 and 𝛽         RBCs managed the TABS to open the valve to supply heating power
+were the same as those optimised in the source DRL controller for DRL­        to the thermal zone. The two RBCs diﬀered at this stage in the tem­
+based controllers implemented in the target oﬃce. However, the values         perature limits below/above which the valve was opened or closed. In
+of Batch size, Gradient steps, Train frequency and the starting value of      detail, the 𝑅𝐵𝐶1 represented the baseline RBC implemented in the real
+Boltzmann temperature coeﬃcient 𝛼 were mod­fied.                              building, where the controller fully opened the valve to supply heating
+    Reducing the batch size to 64 for both online strategies was moti­        energy from TABS if the 𝑇i fell below the lower-temperature accept­
+vated by the limited data amount available for training the controllers       ability threshold 𝑇i = 21 ◦ C for Oﬃce1 and 𝑇i = 23 ◦ C for Oﬃce2.
+in an online fashion and expediting the convergence process towards           Conversely, if 𝑇i exceeded the upper-temperature acceptability thresh­
+an optimal solution [56]. Increasing the number of gradient steps to 5        old 𝑇i = 23 ◦ C for Oﬃce1 or 𝑇i = 25 ◦ C for Oﬃce2, 𝑅𝐵𝐶1 fully closed
+provided signiﬁcant advantages to the controllers, speeding up the train­     the valve to stop the heating energy supply from TABS.
+ing process during the initial weeks of implementation when the agent             A second implementation of the RBC, denoted as 𝑅𝐵𝐶2, was in­
+had a limited amount of transition data stored in the memory buffer for       troduced to compare the performance of online TL against that of a
+proper training [39]. The initial value of 𝛼 was reduced to 0.05 so that      more r­fined controller. 𝑅𝐵𝐶2 followed the same logic as 𝑅𝐵𝐶1, ex­
+the agent would explore more carefully and exploit the control actions        cept its operation range, which has been restricted between [21, 22]◦ C
+from the source DRL control policy [57].                                      for Oﬃce1 and [23, 24]◦ C for Oﬃce2. This adjustment was made after
+    Moreover, while initially impacting the performance of the DRL­           observing that 𝑅𝐵𝐶1 often exceeded the temperature upper bound due
+based control strategies, a training frequency of 288 control time steps      to the thermal inertia of the TABS.
+ensured that the control agent accumulated a larger number of transi­             RBCs operated until occupants left the building at 𝑡end = 21:00 or on
+tions before proceeding to the next learning step, thus enhancing per­        Sundays when the TABS system was switched OFF.
+formance throughout the training period. The combination of increasing            The PI controllers operate according to the following relationship
+gradient steps to 5, reducing batch size to 64, and lowering learning rate    between the control output 𝑢(𝑡) and the reference error 𝑒(𝑡):
+to 0.00025 compared to the source controller safeguards against com­                                    𝑡
+plete overwriting of the pre-trained source control strategy. Adjusting
+                                                                              𝑢(𝑡) = 𝐾p 𝑒(𝑡) + 𝐾i           𝑒(𝜏) 𝑑𝜏                                                    (7)
+the learning rate enabled the optimisation of the control policy accord­                            ∫
+ing to the varying boundary conditions in the target building while                                 0
+mitigating excessive exploration of the action space, which could lead            In this work, 𝐾p and 𝐾i were fine-tuned by employing a PID Tuner
+to deviations from the optimal control policy learned during the ini­         in MATLAB, co­figured for balanced performance. The values of the
+tial training phase [58]. Hence, utilising a lower learning rate ensured      two constants resulting from the tuning process are respectively equal
+                                                                                            1                      1
+that the prior knowledge from the source oﬃce was not completely dis­         to 𝐾p = 0.3 ◦ and 𝐾i = 1 ⋅ 10−4 ◦ . The unit of measure of 𝐾p and 𝐾i
+                                                                                             C                   𝑠⋅ C
+carded. Therefore, the learning rate 𝜇 was reduced for online TL by half      were obtained considering that the PI controller operates respectively
+compared to the value of the same parameter for the source DRL con­           on the proportional and integral value of the error 𝑒(𝑡), measured in
+troller (i.e., 0.0005) as in [24] that demonstrated the eﬀectiveness of the   ◦ C, while 𝑢(𝑡) is expressed as percentage. Moreover, the control action
+
+learning rate reduction by computing the Mahalanobis distance [59].           𝑢(𝑡) was limited within the range [0,1] to be comparable with other
+    However, for the online DRL controller, the initial value of 𝛼 and the    controllers’ action space, d­fined in (1). To prevent integral windup, an
+value of learning rate 𝜇 were the same as source DRL controller since         anti-windup scheme was integrated into the PI controller [60]. The PI
+this control strategy was implemented without pre-training, and it was        controller was set to track an indoor temperature setpoint, and operated
+required to encourage exploration due to the absence of a pre-trained         from Monday to Saturday from 1:00 to 21:00. The choice of 1:00 as the
+policy as in the case of online TL.                                           start time for the PI controllers was made to ensure consistency with
+                                                                              the operation of RBC strategies, providing a fair comparison between
+4.4.2. Traditional controllers                                                the traditional controllers. However, details about the results of each
+   Similarly to the previous work by Silvestri et al. [44], two diﬀerent      tested start time are included in Table D.9 in Appendix D.
+types of traditional controllers were evaluated during the benchmarking           Diﬀerent temperature setpoints and starting times were tested to find
+phase: RBC and PI controllers.                                                the PI controller with the best performance in terms of energy consump­
+
+
+                                                                          8
+D. Coraci, A. Silvestri, G. Razzano et al.
+                                                                                                                           Energy & Buildings 329 (2025) 115254
+                                                                                                   Table 4
+                                                                                                   Average daily energy consumption and
+                                                                                                   mean daily average temperature violation
+                                                                                                   rate for DRL and benchmark controllers for
+                                                                                                   Oﬃce1 during pre-training phase.
+                                                                                                    Controller   𝐸tabs [kWh]   𝑇viol,daily [◦ C]
+                                                                                                    𝑅𝐵𝐶1         7.28          0.139
+                                                                                                    𝑅𝐵𝐶2         8.21          0.042
+                                                                                                    𝑃 𝐼21        6.26          0.253
+                                                                                                    𝑃 𝐼21.5      7.41          0.045
+                                                                                                    𝑃 𝐼22        8.46          0.125
+                                                                                                    𝐷𝑅𝐿          5.59          0.032
+
+
+
+                                                                                      During the implementation, the DRL controller ran in Oﬃce1 from 8
+                                                                                  to 16 March 2024. Subsequently, the DRL controller was transferred to
+                                                                                  Oﬃce2 and implemented from 3 to 26 April 2024.
+
+                                                                                  5. Results
+
+                                                                                     This section shows the outcomes of applying the methodological
+                                                                                  framework described in Section 3. The results are divided into two sub­
+                                                                                  sections, each focusing on a diﬀerent oﬃce.
+
+                                                                                  5.1. Pre-training and real-world implementation of DRL controller in
+                                                                                  Oﬃce1
+
+                                                                                      As outlined in Section 4.3, the DRL controller was pre-trained of­
+                                                                                  ﬂine using the digital twin developed for Oﬃce1 before its real-world
+                                                                                  implementation. This pre-training phase involved optimising the hyper­
+                                                                                  parameters of the source DRL controller, whose values are detailed in
+                                                                                  Table C.7. The results obtained for the DRL controller during the three­
+Fig. 4. The control systems infrastructure where the dotted lines represent the   month pre-training phase in Oﬃce1, conducted using typical climatic
+control signals, while the solid lines represent the data signals, adapted from   data in Modelica for Dübendorf, and those of the benchmark controllers,
+[44].                                                                             are reported in Table 4.
+                                                                                      Results in Table 4 indicate that the DRL controller outperformed the
+tion and temperature violations. For Oﬃce1 and Oﬃce2, three diﬀerent              benchmark controllers implemented in Oﬃce1 in simulation. Speciﬁ­
+indoor temperature setpoints were tested, considering values placed in­           cally, DRL reduced TABS average daily energy consumption between
+side the acceptable temperature ranges per each oﬃce: 21 ◦ C, 21.5 ◦ C            23% and 32% compared to RBCs and between 11% and 34% in relation
+and 22 ◦ C for Oﬃce1, 23 ◦ C, 23.5 ◦ C and 24 ◦ C for Oﬃce2.                      to PI controllers. In addition, the DRL provided better control of in­
+                                                                                  door temperature conditions, since it decreased 𝑇viol,daily between 24%
+4.5. Real-world implementation                                                    and 77% in comparison to RBCs and between 29% and 87% relative
+                                                                                  to PI controllers. Moreover, to provide a better overview of the per­
+    This section outlines the implementation of the controllers in the real       formance for the pre-trained DRL controller, Table E.10 in Appendix E
+systems, adhering to the methodology detailed in Section 3.                       shows the performance comparison of the DRL controller and traditional
+    Fig. 4 shows the flow of data and signals through the communication           controllers over another three-month period from a diﬀerent year but
+infrastructure in NEST.                                                           for the same location (i.e., Dübendorf).
+    In the foundation tier of the system, the Programmable Logic Con­                 Subsequently, the DRL controller was implemented in learning mode
+troller (PLC) situated in HiLo was responsible for gathering sensor data          on the source oﬃce, considering an implementation period of nine days.
+and dispatching control signals to actuators via various protocols, in­           The implementation period was limited by connection issues with the
+cluding Modbus RTU RS485 and conventional analog/digital signals                  database from which the DRL controller extracted the states required
+(0-10V, 4-20mA, PT1000, DI/DO). This PLC communicated with a gate­                for its correct operation.
+way housed on a virtual machine through the versatile, open-source                    Fig. 5 provides a detailed performance comparison of the DRL agent
+OPC-UA protocol. Subsequently, this gateway transmitted the collected             in the real environment versus its behaviour in the digital twin of Of­
+data to a MS-SQL historical database via Open DataBase Connectivity               ﬁce1. This comparison highlights the indoor temperature and energy
+(ODBC). This database is hosted on a virtual machine within the NEST              consumption pr­files in both settings, illustrating how the controller op­
+cloud and is accessible remotely through a Python-integrated REST API.            erates under real-world conditions compared to digital twin conditions.
+Real-time data and control signals were reciprocally exchanged between            For the digital twin, the same boundary conditions of the analysed pe­
+the remote client and the gateway server utilising the MQTT protocol.             riod (8-16 March 2024) were employed, as well as the same actions
+    The remote PC, equipped with a 4-core CPU operating at 3.40 GHz               selected by DRL controller real implemented.
+and 16GB of RAM, ran two Python scripts in parallel within a Python                   Fig. 5 shows that the DRL controller implemented in the digital twin
+virtual environment. The control logic was implemented in the Con­                provided identical performance in terms of energy consumption com­
+troller script, which read data and wrote control signals to a JSON file.         pared to real operation, while the temperature pr­files were similar,
+The Communication interface script handled the transmission of informa­           with some diﬀerences due to sporadic temperature peaks that occurred
+tion between the JSON file and the system. This structure separated the           in real operation and related to certain factors that were not modelled in
+tasks of controlling and communicating, ensuring that communication               the digital twin (e.g. other occupants that arrive in the oﬃce, doors/win­
+remained active even if an error occurred in the Controller script.               dows opening). However, a performance metrics comparison between
+
+
+                                                                              9
+D. Coraci, A. Silvestri, G. Razzano et al.
+                                                                                                                            Energy & Buildings 329 (2025) 115254
+
+
+
+
+            Fig. 5. Comparison of indoor temperature and energy consumption profiles between real and digital implementations for DRL in source oﬃce.
+
+
+                      Table 5                                                          As demonstrated by results in Table 5, the implementation of DRL
+                      Average daily energy consumption and                         controller in the digital twin of Oﬃce1 led to similar TABS average daily
+                      mean daily average temperature violation                     energy consumption compared to 𝑅𝐵𝐶2 and 𝑃 𝐼21 and saved 10%, 11%
+                      rate for DRL and benchmark controllers im­                   and 38% of energy compared to 𝑅𝐵𝐶1, 𝑃 𝐼21.5 and 𝑃 𝐼22, respectively.
+                      plemented in Oﬃce1 digital twin during                       On top of that, the DRL controller provided better control of indoor
+                      the period 8-16 March 2024.
+                                                                                   temperature conditions, reducing 𝑇viol,daily up to 50% compared to RBCs
+                        Controller      𝐸tabs [kWh]   𝑇viol,daily [◦ C]            and between 45% and 63% compared to PI controllers.
+                        𝑅𝐵𝐶1            2.33          0.255                            To conclude the description of results obtained in Oﬃce1, Fig. 6 com­
+                        𝑅𝐵𝐶2            2.13          0.190                        pares for the period 8-16 March 2024 indoor temperature and energy
+                        𝑃 𝐼21           2.04          0.182                        consumption patterns, as well as the outdoor temperature trend, for
+                        𝑃 𝐼21.5         2.37          0.182
+                        𝑃 𝐼22           3.38          0.296
+                                                                                   𝑅𝐵𝐶2, 𝑃 𝐼21 and DRL control strategies implemented on the digital
+                        𝐷𝑅𝐿             2.1           0.108                        twin.
+                                                                                       Fig. 6 shows that DRL was the most eﬀective algorithm for manag­
+                                                                                   ing indoor temperature and optimising energy consumption. In detail,
+                                                                                   𝑅𝐵𝐶2 showed wide and rapid oscillations in indoor temperature, of­
+the real case and the digital twin showed that the consumption was                 ten exceeding temperature limits. This behaviour generated high and
+similar (𝐸tabs,real1 = 18.3kWh vs 𝐸tabs,twin1 = 18.9kWh), while 𝑇viol,daily        discontinuous energy consumption peaks, which was indicative of less
+diﬀered by approximately 16%. The performance metrics for the com­                 eﬃcient control. 𝑃 𝐼21 followed a similar TABS management strategy
+parison of the indoor temperature and energy consumption pr­files of               as 𝑅𝐵𝐶2, while the DRL controller maintained the indoor temperature
+the DRL controller implemented in real building and the digital twin               consistently within comfort limits with minimal variations. At the same
+were respectively 𝑅𝑀𝑆𝐸𝑇i = 0.61 ◦ C and 𝑀𝐴𝑃 𝐸𝐸tabs = 6.7%.                         time, the DRL controller reduced energy consumption peaks, demon­
+    To provide a benchmark of the performance obtained by the DRL in               strating its capability to adapt the control policy to the boundary con­
+Oﬃce1 compared to that of RBCs and PI-based controllers, a compar­                 ditions experienced in the real building.
+ison was made by implementing the controllers on the digital twin of                   Although the DRL performed better than the analysed benchmark
+Oﬃce1 during the period 8-16 March 2024. The results are summarised                controllers, certain anomalous aspects could be highlighted. During un­
+in Table 5.                                                                        occupied hours, as in the third and fifth day of the analysed period,
+
+
+                                                                            10
+D. Coraci, A. Silvestri, G. Razzano et al.
+                                                                                                                         Energy & Buildings 329 (2025) 115254
+
+
+
+
+         Fig. 6. Comparison of indoor temperature and energy consumption profiles between DRL, 𝑅𝐵𝐶2 and 𝑃 𝐼21 implemented in the Oﬃce1 digital twin.
+
+
+the DRL controller switched ON the TABS. This behaviour suggests that            the limitations introduced by the reward structure, enabling the DRL
+the DRL controller activated the TABS to offset for suboptimal decisions         controller to preemptively activate or deactivate the TABS at the ap­
+made the previous day (i.e. second day, where the TABS was not ac­               propriate time, thus minimising energy consumption while enhancing
+tivated despite 𝑇i is lower than 𝑇i ), highlighting a limitation in the          indoor temperature control.
+long-term decision-making framework of DRL controllers. This obser­
+vation aligns with the challenges encountered by DRL control agents in           5.2. Implementation of online transfer learning in Oﬃce2
+properly accounting for thermal inertia, in particular in highly dynamic
+environments such as oﬃce buildings.                                                 This section summarises the results of implementing the online TL
+    Moreover, on the sixth day, the DRL controller did not switch ON             strategy in the target oﬃce (i.e., Oﬃce2). First, an overview of the
+the TABS although 𝑇i was below 𝑇i during occupancy hours, while dur­             outcomes from the real-world application of online TL is presented. Sub­
+ing the last two days of the analysed period the DRL controller failed           sequently, the performance of the online TL strategy is benchmarked
+to keep the TABS switched ON although 𝑇i was above 𝑇i during occu­               against RBCs, PI and online DRL approaches. These benchmark con­
+pancy hours. These behaviours could be attributed to the design of the           trollers were tested in the digital twin of Oﬃce2 over the same period as
+reward structure, which prioritises long-term optimization objectives            the real-world implementation, from 3 April to 26 April 2024. No con­
+over immediate corrective actions, leading to delayed responses in some          nection losses occurred during the implementation period of the online
+circumstances. Although the DRL controller integrated the measured in­           TL.
+door temperature in the state-space, it may not fully account for dynamic            Fig. 7 shows the pr­files from real measured data of indoor tem­
+disturbances such as thermal exchanges with adjacent rooms or outdoor            peratures, real measured heating power provided by TABS and its sup­
+environments and air i­filtration through open doors or windows. These           ply/return water temperature, outdoor and nearest room temperatures
+events introduced temperature fluctuations that are challenging for the          and solar radiation over twelve days during the real implementation pe­
+DRL controller to anticipate and mitigate eﬀectively, given its current          riod of the online TL (from 3 April to 14 April 2024).
+state-space representation. Including additional variables into the state­           The online TL strategy aimed to minimise energy consumption,
+space (e.g. temperature of the nearest rooms or information about door           mainly during occupancy hours, by leveraging free thermal gains from
+and windows openings) could improve the ability of the DRL controller            occupants, appliances and solar radiation, as observed in the first two
+in r­fining its policy and enhance its responsiveness to such dynamic            days of the analysed period. Moreover, from the third to the seventh
+environmental changes. Moreover, this approach could help balance                day, the TABS was never switched on since the online TL had complete
+
+
+                                                                           11
+D. Coraci, A. Silvestri, G. Razzano et al.
+                                                                                                                             Energy & Buildings 329 (2025) 115254
+
+
+
+
+Fig. 7. Indoor temperature, heating power and TABS supply/return water temperature pr­files from real implementation of online TL strategy in target oﬃce for the
+period 3 April - 14 April 2024.
+
+
+knowledge of external climatic conditions due to the presence in the               consumption pr­files between the real implementation and the digital
+state-space of past and future information on outdoor temperature and              twin during the second period (15-26 April 2024) is shown in Fig. 8,
+solar radiation. In particular, during these days, climatic conditions were        using the same boundary conditions and the same actions selected by
+less severe compared to typical winter conditions (with peaks of 30 ◦ C in         the online TL controller implemented in reality.
+some cases for 𝑇o ), i­fluencing the building dynamics and allowing the                Fig. 8 shows that the digital twin was less accurate in emulating the
+online TL to avoid wasting energy while maintaining adequate indoor                real indoor temperature pr­file when compared to the previous case of
+temperature conditions. However, during the last two days of the anal­             Oﬃce1. The temperature pr­file from the digital twin frequently devi­
+ysed period (13-14 April 2024), a technical issue emerged in the TABS              ated from the real implementation, particularly in response to abrupt
+system related to the presence of a threshold value on the average out­            temperature changes. Several factors may have contributed to the dis­
+door temperature over the past 24 hours. Speciﬁcally, during these two             crepancies observed in the indoor temperature pr­files, such as occupant
+days, the operating mode of the TABS switched from heating to cooling              behaviour that i­fluenced the opening/closing of doors and windows
+mode (as can be seen from the supply and return temperature pr­files               and the eﬀect of solar radiation in combination with the presence of
+in Fig. 7) due to the high value of outdoor temperature, which exceeded            blinds in the window, as described in Section 2. These aspects signif­
+the limit for maintaining the TABS system in heating mode. However,                icantly i­fluenced the indoor thermal dynamics, resulting in inability
+from 15 April 2024, the 24-hour average of outdoor temperature was                 of the digital twin inability to capture the temperature variations ac­
+lower than the threshold limit, so the TABS system resumed its opera­              curately. These discrepancies were associated with not integrating the
+tion in heating mode. Due to this issue, 13 and 14 April 2024 had to               eﬀect of the opening of doors and windows by the occupants in the
+be excluded from the analysis. As a result, the online TL implementa­              digital twin of the target oﬃce. Moreover, although the eﬀect of the
+tion period was split into two parts: the first period from 3 to 12 April          presence of the blinds was integrated within the modelling through the
+2024, and the second period from 15 to 26 April 2024. This adjustment              change of the g-value of the window, it turned out not to be adequate
+allowed for a more reliable performance benchmark for online TL when               with the results obtained during the analysed period, in contrast to the
+operating the TABS in heating conditions.                                          results from the model calibration phase described in Section 4.1. As
+    As for Oﬃce1, the performance of the online TL in the target oﬃce is           a result, the value of 𝑅𝑀𝑆𝐸𝑇i for the comparison of indoor temper­
+compared to the performance when implemented in the digital twin of                ature pr­files between real measured data and digital twin of Oﬃce2
+Oﬃce2. Therefore, a comparison of the indoor temperature and energy                was equal to 0.92 ◦ C. Despite the discrepancies in the temperature pro­
+
+
+                                                                            12
+D. Coraci, A. Silvestri, G. Razzano et al.
+                                                                                                                            Energy & Buildings 329 (2025) 115254
+
+
+
+
+Fig. 8. Comparison of indoor temperature and energy consumption pr­files between real and digital implementations for online TL in target oﬃce during the period
+15-26 April 2024.
+
+
+
+ﬁles, the energy consumption pattern of the digital twin was aligned                               Table 6
+with that of the real implementation. However, the peak values of en­                              Average daily energy consumption and
+ergy consumed were higher for the digital twin. This suggests that while                           mean daily average temperature violation
+the temperature modelling faced challenges, the digital twin captured                              rate for online TL and benchmark controllers
+energy consumption dynamics more accurately. In this framework, the                                implemented in Oﬃce2 digital twin.
+value of 𝑀𝐴𝑃 𝐸𝐸TABS was equal to 9.6%. In summary, while the digital                                 Controller    𝐸tabs [kWh]   𝑇viol,daily [◦ C]
+twin demonstrated a reasonable approximation of the real energy con­                                 𝑅𝐵𝐶1          3.55          0.371
+sumption, it fell short of accurately modelling the indoor temperature                               𝑅𝐵𝐶2          3.35          0.415
+pr­file for Oﬃce2. This discrepancy highlights the importance of includ­                             𝑃 𝐼23         2.98          0.385
+                                                                                                     𝑃 𝐼23.5       3.67          0.347
+ing occupant interactions and behaviours in the digital twin models to
+                                                                                                     𝑃 𝐼24         4.78          0.453
+enhance their predictive accuracy and reliability in real-world applica­                             Online DRL    3.94          0.572
+tions.                                                                                               Online TL     2.81          0.247
+    In conclusion, Table 6 oﬀers an overview of the performance derived
+from implementing benchmark control strategies in the digital twin of
+the target oﬃce, while Fig. 9 provides a detailed view of indoor temper­          rate (i.e., 0.247 ◦ C), reducing this metric by 33% and 40% compared to
+ature and energy consumption pr­files for the strategies providing the            𝑅𝐵𝐶1 and 𝑅𝐵𝐶2, up to 30% in comparison to PI controllers and by
+best performance per each control type.                                           57% compared to the online DRL strategy. Moreover, to demonstrate
+    The results in Table 6 refer to both implementation periods during            that the proposed online TL strategy is an eﬀective solution to enhance
+2024, 3-12 April and 15-26 April. The online TL controller had the low­           the scalability of DRL controllers regardless of the transfer direction,
+est average daily energy consumption (i.e., 2.81 kWh), which is notably           Table E.11 in Appendix E shows the performance comparison for DRL­
+lower compared to all other controllers, saving around 20% of energy              based controllers (i.e., oﬄine DRL, online DRL and online TL) over a
+compared to RBCs, between 5% and 40% compared to PI controllers and               three-month period from a diﬀerent year for Dübendorf. In detail, in
+up to 25% compared to the online DRL agent. Furthermore, the online               Table E.11 the online TL process was carried out by transferring a DRL
+TL controller achieved the lowest daily average temperature violation             controller pre-trained in Oﬃce2 (i.e., source) to Oﬃce1 (i.e., target).
+
+
+                                                                            13
+D. Coraci, A. Silvestri, G. Razzano et al.
+                                                                                                                         Energy & Buildings 329 (2025) 115254
+
+
+
+
+Fig. 9. Comparison of indoor temperature and energy consumption pr­files between online TL, online DRL, 𝑅𝐵𝐶2 and 𝑃 𝐼23 implemented in the Oﬃce2 digital twin
+during the period between 15 April and 26 April 2024.
+
+
+
+    Fig. 9 shows that the online TL controller outperformed the bench­          This integration could involve adding a term to the objective function
+mark 𝑅𝐵𝐶24, 𝑃 𝐼23 and online DRL controllers in optimising indoor               that minimises the diﬀerence in the values of consecutive control ac­
+temperature pr­file and reducing energy consumption. The online TL              tions or by including safety constraints for the actuating systems that
+controller was the most eﬀective in mitigating temperature violations,          override control actions when necessary.
+particularly during the initial hours of occupancy, due to its ability to
+preemptively supply heating energy for maintaining indoor tempera­              6. Discussion
+tures within the desired range more reliably than the other controllers.
+Moreover, the online TL controller reduced peaks in energy consump­                 This paper assessed the eﬀectiveness of an online TL strategy in
+tion compared to 𝑅𝐵𝐶24 and 𝑃 𝐼23 through a more eﬃcient energy                  homogeneous and transductive settings, implemented in a real build­
+management strategy that adjusted the heating supply proactively to             ing with two oﬃces. By leveraging imitation learning and weight­
+avoid large energy spikes. Compared to the online DRL controller, the           initialisation, the online TL framework avoided the need for extensive
+online TL strategy demonstrated better management of the TABS sys­              pre-training, a signiﬁcant limitation in real-world applications where
+tem, achieving a more balanced trade-off between energy consumption             DRL controllers must operate eﬃciently from the early stage of imple­
+and maintaining indoor temperature within comfort bounds. The on­               mentation.
+line DRL and online TL controllers are designed to adapt to real-time               The DRL controller implemented in the source oﬃce was directly
+conditions, which can result in large jumps in energy consumption as            transferred to the target oﬃce using the online TL methodology to eval­
+they respond to changing occupancy patterns and outdoor tempera­                uate its performance compared to traditional strategies like RBC and PI
+ture i­fluences. Nevertheless online TL led to better overall performance       controllers, as well as an advanced DRL controller implemented without
+compared to other benchmark controllers, its control policy may pose            pre-training (i.e., online DRL). The developed online TL methodology
+challenges regarding component wear, as in this case study for the TABS         ensured better performance than the benchmark controllers, avoiding a
+valve. The maintenance of such components could incur additional costs          new pre-training phase of the controller on a new thermal zone. Such
+that negate the ben­fits of energy savings. To address this issue, future       a pre-training phase is not compatible with the needs of real buildings,
+implementations of the DRL-based controllers should consider the inte­          where the controller must ensure certain performance levels from the
+gration of a strategy to minimise abrupt transitions in valve operation.        initial stages of implementation. Furthermore, the lack of adequate mon­
+
+
+                                                                          14
+D. Coraci, A. Silvestri, G. Razzano et al.
+                                                                                                                      Energy & Buildings 329 (2025) 115254
+itoring systems could limit the availability of monitored data to pre-train    in real-world applications, this method oﬀers a strong solution to typical
+DRL controllers. In this context, avoiding the pre-training phase by using     DRL limitations, such as limited observation space and limited monitor­
+the developed online TL methodology makes the DRL implementation               ing systems. The DRL controller had a limited and simpl­fied observation
+process in buildings more scalable.                                            space, including easy-to-measure variables monitored in real buildings
+    One of the major strengths of the proposed TL method is its ability to     with a limited amount of sensors (e.g., indoor temperature, solar radia­
+adjust the control policy to diﬀerent environmental conditions between         tion, occupancy data). Results demonstrated that the DRL controller can
+source and target zones. The energy system implemented in the two of­          function eﬀectively in standard building environments without needing
+ﬁce zones was the same and consisted of a lightweight TABS integrated          extensive instrumentation.
+into the ceiling. Moreover, both oﬃces had the same geometry but dif­              For occupancy, Passive Infrared Sensors (PIRs) are frequently em­
+fered in the number of occupants, heating load pr­files, the acceptable        ployed since they are low-cost sensors (typically ranging from $10 to
+indoor temperature range and diﬀerences in the layout of the ventilation       $50) and easy to use [62]. PIRs mainly provide a binary variable indi­
+system. In Oﬃce2, the ventilation system was integrated with the TABS,         cating the presence of occupants, which is suﬃcient for several energy
+as a consequence the supply air temperature from ventilation and, con­         management applications. Their accuracy is generally good for detect­
+sequently, indoor temperature increased compared to Oﬃce1, where the           ing movement (around 5-10%), although they may not accurately count
+TABS and ventilation system were installed separately. Furthermore, the        the number of occupants. For solar radiation, while dedicated sensors
+diﬀerent layout of the ventilation system between the two oﬃces leads          can be used, which may cost between $100 and $500, it is not neces­
+to a variation of the thermal load pr­files. In this regard, the online TL     sary to install them. Solar radiation values can be obtained from online
+demonstrated excellent capabilities in adapting the transferred control        services like the Solcast API [63], which can provide reliable solar radi­
+policy to the indoor environment dynamics of the target oﬃce.                  ation data (accuracy less than 10%) at little cost, making it a practical
+    The results show that during the implementation period, the online         solution for many applications.
+DRL controller could not match the performance of the online TL, high­             The controller implementation setup ensured interoperability with
+lighting the advantages of the TL process considering Key Performance          the existing systems (as per the action implemented in the TABS valve)
+Indicator (KPI) d­fined in the literature for TL. From the comparison of       without including other sensors or actuators. Moreover, a fail-safe mech­
+online TL and online DRL controllers by using the TL KPI Asymptotic per­       anism is included in the monitoring and implementation infrastructure
+formance during the implementation period (3 April - 26 April 2024), it        as in [44] to avoid possible damages due to connection and infrastruc­
+emerged that the online TL ensured better performance both in terms of         ture issues.
+energy consumption (i.e., -29%) and mean daily average violation rate              In this work, the controllers were implemented on a remote PC con­
+(i.e., -57%). The online DRL controller failed in the short implementa­        nected directly via a Python-developed communication interface with
+tion period to guarantee the correct trade-off between reducing energy         the NEST Cloud. However, this type of connection was subject to con­
+consumption and maintaining adequate indoor temperature conditions.            nection errors on the remote PC side. Therefore, a possible future im­
+    To benchmark the performance of the controllers implemented in             provement to limit connection issues could be the controller implemen­
+both oﬃces, a detailed RC-based digital twin model was developed for           tation directly on the devices in NEST, avoiding the development of
+each oﬃce in Modelica. These models were developed according to the            a communication interface that leads to additional implementation is­
+available technical spec­fications related to the thermophysical prop­         sues. Moreover, to avoid extreme indoor temperature conditions that
+erties of the building envelope and the technical data of the TABS.            may cause discomfort for occupants, safety constraints related to indoor
+Employing a digital twin guaranteed that the physical response of the          temperature values should be integrated into the fallback safety system.
+model closely matched what would be observed if the same controller            These constraints will automatically switch to the default controller if
+was implemented in a real-world setting. A digital twin was calibrated         such conditions persist for extended periods.
+using a grid search approach by adjusting some model parameters and                Another limitation is linked to the case study, since the two thermal
+using real data measured in the oﬃces during November 2023. How­               zones evaluated for the online TL process are part of the same building.
+ever, the comparison of RMSE and MAPE obtained for the two oﬃces               Besides having similar geometry and energy systems, the two zones have
+during the real implementation periods revealed a limitation related           the same boundary conditions (e.g. climatic conditions), except for the
+to the calibration of the digital twin for the target oﬃce, which was          diﬀerent range of acceptable indoor temperatures and the stochastic na­
+less accurate than that for the source oﬃce. The main issue was the            ture of the occupancy pr­file. It might be advantageous to implement the
+inadequate integration of occupant behaviour into the model, as they           online TL between buildings located in diﬀerent locations to evaluate if
+frequently changed the indoor temperature dynamic by opening doors             the climate conditions i­fluence the eﬀectiveness of the transfer pro­
+and windows. To overcome this limitation, the possibility of air i­fil­        cess in real buildings. Furthermore, the ben­fits of implementing online
+tration from adjacent spaces or the outside could be included in future        TL should be considered among buildings with the same type of HVAC
+modelling processes, allowing for a more accurate consideration of this        equipment (e.g. TABS as in this paper) but integrated within diﬀerent
+phenomenon.                                                                    and increasingly complex energy systems.
+    The widespread implementation of DRL-based controllers in real
+buildings is limited by potential equipment damage due to extreme              7. Conclusion
+indoor environmental conditions, connection and monitoring infrastruc­
+ture issues [13]. Sensors signiﬁcantly impact the quality of the control           This paper proposes the implementation of an online TL strategy in
+process, as the control agent uses the measured variables to select the        a real building located in Switzerland to transfer a DRL-based controller
+optimal control action. If a sensor does not accurately measure the vari­      between two oﬃces inside this building. The DRL controller was imple­
+able (e.g. indoor temperature), it would provide incorrect information         mented to manage the valve opening percentage of the TABS to reduce
+to the controller, leading to a misinformed understanding of the actual        energy consumption and optimise indoor temperature conditions within
+conditions in the building. Therefore, it would be ben­ficial to quantify      an acceptable range.
+the eﬀectiveness of the sensors through a sensitivity analysis [61].               The DRL controller was first pre-trained on the digital twin of the
+    The building employed as a case study was a living lab. While there        source oﬃce. Afterwards, the DRL controller was implemented in the
+are similarities between real buildings and living labs, there are also        real oﬃce and its performance was benchmarked using the digital twin
+signiﬁcant diﬀerences. For example, living labs like HiLo usually have         of Oﬃce1 against two RBCs and three PI controllers. In this phase,
+comprehensive sensors and monitoring systems to collect detailed per­          the DRL ensured similar performance in terms of average daily energy
+formance data. In contrast, real buildings often have more limited instru­     consumption compared to 𝑅𝐵𝐶2 and 𝑃 𝐼21, and 10 to 30% better per­
+mentation. However, to ensure experiment replicability and scalability         formance compared to the other benchmark controllers. Furthermore,
+
+
+                                                                          15
+D. Coraci, A. Silvestri, G. Razzano et al.
+                                                                                                                        Energy & Buildings 329 (2025) 115254
+the DRL provided better performance in indoor temperature manage­              Declaration of competing interest
+ment, reducing the daily average temperature violation rate 𝑇viol,daily
+by 50% compared to all benchmark controllers.                                      The authors declare the following financial interests/personal rela­
+    Thus, the source controller was implemented in the real Oﬃce2 fol­         tionships which may be considered as potential competing interests:
+lowing the online TL strategy. The performance of online TL was bench­         Alberto Silvestri reports financial support was provided by Mitsubishi
+marked by implementing in the digital twin of the target oﬃce con­             Electric R&D Centre Europe BV. Other authors declare that they have
+trollers of the same type as in Oﬃce1 as well as a DRL-based controller        no known competing financial interests or personal relationships that
+implemented directly without pre-training (i.e., online DRL). Online TL        could have appeared to i­fluence the work reported in this paper.
+was more eﬀective than the other benchmark controllers, since it re­
+duces the average daily energy consumption by 20%, between 5% and              Acknowledgements
+40% and up to 25% when compared to RBCs, PI and online DRL con­
+                                                                                  The measured data used in this study were collected and made avail­
+trollers, respectively. Furthermore, online TL implementation led to a
+                                                                               able by Empa with the support of the Swiss Federal Oﬃce of Energy and
+reduction in 𝑇viol,daily of up to 30% compared to RBCs and PI controllers
+                                                                               the Swiss National Science Foundation. The experiments in HiLo were
+and of 57% compared to online DRL.
+                                                                               carried out with the support of Sascha Stoller and Reto Fricker.
+    This study oﬀers important insights into the practical implementa­
+                                                                                  The work of Silvio Brandi is funded by the project NODES which
+tion of online TL, eﬀectively connecting simulation-based research with
+                                                                               has received funding from the MUR - M4C2 1.5 of PNRR funded
+real-world implementation. The results highlight the potential and fea­
+                                                                               by the European Union - NextGenerationEU (Grant agreement no.
+sibility of using online TL for DRL controllers in real-world applications,    ECS00000036).
+proving that online TL can signiﬁcantly enhance the scalability of DRL            The work of Alfonso Capozzoli and Giuseppe Razzano is carried
+controllers in buildings.                                                      out within the FAIR - Future Art­ficial Intelligence Research and re­
+    Future works could be focused on the following aspects:                    ceived funding from the European Union Next-GenerationEU (PIANO
+                                                                               NAZIONALE DI RIPRESA E RESILIENZA (PNRR) -- MISSIONE 4 COMPO­
+   • Evaluation of the real performance for online TL implementation           NENTE 2, INVESTIMENTO 1.3 -- D.D. 1555 11/10/2022, PE00000013).
+     when the DRL manages both the TABS and other systems installed            This manuscript r­flects only the authors’ views and opinions, neither
+     in the oﬃce, such as the HVRF. Including the HVRF ensures a faster        the European Union nor the European Commission can be considered
+     response in maintaining appropriate indoor building temperature           responsible for them.
+     conditions. Furthermore, this implementation procedure could be              This study was partly financed by Mitsubishi Electric R&D Centre
+     extended to the cooling season.                                           Europe B.V. [contract number ETH ID No 23035].
+   • Improvement of the digital twin models developed for the two of­
+     ﬁces to account for other factors related to occupant behaviour that      Appendix A. Related works on transfer learning applications for
+     i­fluences the indoor temperature dynamics, e.g. door and win­            DRL controllers in buildings
+     dow opening. Moreover, the digital twins could be calibrated using
+     specific algorithms, such as the Genetic Algorithm (GA), to ensure             This section provides an overview about additional related works
+     better performance in terms of RMSE and MAPE compared to those            focused on the application of TL frameworks for DRL controllers.
+     obtained in this work.                                                         Lissa et al. [64] introduced parallel TL to transfer the control policy
+   • Evaluation of the real performance of online TL when DRL-based            among five distinct DRL agents throughout their training without the
+     controllers are transferred between diﬀerent buildings with dif­          need to wait until the end of the training process. This method has been
+     ferent boundary conditions (e.g. weather), diﬀerent geometry and          implemented in a microgrid consisting of five separate homes, resulting
+                                                                               in a five-fold reduction in training time and a 10% decrease in energy
+     energy systems. Moreover, complex versions of the reward function
+                                                                               consumption. This results was achieved by optimising the operation of
+     could be evaluated, including factors such as electricity price (e.g.,
+                                                                               a Photovoltaic (PV) system combined with a heat pump, compared to
+     Time-Of-Use (TOU) or Real-Time Pricing (RTP)) or peak demand
+                                                                               scenarios without knowledge transfer. An occupancy-based TL method­
+     reduction.
+                                                                               ology leveraging the K-means algorithm and Dynamic Time Warping
+   • Extension of the performance benchmarking by considering other
+                                                                               (DTW) was developed in [65] to match similar occupancy patterns in
+     advanced model-based control strategies to better demonstrate the
+                                                                               26 residential units and improve control performance for the HVAC sys­
+     advantages of implementing online TL when implemented in real             tem. Thermal discomfort during the learning process was reduced and
+     buildings.                                                                jumpstart and asymptotic performances were enhanced respectively by
+                                                                               25% and 5% compared to a model-free controller. Kadamala et al. [66]
+CRediT authorship contribution statement                                       ﬁne-tuned a DRL controller pre-trained on a source environment in two
+                                                                               distinct simulation environments, one simulating the same building un­
+                                                                               der diﬀerent weather conditions while the other simulated a diﬀerent
+    Davide Coraci: Writing -- original draft, Visualization, Software,
+                                                                               building under the same weather conditions. The experiments included
+Methodology, Investigation, Formal analysis, Data curation, Concep­
+                                                                               two diﬀerent reward functions to assess their impact on TL. Results
+tualization. Alberto Silvestri: Writing -- original draft, Visualization,
+                                                                               demonstrate that the transferred agents outperformed the RBC and re­
+Software, Methodology, Investigation, Formal analysis, Data curation,          duce the total reward from 1% to 4% compared to DRL agents without
+Conceptualization. Giuseppe Razzano: Writing -- original draft, Visual­        pre-training.
+ization, Software, Investigation, Formal analysis. Davide Fop: Writing              Moreover, recent TL applications for DRL controllers have been in­
+– original draft, Visualization, Software, Investigation, Formal analysis.     troduced in the literature to ensure acceptable performance for DRL
+Silvio Brandi: Writing -- review & editing, Validation, Methodology, In­       agents from the early stage of deployment in target buildings, emulating
+vestigation, Conceptualization. Esther Borkowski: Writing -- review &          real-world applications. Liu et al. [67] proposed a generative adversar­
+editing, Resources. Tianzhen Hong: Writing -- review & editing, Vali­          ial IL approach to employ expert demonstration from a Model Predictive
+dation, Methodology. Arno Schlueter: Writing -- review & editing, Val­         Control (MPC) to enhance the performance of a DRL controller man­
+idation, Methodology, Conceptualization. Alfonso Capozzoli: Writing            aging a Variable Air Volume (VAV) system for cost reduction and load
+– review & editing, Validation, Supervision, Methodology, Conceptual­          shifting purposes in a commercial building. The proposed approach out­
+ization.                                                                       performed a RBC and a DRL controller not employing IL by improving
+
+
+                                                                          16
+D. Coraci, A. Silvestri, G. Razzano et al.
+                                                                                                                                     Energy & Buildings 329 (2025) 115254
+the cumulative reward respectively by 22% and 7%. Amasyali et al.                   the reward function typically r­flects a balance between minimising
+[68] employed a TL strategy to transfer the knowledge from ten DRL                  energy consumption and enhancing indoor temperature conditions.
+controllers pre-trained for managing the cooling energy supply to a tar­
+get building. The results demonstrated that the TL approach achieved a             The ultimate goal of an RL agent is to determine an optimal control
+cumulative reward comparable to that of a DRL controller pre-trained           policy 𝜋 , which is a mapping between states and actions that maximizes
+for ten episodes while signiﬁcantly outperforming both a DRL agent de­         the cumulative reward over a d­fined time horizon [14]. This is achieved
+ployed with no pre-training and a fixed setpoint operation controller. To      through interaction with the controlled environment via a process of
+conclude, Coraci et al. [39,24] introduced an online TL approach aimed         trial and error.
+at simulating the real-world implementation of a TL process. The trans­            Within the RL framework, the problem is characterized by two core
+ferred DRL controller managed a cooling system to reduce electricity           functions essential for determining the optimal control policy: the state­
+cost and to enhance indoor temperature conditions. In both applica­            value function and the action-value function. The state-value function
+tions, source and target buildings had the same spatial co­figuration but      provides the expected cumulative reward when the agent begins in a
+diﬀerent envelope features, climate conditions and electricity price/oc­       given state s and follows the policy 𝜋 thereafter [69].
+cupancy schedules. In [39], the online TL approach reduced electricity                    ∑            ∑
+cost and ensured an improvement in indoor temperature conditions               𝑣𝜋 (𝑠) =       𝜋(𝑎|𝑠)           𝑝(𝑠′ , 𝑟|𝑠, 𝑎)[𝑟 + 𝛾𝑣𝜋 (𝑠′ )]
+                                                                                          𝑎            𝑠′ ,𝑟
+when compared with RBC and a DRL agent directly implemented with­
+out pre-training. Although slightly less eﬀective than the DRL controller            =𝐸[𝑟𝑡+1 + 𝛾𝑣𝜋 (𝑠′ )|𝑆𝑡 = 𝑠, 𝑆𝑡+1 = 𝑠′ ]                                         (B.1)
+deployed after an oﬄine pre-training phase, the online TL approach                Here, 𝑟 denotes the immediate reward that the agent receives as it
+oﬀered the signiﬁcant advantage of requiring no additional modelling           transitions from state 𝑠 to 𝑠′ following the execution of action 𝑎. The
+eﬀort and could be directly implemented in target buildings, making            parameter 𝛾 [0,1] represents the discount factor for future rewards [14].
+it highly suitable for real-world implementation. Similar results were         When the agent sets 𝛾 = 1, it places higher emphasis on future rewards,
+obtained in [24] where online TL was evaluated for source and target           while a value of 𝛾 = 0 r­flects a preference for immediate rewards.
+buildings diﬀered in terms of implemented energy systems due to the               Similarly, the action-value function r­flects the capability of the DRL
+presence of PV systems and Battery Energy Storage System (BESS) in tar­        agent to choose a specific control action 𝑎 while following a control
+get buildings. Despite diﬀerences in the energy systems, the source and        policy 𝜋 from a given state 𝑠 [70].
+target controllers chose the same control actions, albeit with changes in
+the state-space design due to additional information related to PV and         𝑞𝜋 (𝑠, 𝑎) = 𝐸[𝑟𝑡+1 + 𝛾𝑞𝜋 (𝑠′ , 𝑎′ )|𝑆𝑡 = 𝑠, 𝐴𝑡 = 𝑎]                                   (B.2)
+BESS operation.
+                                                                                   Due to its simplicity Q-learning is the most widely used algorithm
+                                                                               within the RL family. In Q-learning, the association between states and
+Appendix B. Background on reinforcement learning and transfer
+                                                                               actions is represented using a tabular approach, where Q-values (i.e.,
+learning
+                                                                               state-action values) are iteratively updated by the agent through the
+                                                                               Bellman equation [71].
+   This section provides details about theoretical foundations related to
+RL and TL.                                                                     𝑄(𝑠, 𝑎) = 𝑄(𝑠, 𝑎) + 𝜇[𝑟(𝑠, 𝑎) + 𝛾𝑚𝑎𝑥𝑎′ 𝑄(𝑠′ , 𝑎′ ) − 𝑄(𝑠, 𝑎)]                         (B.3)
+                                                                               where 𝜇 [0,1] represents the learning rate, i.e., the degree to which new
+B.1. Reinforcement learning
+                                                                               knowledge overrides the old knowledge. When an agent uses a learning
+                                                                               rate of 0, it does not acquire new knowledge and thus does not update
+   Advanced controllers employing reinforcement learning algorithms            its control policy. Conversely, setting the learning rate to 1 causes the
+are designed to discover the optimal control policy for a given problem        agent to entirely overwrite any previously learned knowledge with new
+through a process of trial and error. More speciﬁcally, RL can be framed       information.
+as a Markov Decision Process (MDP), represented by a tuple that in­                Despite its ben­fits, a tabular approach can become impractical for
+cludes four key elements [14]:                                                 real-world applications, due to the extensive state and action spaces that
+                                                                               would need to be stored [72]. A viable solution to address this limita­
+   • State (s): This is the mathematical representation of the controlled      tion in Q-learning is to employ Deep Neural Networks (DNNs) instead
+     environment, used as input for the controller to determine the ap­        of conventional lookup tables. DNNs can approximate Q-values, thereby
+     propriate control action. The state may provide either a complete         mapping the state-action relationship without relying on tables to iden­
+     or partial description of the environment; in cases where only par­       tify the optimal control policy [73]. In this context, RL algorithms that
+     tial information is available, it constitutes a Partially Observable      incorporate neural networks fall under the category of DRL.
+     Markov Decision Process (POMDP). In building energy manage­                   Diﬀerent control algorithms based on DRL can be found in the liter­
+     ment, common state variables include parameters such as indoor            ature. However, this chapter describes only the Soft Actor-Critic (SAC)
+     temperature and occupancy status.                                         algorithm used in this work.
+   • Action (a): This refers to the control decision made by the con­
+     troller at each control time step to optimize the control problem. In     Soft actor-critic The SAC algorithm, introduced by Haarnoja et al. [57],
+     the context of building energy management, a typical action might         is an actor-critic-based approach that utilizes two distinct neural net­
+     involve setting the supply water temperature in heating or cooling        works, known as the Actor and the Critic. The actor-critic structure is
+     systems.                                                                  particularly ben­ficial for handling stochastic processes, such as HVAC
+   • Transition Probabilities (P): Transition probability, denoted as          control, as it enables direct learning of a stochastic policy [74]. Unlike
+     𝑃 (𝑠𝑡+1 = 𝑠′ |𝑠𝑡 = 𝑠, 𝑎𝑡 = 𝑎) = 𝑃 ∶ 𝑆𝑋𝐴𝑋𝑆 ′ d­fines the likelihood        other actor-critic methods, SAC is an off-policy DRL algorithm distin­
+     of moving from a current state s to a subsequent state s’ as a result     guished by its high performance in optimizing various control tasks and
+     of the action a chosen by the controller. In building energy man­         its ability to operate eﬀectively in continuous action spaces.
+     agement, these probabilities are often unknown, as deriving them              In SAC, the Actor and Critic networks, parametrized as DNNs, are
+     requires a detailed model of the controlled environment.                  used to approximate the state-value and action-value functions, respec­
+   • Reward (R): The reward quant­fies the quality of transitioning from       tively. The Actor operates within both control and learning loops, select­
+     s to s’ after taking action a and is d­fined by a function that aligns    ing the optimal control action at each control time step (policy-based).
+     with specific control objectives. In building energy management,          The Critic, on the other hand, functions solely during the learning phase,
+
+
+                                                                          17
+D. Coraci, A. Silvestri, G. Razzano et al.
+                                                                                                                        Energy & Buildings 329 (2025) 115254
+assessing the eﬀectiveness of the Actor’s decisions (value-based). The           aging the labelled data from the source domain to enhance learning in
+control policy is further improved through the reuse of past experiences         the target domain, rather than emphasizing diﬀerences between the do­
+stored in replay memory, as prescribed by the off-policy framework.              mains.
+    Additionally, SAC follows the maximum entropy RL framework: by                   Transductive TL is characterized by the existence of diﬀerent do­
+incorporating an entropy term into the objective function, alongside the         mains for the source and target, while the tasks remain the same. In this
+expected return, the algorithm achieves greater stability and improved           case, labelled data is only available for the source domain, with the goal
+exploration [75].                                                                of utilizing this labelled information to improve learning in the target
+                                                                                 domain.
+                  ∑
+                  ∞
+𝜋 ∗ = 𝑎𝑟𝑔𝑚𝑎𝑥𝜋 𝐸𝜋 [ 𝛾 𝑡 (𝑟(𝑠𝑡 , 𝑎𝑡 ) + 𝛼𝐻𝑡𝜋 )]                          (B.4)         Unsupervised TL applies when labelled data is not available in either
+                        𝑡=0                                                      the source or target domains. The domains may be the same or diﬀerent,
+                                                                                 and the tasks in the source and target domains are distinct. The objec­
+    Here, 𝑟(𝑠𝑡 , 𝑎𝑡 ) denotes the reward for a given state-action pair, 𝛼
+                                                                                 tive here is to exploit the shared information or structure between the
+is a regularisation term known as the temperature coeﬃcient, and 𝐻
+                                                                                 domains to enhance learning in the target domain.
+represents the Shannon entropy term. The temperature coeﬃcient 𝛼
+                                                                                     Furthermore, TL can also be categorized based on the diﬀerences in
+modulates the relative importance of the entropy term in relation to the
+                                                                                 feature spaces and labels between the source and target domains. Homo­
+reward; for traditional RL algorithms, 𝛼 is set to 0. When 𝛼 is low, the
+                                                                                 geneous TL pertains to scenarios where the feature spaces and labels of
+agent prioritizes reward maximisation over entropy maximisation. The
+                                                                                 the source and target domains are identical, indicating no variations in
+Shannon entropy term, meanwhile, encourages the agent to maximize
+                                                                                 features or labels between them. Heterogeneous TL applies when there
+returns while exploring the action space as diversely as possible.
+                                                                                 are discrepancies in feature spaces and/or labels between the source
+                                                                                 and target domains. This class­fication occurs when the feature spaces,
+B.2. Transfer learning                                                           labels, or both diﬀer.
+                                                                                     Additionally, TL can be further class­fied according to the method of
+     Transfer learning is a machine learning approach that has emerged           knowledge sharing used in solution class­fication, which encompasses
+as an eﬀective technique for leveraging knowledge gained from one task           instance-based, feature representation-based, relational knowledge­
+to enhance performance on a diﬀerent but related problem [26]. Knowl­            based, and model parameter-based TL [26]. This paper emphasizes
+edge sharing occurs at the beginning of the learning process, enabling           model parameter-based TL, which focuses on sharing specific param­
+faster convergence of machine learning models compared to scenarios              eters or their distributions, such as model weights, between the source
+where learning is initiated from scratch without any prior knowledge.            and target tasks. This type of TL includes three sub-classifications
+The mathematical framework of TL necessitates a clear understanding              based on the methods for sharing parameters: feature extraction,
+of the concepts of domain and task, as outlined by [27].                         weight-initialisation, and relational knowledge-based [26]. In weight­
+     Domain: a domain 𝐷 consists of two components, a feature space              initialisation, the target model weights are initialized using the pre­
+X and a marginal distribution probability 𝑃 (𝑋), where 𝑋 = 𝑥1 , … , 𝑥𝑛 ∈         trained weights from the source task. This approach establishes a foun­
+𝑋.                                                                               dation for the target model to leverage the knowledge gained in the
+     Task: a task 𝑇 consists of a label space 𝑌 and an objective predic­         source domain. Following the initialisation, an additional fine-tuning
+tive function 𝑓 (⋅) denoted by 𝑌 = 𝑌 , 𝑓 (⋅). This function is not directly      process can be conducted. During this fine-tuning phase, the target
+observed but it is learned from the training data, represented by a pair         model is further trained using data specific to the target task, allow­
+(𝑥𝑖 ,𝑦𝑖 ), where 𝑥𝑖 ∈ 𝑋 and 𝑦𝑖 ∈ 𝑌 . 𝑓 (⋅) is used to approximate the condi­     ing it to adjust its parameters according to the characteristics of the
+tional probability 𝑃 (𝑦|𝑥) as well as to predict the label of new instances      target domain [24].
+𝑥.
+     TL occur between multiple domains, however research has focused             Appendix C. Details on hyperparameters optimisation for the
+on the case where knowledge sharing occurs between a source domain               source DRL controller
+𝐷𝑆 = (𝑥𝑆1 , 𝑦𝑆1 ),..., (𝑥𝑆𝑛 , 𝑦𝑆𝑛 ) and a target domain 𝐷𝑇 = (𝑥𝑇1 ,
+                                    𝑆        𝑆
+𝑦𝑇1 ),..., (𝑥𝑇𝑛 , 𝑦𝑇𝑛 ) [76]. Thus, according to [26,27], TL is d­fined as           This section provides details about the hyperparameter optimisation
+                𝑇       𝑇
+the process that improves the learning of the predictive function in the         phase for the source DRL controller.
+target domain 𝐷𝑇 with learning task 𝑇𝑇 , using the acquired knowledge                The first five rows of Table C.7 indicates the values of hyperparame­
+in the source domain 𝐷𝑆 with task 𝑇𝑆 .                                           ters kept fixed during the optimisation process, while the last five rows
+    This paper investigates the knowledge-sharing among controllers              report the optimised hyperparameters (i.e., Number of hidden layers,
+based on DRL. Therefore, it is required to d­fine a correspondence               Number of neurons per hidden layer, Learning rate 𝜇 , 𝜃 and 𝛽 ) with their
+between the concepts of domain, label space, and task as d­fined in              corresponding range and step value. Moreover, the Boltzmann tempera­
+conventional ML contexts and the state-space, action-space, and re­              ture coeﬃcient 𝛼 was automatically optimised by employing the built-in
+ward function utilized in DRL [24]. Various studies, such as those by            function included in Stable-Baselines 3, considering a starting value of
+[40,77], provide valuable insights into the possible applications of TL          𝛼 equal to 1. From Table C.7 emerges that the best value from the op­
+for this control framework. In RL, the input feature space (i.e., domain)        timisation of hyperparameters for 𝛽 was equal to 2, indicating that the
+corresponds to the state-space, while the label space is aligned with            agent received an equivalent penalty for deviating by 0.5 kWh and for
+the action-space. Overall, knowledge sharing in ML problems can oc­              straying 1 ◦ C beyond the comfort bounds [78,79].
+cur when the source and target domains, tasks, and solutions diﬀer or                Table C.8 reports the results for the twenty tested co­figuration of
+show similarities [39]. In this regard, [26] has class­fied diﬀerent as­         DRL hyperparameters for the source controller.
+pects based on the similarity of tasks (i.e., label class­fication), features        The 12th co­figuration resulted as the best, since it had the small­
+                                                                                 est Euclidean distance value from the ideal point, whose coordinates
+and labels (i.e., space class­fication), and knowledge-sharing modalities
+                                                                                 were 𝐸tabs,ideal = 5.52 kWh and 𝑇viol,daily,ideal = 0.027 ◦ C, as well as
+(i.e., solution class­fication). This section provides only details on the
+elements relevant to each class­fication mentioned below.                        better performance than 𝑅𝐵𝐶1, equal to 𝐸tabs,RBC1 = 7.28 kWh and
+    Three categories are established for classifying TL approaches based         𝑇viol,daily,RBC1 = 0.139 ◦ C. The best co­figuration of hyperparameters is
+on the similarity of tasks and the availability of labelled data in both the     highlighted in yellow.
+source and target domains.                                                           Due to computational constraints, each trial was run only once in
+    Inductive TL occurs when labelled data is present in both the source         this study, since each trial consisted of 20 episodes, with each episode
+and target domains, although the tasks diﬀer. The main focus is on lever­        taking on average 10 minutes on a machine equipped with a 4-core CPU
+
+
+                                                                            18
+D. Coraci, A. Silvestri, G. Razzano et al.
+                                                                                                                                                                 Energy & Buildings 329 (2025) 115254
+                                        Table C.7
+                                        Values and range of DRL controller hyperparameters.
+                                             Hyperparameters                                  Range                            Step                   Best value
+                                             Discount factor 𝛾                                -                                -                      0.99
+                                             Batch size                                       -                                -                      128
+                                             Training episodes                                -                                -                      20
+                                             Gradient steps                                   -                                -                      1
+                                             Train frequency                                  -                                -                      1
+
+                                             # Hidden layers                                  [2,4]                            2                      4
+                                             # Neurons per hidden layer                       [64, 128]                        64                     64
+                                             Learning rate 𝜇                                  [1 ⋅ 10−4 , 1 ⋅ 10−3 ]           1 ⋅ 10−4               5 ⋅ 10−4
+                                             Reward scaling factor 𝜃                          [1, 5]                           1                      1
+                                             Temperature-term reward weight 𝛽                 [1, 10]                          1                      2
+
+
+
+                                      Table C.8
+                                      Configurations of DRL hyperparameters involved in the optimisation process for source controller, with
+                                      the selected co­figuration highlighted in yellow. (For interpretation of the colours in the table(s), the
+                                      reader is referred to the web version of this article.)
+                                        Configuration      # Layers           # Neurons   𝜇             𝜃      𝛽       𝐸tabs [kWh]    𝑇viol,daily [◦ C]      𝑑euclidean
+                                        1                  2                  128         8 ⋅ 10−4      3      10      7.18           0.029                  1.66
+                                        2                  4                  128         4 ⋅ 10−4      2      7       6.54           0.086                  1.02
+                                        3                  2                  64          1 ⋅ 10−3      5      9       8.43           0.041                  2.91
+                                        4                  2                  64          7 ⋅ 10−4      1      5       5.98           0.065                  0.46
+                                        5                  4                  64          3 ⋅ 10−4      4      8       7.29           0.079                  1.77
+                                        6                  2                  128         1 ⋅ 10−3      3      6       6.15           0.035                  0.63
+                                        7                  4                  128         5 ⋅ 10−4      5      4       5.93           0.098                  0.42
+                                        8                  2                  128         7 ⋅ 10−4      1      10      8.11           0.027                  2.59
+                                        9                  2                  64          9 ⋅ 10−4      2      2       7.78           0.038                  2.26
+                                        10                 4                  64          4 ⋅ 10−4      5      1       5.52           0.109                  0.08
+                                        11                 4                  128         2 ⋅ 10−4      4      3       6.03           0.092                  1.03
+                                        12                 4                  64          5 ⋅ 10−4      1      2       5.59           0.032                  0.07
+                                        13                 4                  128         6 ⋅ 10−4      1      9       7.67           0.045                  2.15
+                                        14                 4                  64          1 ⋅ 10−3      4      2       6.14           0.058                  0.62
+                                        15                 4                  64          8 ⋅ 10−4      2      5       7.99           0.081                  2.47
+                                        16                 2                  64          2 ⋅ 10−4      5      6       5.66           0.070                  0.15
+                                        17                 2                  128         5 ⋅ 10−4      1      3       5.74           0.098                  0.23
+                                        18                 4                  128         7 ⋅ 10−4      5      8       7.36           0.063                  1.84
+                                        19                 4                  64          1 ⋅ 10−4      3      7       5.91           0.030                  0.39
+                                        20                 2                  64          3 ⋅ 10−4      4      10      6.83           0.079                  1.31
+
+
+
+                      Table D.9
+                      Results comparison for 𝑃 𝐼21.5 controller
+                      with diﬀerent start time.
+                         Start time     𝐸tabs [kWh]       𝑇viol,daily [◦ C]
+                         1:00           7.41              0.045
+                         2:00           7.35              0.056
+                         3:00           7.28              0.086
+                         4:00           7.19              0.149
+                         5:00           7.06              0.224
+
+
+
+
+operating at 3.40 GHz and 16GB of RAM. This resulted in approximately
+3.5 hours per trial, leading to a total of 70 hours for the hyperparameter                                  Fig. D.10. Indoor temperature and action provided as input to the Oﬃce1 digital
+tuning process. However, the results indicated in Table C.8 does not fully                                  twin model to evaluate system parameters.
+capture variability due to random initialization or stochastic training
+processes of DRL controllers since results referred to a single run per
+                                                                                                                To provide estimated values of system gain, time constant, and dead
+each trial. Therefore, future work will aim to address this by running
+                                                                                                            time a simulation has been performed considering fixed values for in­
+multiple trials for each hyperparameter co­figuration to ensure that the
+                                                                                                            puts requested by Oﬃce1 digital twin with the exception of the control
+observed diﬀerences are statistically signiﬁcant. This would allow for a
+                                                                                                            action. The purpose of the experiment was to determine the requested
+more robust comparison between the results of each trial.
+                                                                                                            step response parameters. Indeed, after a time period suﬃcient to reach
+                                                                                                            steady state, the control input was increase to its maximum value (i.e.,
+Appendix D. Details on PI tuning                                                                            100% of TABS valve opening) by means of a step function. Subsequently,
+                                                                                                            the response of the controlled variable (i.e., oﬃce zone indoor air tem­
+    This section provides further details regarding the tuning of PI con­                                   perature) was used to compute system parameters. Fig. D.10 provides an
+troller.                                                                                                    overview of the indoor temperature trend during the experiment, from
+    Table D.9 summarises the results in terms of 𝐸tabs and 𝑇viol,daily for                                  which results a time constant equal to 17 hours and a system gain equal
+the 𝑃 𝐼21.5 controller in the source oﬃce considering five diﬀerent start                                   to 7.7 ◦ C. Moreover, the dead time value that corresponds to an increase
+times.                                                                                                      of 0.1 ◦ C in the indoor temperature value is equal to 1 hour. However,
+
+
+                                                                                                  19
+D. Coraci, A. Silvestri, G. Razzano et al.
+                                                                                                                                    Energy & Buildings 329 (2025) 115254
+                                                                                                    Table E.10
+                                                                                                    Average daily energy consumption and mean
+                                                                                                    daily average temperature violation rate for
+                                                                                                    DRL and benchmark controllers for Oﬃce1
+                                                                                                    during the new validation periods considered
+                                                                                                    after pre-training phase.
+                                                                                                      Controller      𝐸tabs [kWh]      𝑇viol,daily [◦ C]
+                                                                                                      𝑅𝐵𝐶1            8.74             0.0827
+                                                                                                      𝑅𝐵𝐶2            7.65             0.0211
+                                                                                                      𝑃 𝐼21           6.73             0.1905
+                                                                                                      𝑃 𝐼21.5         7.88             0.0121
+                                                                                                      𝑃 𝐼22           8.92             0.0417
+                                                                                                      𝐷𝑅𝐿             6.45 ± 0.51      0.0253 ± 0.0129
+
+Fig. E.11. Comparison of outdoor temperature pr­files for the two three-month
+periods evaluated for Dübendorf (Switzerland).
+                                                                                                   Table E.11
+                                                                                                   Average daily energy consumption and mean
+these parameters are d­fined for first-order systems, while the consid­                            daily average temperature violation rate for of­
+ered system is of higher order. Therefore, the values for the discussed                            ﬂine DRL, online DRL and online TL for Oﬃce1
+parameters must be considered correct albeit approximated.                                         during the other three-month period for Düben­
+                                                                                                   dorf.
+
+Appendix E. Supplementary validation analysis for DRL                                                Controller       𝐸tabs [kWh]        𝑇viol,daily [◦ C]
+controller pre-training in Oﬃce1 and for the online TL strategy                                      Oﬄine DRL        6.51 ± 0.34        0.0495 ± 0.0070
+                                                                                                     Online DRL       10.42 ± 0.17       0.1069 ± 0.0118
+                                                                                                     Online TL        6.84 ± 0.20        0.0691 ± 0.0176
+    This section provides additional details on the analysis of supple­
+mentary results related to the pre-training process of the DRL controller
+on Oﬃce 1 and a benchmark of the online TL performances with those                   Table E.11 provides an overview about the performances in terms of
+of oﬄine DRL and online DRL.                                                     𝐸tabs and 𝑇viol,daily for online TL when the role of the two oﬃce zones
+    For the DRL pre-training phase in Oﬃce1, the results in Table 4 have         was reversed. Therefore, a DRL controller pre-trained on Oﬃce2 (i.e.,
+been extended by comparing the performance of DRL and traditional                source zone) was transferred to Oﬃce1 (i.e., target zone). The online TL
+controllers (i.e., RBC and PI strategies). Here, the performance of DRL          performances were benchmarked with those of oﬄine DRL and online
+was evaluated over three months, from 1 December to 28 February, but             DRL during a three-month period considering the same weather con­
+from a diﬀerent year, to evaluate the performance of the controllers             ditions as in Table E.10. These experiments were conducted using the
+in diﬀerent climatic conditions. For the online TL strategy, additional          digital twin developed for Oﬃce1. Moreover, the results are reported as
+experiments were carried out by reversing the roles of the two oﬃce              the average value ± standard deviation, retrieved from five separate tri­
+zones, transferring a controller pre-trained in Oﬃce2 to Oﬃce1.                  als each with a diﬀerent seed, to account for variability in DRL-based
+    To provide further insight for the climatic conditions during the new        controllers.
+validation period, Fig. E.11 shows a comparison between the outdoor                  Results in Table E.11 indicate that online TL outperformed online
+temperature pr­files used for the results in Table 4 and those for the new       DRL reducing 𝐸tabs by 34% and 𝑇viol,daily by 35%. In contrast, online TL
+validation period. During the original training period, outdoor temper­          performances were lower by 5% for 𝐸tabs and by 40% for 𝑇viol,daily than
+atures generally ranged between approximately −5 ◦ C and 10 ◦ C. In the          those obtained by implementing the oﬄine DRL agent. Despite oﬄine
+new validation period colder minimum temperatures can be observed                DRL outperformed the online TL, its applicability is limited compared
+on certain days. Moreover, Fig. E.11 highlights the variability between          to the other DRL-based strategies since it requires to perform again the
+the two periods, demonstrating that the DRL controller was evaluated             oﬄine training process for several training episodes.
+under slightly more severe climate conditions than those of the original
+training period.                                                                 Data availability
+    The results obtained in Oﬃce1 for the DRL controller during the new
+validation three-month period pre-training phase in Oﬃce1 and those                  The data that has been used is co­fidential.
+of the benchmark controllers, are reported in Table E.10. These exper­
+iments were conducted using the digital twin developed for Oﬃce1.                References
+Moreover, the DRL results are reported in Table E.10 as the average
+value ± standard deviation, retrieved from five separate trials each with         [1] R. Yan, T. Zhao, Y. Rezgui, S. Kubicki, Y. Li, Transferability and robustness of a data­
+                                                                                      driven model built on a large number of buildings, J. Build. Eng. 80 (2023) 108127,
+a diﬀerent seed, to account for variability in DRL controller perfor­                 https://doi.org/10.1016/j.jobe.2023.108127.
+mance. Moreover, the value of employed DRL hyperparameters are the                [2] IEA, Digitalisation and energy, https://www.iea.org/reports/digitalisation-and-
+same as those indicated in Table C.7.                                                 energy, 2017. (Accessed 27 April 2024), IEA report: Digitalisation and energy, Paris,
+    Results in Table E.10 indicate that the DRL controller outperformed               France.
+                                                                                  [3] IEA, Buildings, https://www.https://www.iea.org/energy-system/buildings, 2023.
+traditional controllers implemented in Oﬃce1 in the new validation pe­                (Accessed 21 June 2024), IEA report: Buildings, Paris, France.
+riod in terms of energy consumption. Speciﬁcally, DRL reduced TABS                [4] G. Li, Y. Wu, S. Yoon, X. Fang, Comprehensive transferability assessment of short­
+average daily energy consumption between 16% and 26% compared to                      term cross-building-energy prediction using deep adversarial network transfer learn­
+RBCs and between 4% and 27% in relation to PI controllers. In addi­                   ing, Energy (2024) 131395, https://doi.org/10.1016/j.energy.2024.131395.
+                                                                                  [5] M.S. Piscitelli, S. Brandi, A. Capozzoli, F. Xiao, A data analytics-based tool for the de­
+tion, the DRL provided better control of indoor temperature conditions                tection and diagnosis of anomalous daily energy patterns in buildings, Build. Simul.
+compared to 𝑅𝐵𝐶1, 𝑃 𝐼21 and 𝑃 𝐼22, since it decreased 𝑇viol,daily respec­             14 (1) (2021) 131--147, https://doi.org/10.1007/s12273-020-0650-1.
+tively by 69%, 87% and 39%. The temperature control performance of                [6] T. Lee, S. Yoon, K. Won, Delta-t-based operational signatures for operation pattern
+the DRL is worse than that of 𝑅𝐵𝐶2 and 𝑃 𝐼21.5. However, these tradi­                 and fault diagnosis of building energy systems, Energy Build. 257 (2022) 111769,
+                                                                                      https://doi.org/10.1016/j.enbuild.2021.111769.
+tional controllers can not optimize multi-objective functions. As a result,       [7] G. Martinopoulos, K.T. Papakostas, A.M. Papadopoulos, A comparative review of
+better temperature control performances are achieved with higher TABS                 heating systems in eu countries, based on eﬃciency and fuel cost, Renew. Sustain.
+energy consumption compared to the DRL.                                               Energy Rev. 90 (2018) 687--699, https://doi.org/10.1016/j.rser.2018.03.060.
+
+
+
+                                                                            20
+D. Coraci, A. Silvestri, G. Razzano et al.
+                                                                                                                                                   Energy & Buildings 329 (2025) 115254
+ [8] T.I. Salsbury, A survey of control technologies in the building automation indus­               Conference on Information, Communication and Automation Technologies (ICAT),
+     try, IFAC Proc. Vol. 38 (1) (2005) 90--100, https://doi.org/10.3182/20050703-6-                 2023, pp. 1--6.
+     CZ-1902.01397, 16th IFAC World Congress.                                                   [31] Y.-T. Chiang, C.-H. Lu, J.Y.-J. Hsu, A feature-based knowledge transfer framework
+ [9] Z. Wang, T. Hong, Reinforcement learning for building controls: the opportuni­                  for cross-environment activity recognition toward smart home applications, IEEE
+     ties and challenges, Appl. Energy 269 (2020) 115036, https://doi.org/10.1016/j.                 Trans. Human-Mach. Syst. 47 (3) (2017) 310--322, https://doi.org/10.1109/THMS.
+     apenergy.2020.115036.                                                                           2016.2641679.
+[10] C. Finck, P. Beagon, J. Clauß, T. Péan, P. Vogler-Finck, K. Zhang, H. Kazmi, Review of     [32] H. Li, G. Pinto, M.S. Piscitelli, A. Capozzoli, T. Hong, Building thermal dynam­
+     applied and tested control possibilities for energy flexibility in buildings, Technical         ics modeling with deep transfer learning using a large residential smart thermo­
+     Report from IEA EBC Annex 67 - Energy Flexible Buildings, 2017, pp. 1--59.                      stat dataset, Eng. Appl. Artif. Intell. 130 (2024) 107701, https://doi.org/10.1016/j.
+[11] C. Miller, Z. Nagy, A. Schlueter, Automated daily pattern filtering of measured build­          engappai.2023.107701.
+     ing performance data, Autom. Constr. 49 (2015) 1--17, https://doi.org/10.1016/j.           [33] G. Pinto, R. Messina, H. Li, T. Hong, M.S. Piscitelli, A. Capozzoli, Sharing is caring: an
+     autcon.2014.09.004.                                                                             extensive analysis of parameter-based transfer learning for the prediction of building
+[12] W. Liang, H. Li, S. Zhan, A. Chong, T. Hong, Energy flexibility quantification                  thermal dynamics, Energy Build. (2022) 112530, https://doi.org/10.1016/j.enbuild.
+     of a tropical net-zero oﬃce building using physically consistent neural network­                2022.112530.
+     based model predictive control, Adv. Appl. Energy 14 (2024) 100167, https://               [34] L. Chen, G. Li, J. Liu, L. Liu, C. Zhang, J. Gao, C. Xu, X. Fang, Z. Yao, Fault diagnosis
+     doi.org/10.1016/j.adapen.2024.100167, https://www.sciencedirect.com/science/                    for cross-building energy systems based on transfer learning and model interpreta­
+     article/pii/S2666792424000052.                                                                  tion, J. Build. Eng. (2024) 109424, https://doi.org/10.1016/j.jobe.2024.109424.
+[13] Z. Nagy, G. Henze, S. Dey, J. Arroyo, L. Helsen, X. Zhang, B. Chen, K. Amasyali,           [35] G. Li, L. Chen, J. Liu, X. Fang, Comparative study on deep transfer learning strategies
+     K. Kurte, A. Zamzam, H. Zandi, J. Drgoňa, M. Quintana, S. McCullogh, J.Y. Park,                 for cross-system and cross-operation-condition building energy systems fault diag­
+     H. Li, T. Hong, S. Brandi, G. Pinto, A. Capozzoli, D. Vrabie, M. Bergés, K. Nweye, T.           nosis, Energy 263 (2023) 125943, https://doi.org/10.1016/j.energy.2022.125943.
+     Marzullo, A. Bernstein, Ten questions concerning reinforcement learning for building       [36] N. Gavenski, O. Rodrigues, M. Luck, Imitation learning: a survey of learning methods,
+     energy management, Build. Environ. 241 (2023) 110435, https://doi.org/10.1016/                  environments and metrics, arXiv:2404.19456, https://arxiv.org/abs/2404.19456,
+     j.buildenv.2023.110435.                                                                         2024.
+[14] R.S. Sutton, A.G. Barto, Reinforcement Learning: An Introduction, 2nd edition, The         [37] M. Genkin, J. McArthur, A transfer learning approach to minimize reinforcement
+     MIT Press, 2018, http://incompleteideas.net/book/the-book-2nd.html.                             learning risks in energy optimization for automated and smart buildings, Energy
+[15] V. Mnih, K. Kavukcuoglu, D. Silver, A.A. Rusu, J. Veness, M.G. Bellemare, A. Graves,            Build. 303 (2024) 113760, https://doi.org/10.1016/j.enbuild.2023.113760.
+     M. Riedmiller, A.K. Fidjeland, G. Ostrovski, S. Petersen, C. Beattie, A. Sadik, I.         [38] K. Nweye, S. Sankaranarayanan, Z. Nagy, Merlin: multi-agent oﬄine and transfer
+     Antonoglou, H. King, D. Kumaran, D. Wierstra, S. Legg, D. Hassabis, Human-level                 learning for occupant-centric operation of grid-interactive communities, Appl. En­
+     control through deep reinforcement learning, Nature 518 (7540) (2015) 529--533,                 ergy 346 (2023) 121323, https://doi.org/10.1016/j.apenergy.2023.121323.
+     https://doi.org/10.1038/nature14236.                                                       [39] D. Coraci, S. Brandi, T. Hong, A. Capozzoli, Online transfer learning strategy for
+[16] A. Riebel, J.M. Cardemil, E. López, Multi-objective deep reinforcement learning for             enhancing the scalability and deployment of deep reinforcement learning control
+     a water heating system with solar energy and heat recovery, Energy 291 (2024)                   in smart buildings, Appl. Energy 333 (2023) 120598, https://doi.org/10.1016/j.
+     130296, https://doi.org/10.1016/j.energy.2024.130296.                                           apenergy.2022.120598.
+[17] G. Han, H.-J. Joo, H.-W. Lim, Y.-S. An, W.-J. Lee, K.-H. Lee, Data-driven heat pump        [40] F.L. Da Silva, A.H.R. Costa, A survey on transfer learning for multiagent rein­
+     operation strategy using rainbow deep reinforcement learning for signiﬁcant re­                 forcement learning systems, J. Artif. Intell. Res. 64 (1) (2019) 645--703, https://
+     duction of electricity cost, Energy 270 (2023) 126913, https://doi.org/10.1016/j.               doi.org/10.1613/jair.1.11396.
+     energy.2023.126913.                                                                        [41] P. Richner, P. Heer, R. Largo, E. Marchesi, M. Zimmermann, NEST -- a platform for the
+[18] A. Crespo, D. Gibert, Álvaro de Gracia, C. Fernández, Optimal control of a solar­               acceleration of innovation in buildings, Inf. Construc. 69 (548) (2018) 222, https://
+     driven seasonal sorption storage system through deep reinforcement learning, Appl.              doi.org/10.3989/id.55380, http://informesdelaconstruccion.revistas.csic.es/index.
+     Therm. Eng. 238 (2024) 121905, https://doi.org/10.1016/j.applthermaleng.2023.                   php/informesdelaconstruccion/article/view/5879.
+     121905.                                                                                    [42] P. Block, A. Schlueter, D. Veenendaal, J. Bakker, M. Begle, I. Hischier, J. Hofer, P.
+[19] Z. Zhang, A. Chong, Y. Pan, C. Zhang, K.P. Lam, Whole building energy model for                 Jayathissa, I. Maxwell, T.M. Echenagucia, Z. Nagy, D. Pigram, B. Svetozarevic, R.
+     hvac optimal control: a practical framework based on deep reinforcement learning,               Torsing, J. Verbeek, A. Willmann, G.P. Lydon, NEST HiLo: investigating lightweight
+     Energy Build. 199 (2019) 472--490, https://doi.org/10.1016/j.enbuild.2019.07.029.               construction and adaptive energy systems, J. Build. Eng. 12 (2017) 332--341, https://
+[20] D. Wang, W. Zheng, Z. Wang, Y. Wang, X. Pang, W. Wang, Comparison of reinforce­                 doi.org/10.1016/j.jobe.2017.06.013.
+     ment learning and model predictive control for building energy system optimization,        [43] B. Svetozarevic, M. Begle, P. Jayathissa, S. Caranovic, R.F. Shepherd, Z. Nagy, I. His­
+     Appl. Therm. Eng. 228 (2023) 120430, https://doi.org/10.1016/j.applthermaleng.                  chier, J. Hofer, A. Schlueter, Dynamic photovoltaic building envelopes for adaptive
+     2023.120430.                                                                                    energy and comfort management, Nat. Energy 4 (8) (2019) 671--682.
+[21] Z. Zou, X. Yu, S. Ergan, Towards optimal control of air handling units using deep          [44] A. Silvestri, D. Coraci, S. Brandi, A. Capozzoli, E. Borkowski, J. Köhler, D. Wu, M.N.
+     reinforcement learning and recurrent neural network, Build. Environ. 168 (2020)                 Zeilinger, A. Schlueter, Real building implementation of a deep reinforcement learn­
+     106535, https://doi.org/10.1016/j.buildenv.2019.106535.                                         ing controller to enhance energy eﬃciency and indoor temperature control, Appl.
+[22] A.T. Nguyen, D.H. Pham, B.L. Oo, M. Santamouris, Y. Ahn, B.T. Lim, Modelling                    Energy 368 (2024) 123447, https://doi.org/10.1016/j.apenergy.2024.123447.
+     building hvac control strategies using a deep reinforcement learning approach, En­         [45] Modelica Association, Modelica® - a un­fied object-oriented language for
+     ergy Build. 310 (2024) 114065, https://doi.org/10.1016/j.enbuild.2024.114065.                   physical systems modeling. Tutorial, http://www.modelica.org/documents/
+[23] X. Fang, G. Gong, G. Li, L. Chun, P. Peng, W. Li, X. Shi, X. Chen, Deep reinforcement           ModelicaTutorial14.pdf, Dec. 2000.
+     learning optimal control strategy for temperature setpoint real-time reset in multi­       [46] M. Wetter, W. Zuo, T.S. Nouidui, X. Pang, Modelica buildings library, J. Build.
+     zone building hvac system, Appl. Therm. Eng. 212 (2022) 118552, https://doi.org/                Perform. Simul. 7 (4) (2014) 253--270, https://doi.org/10.1080/19401493.2013.
+     10.1016/j.applthermaleng.2022.118552.                                                           765506.
+[24] D. Coraci, S. Brandi, T. Hong, A. Capozzoli, An innovative heterogeneous trans­            [47] K.S. Cetin, M.H. Fathollahzadeh, N. Kunwar, H. Do, P.C. Tabares-Velasco, Develop­
+     fer learning framework to enhance the scalability of deep reinforcement learning                ment and validation of an hvac on/off controller in energyplus for energy simulation
+     controllers in buildings with integrated energy systems, Build. Simul. 17 (2024)                of residential and small commercial buildings, Energy Build. 183 (2019) 467--483,
+     739--770, https://doi.org/10.1007/s12273-024-1109-6.                                            https://doi.org/10.1016/j.enbuild.2018.11.005.
+[25] S. Brandi, M. Fiorentini, A. Capozzoli, Comparison of online and oﬄine deep re­            [48] T. Blochwitz, M. Otter, M. Arnold, C. Bausch, C. Clauß, H. Elmqvist, A. Junghanns,
+     inforcement learning with model predictive control for thermal energy manage­                   J. Mauss, M. Monteiro, T. Neidhold, et al., The functional mockup interface for tool
+     ment, Autom. Constr. 135 (2022) 104128, https://doi.org/10.1016/j.autcon.2022.                  independent exchange of simulation models, in: Proceedings of the 8th International
+     104128.                                                                                         Modelica Conference, Linköping University Press, 2011, pp. 105--114.
+[26] G. Pinto, Z. Wang, A. Roy, T. Hong, A. Capozzoli, Transfer learning for smart build­       [49] A. Raﬃn, A. Hill, A. Gleave, A. Kanervisto, M. Ernestus, N. Dormann, Stable­
+     ings: a critical review of algorithms, applications, and future perspectives, Adv. Appl.        baselines3: reliable reinforcement learning implementations, J. Mach. Learn. Res.
+     Energy 5 (2022) 100084, https://doi.org/10.1016/j.adapen.2022.100084.                           22 (268) (2021) 1--8, http://jmlr.org/papers/v22/20-1364.html.
+[27] S.J. Pan, Q. Yang, A survey on transfer learning, IEEE Trans. Knowl. Data Eng. 22 (10)     [50] S. Brandi, A. Gallo, A. Capozzoli, A predictive and adaptive control strategy to op­
+     (2010) 1345--1359, https://doi.org/10.1109/TKDE.2009.191.                                       timize the management of integrated energy systems in buildings, Energy Rep. 8
+[28] S.-M. Jung, S. Park, S.-W. Jung, E. Hwang, Monthly electric load forecasting using              (2022) 1550--1567, https://doi.org/10.1016/j.egyr.2021.12.058.
+     transfer learning for smart cities, Sustainability 12 (16) (2020), https://doi.org/10.     [51] D. Coraci, S. Brandi, A. Capozzoli, Eﬀective pre-training of a deep reinforcement
+     3390/su12166364, https://www.mdpi.com/2071-1050/12/16/6364.                                     learning agent by means of long short-term memory models for thermal energy
+[29] Z. Xing, Y. Pan, Y. Yang, X. Yuan, Y. Liang, Z. Huang, Transfer learning integrat­              management in buildings, Energy Convers. Manag. 291 (2023) 117303, https://
+     ing similarity analysis for short-term and long-term building energy consumption                doi.org/10.1016/j.enconman.2023.117303.
+     prediction, Appl. Energy 365 (2024) 123276, https://doi.org/10.1016/j.apenergy.            [52] T. Akiba, S. Sano, T. Yanase, T. Ohta, M. Koyama, Optuna: a next-generation hy­
+     2024.123276.                                                                                    perparameter optimization framework, in: Proceedings of the 25th ACM SIGKDD
+[30] E. Omeragic, O. Orhan, T. Uzunovic, E. Golubovic, Analysing transfer learning eﬃ­               International Conference on Knowledge Discovery & Data Mining, KDD ’19, Associ­
+     cacy with diﬀerent feature sets for occupancy detection, in: 2023 XXIX International            ation for Computing Machinery, New York, NY, USA, 2019, pp. 2623--2631.
+
+
+
+                                                                                           21
+D. Coraci, A. Silvestri, G. Razzano et al.
+                                                                                                                                                   Energy & Buildings 329 (2025) 115254
+[53] J. Bergstra, R. Bardenet, Y. Bengio, B. Kégl, Algorithms for hyper-parameter                 [68] K. Amasyali, Y. Liu, H. Zandi, A transfer learning strategy for improving the data ef­
+     optimization, in: Proceedings of the 24th International Conference on Neu­                        ﬁciency of deep reinforcement learning control in smart buildings, in: 2024 IEEE
+     ral Information Processing Systems, NIPS’11, Curran Associates Inc., Red Hook,                    Power & Energy Society Innovative Smart Grid Technologies Conference (ISGT),
+     NY, USA, 2011, pp. 2546--2554, https://proceedings.neurips.cc/paper/2011/ﬁle/                     2024, pp. 1--5.
+     86e8f7ab32cfd12577bc2619bc635690-Paper.pdf.                                                  [69] V. Gullapalli, A stochastic reinforcement learning algorithm for learning real­
+[54] Q. Xin, 3 - optimization techniques in diesel engine system design, in: Q. Xin (Ed.),             valued functions, Neural Netw. 3 (6) (1990) 671--692, https://doi.org/10.1016/
+     Diesel Engine System Design, Woodhead Publishing, 2013, pp. 203--296.                             0893-6080(90)90056-Q.
+[55] M. Zelany, A concept of compromise solutions and the method of the displaced ideal,          [70] D. Azuatalam, W.-L. Lee, F. de Nijs, A. Liebman, Reinforcement learning for whole­
+     Comput. Oper. Res. 1 (3) (1974) 479--496, https://doi.org/10.1016/0305-0548(74)                   building hvac control and demand response, Energy AI 2 (2020) 100020, https://
+     90064-1.                                                                                          doi.org/10.1016/j.egyai.2020.100020.
+[56] S.L. Smith, P.-J. Kindermans, C. Ying, Q.V. Le, Don’t decay the learning rate, increase      [71] R. Bellman, Dynamic programming, Science 153 (3731) (1966) 34--37, https://
+     the batch size, preprint, arXiv:1711.00489, 2017.                                                 doi.org/10.1126/science.153.3731.34,         https://science.sciencemag.org/content/
+[57] T. Haarnoja, A. Zhou, K. Hartikainen, G. Tucker, S. Ha, J. Tan, V. Kumar, H. Zhu,                 153/3731/34.full.pdf.
+     A. Gupta, P. Abbeel, S. Levine, Soft actor-critic algorithms and applications, arXiv:        [72] G. Pinto, D. Deltetto, A. Capozzoli, Data-driven district energy management with sur­
+     1812.05905, 2019.                                                                                 rogate models and deep reinforcement learning, Appl. Energy 304 (2021) 117642,
+[58] H. Li, P. Chaudhari, H. Yang, M. Lam, A. Ravichandran, R. Bhotika, S. Soatto, Re­                 https://doi.org/10.1016/j.apenergy.2021.117642.
+     thinking the hyperparameters for fine-tuning, arXiv:2002.11770, 2020.                        [73] D. Coraci, S. Brandi, M.S. Piscitelli, A. Capozzoli, Online implementation of a soft
+[59] M. Kaya, H.c. Bilge, Deep metric learning: a survey, Symmetry 11 (9) (2019), https://             actor-critic agent to enhance indoor temperature control and energy eﬃciency in
+     doi.org/10.3390/sym11091066, https://www.mdpi.com/2073-8994/11/9/1066.                            buildings, Energies 14 (4) (2021), https://doi.org/10.3390/en14040997.
+[60] A. Visioli, Mod­fied anti-windup scheme for pid controllers, IEE Proc., Control The­
+                                                                                                  [74] S.P. Singh, T.S. Jaakkola, M.I. Jordan, Learning without state-estimation in partially
+     ory Appl. 150 (2003) 49--54, https://doi.org/10.1049/ip-cta:20020769.
+                                                                                                       observable Markovian decision processes, in: Proceedings of the Eleventh Inter­
+[61] Y. Bae, S. Bhattacharya, B. Cui, S. Lee, Y. Li, L. Zhang, P. Im, V. Adetola, D. Vrabie, M.
+                                                                                                       national Conference on International Conference on Machine Learning, ICML’94,
+     Leach, T. Kuruganti, Sensor impacts on building and hvac controls: a critical review
+                                                                                                       Morgan Kaufmann Publishers Inc., San Francisco, CA, USA, 1994, pp. 284--292.
+     for building energy performance, Adv. Appl. Energy 4 (2021) 100068, https://doi.
+                                                                                                  [75] G. Pinto, M.S. Piscitelli, J.R. Vázquez-Canteli, Z. Nagy, A. Capozzoli, Coordinated
+     org/10.1016/j.adapen.2021.100068.
+                                                                                                       energy management for a cluster of buildings through deep reinforcement learning,
+[62] M. Verma, R. Kaler, M. Singh, Sensitivity enhancement of passive infrared
+                                                                                                       Energy 229 (2021) 120725, https://doi.org/10.1016/j.energy.2021.120725.
+     (pir) sensor for motion detection, Optik 244 (2021) 167503, https://doi.org/
+                                                                                                  [76] Y. Himeur, M. Elnour, F. Fadli, N. Meskin, I. Petri, Y. Rezgui, F. Bensaali, A.
+     10.1016/j.ijleo.2021.167503, https://www.sciencedirect.com/science/article/pii/
+                                                                                                       Amira, Next-generation energy systems for sustainable smart cities: roles of trans­
+     S0030402621011256.
+                                                                                                       fer learning, Sustain. Cities Soc. 85 (2022) 104059, https://doi.org/10.1016/j.scs.
+[63] IEA, Solcast API, https://www.solcast.com/, 2024. (Accessed 29 October 2024), Sol­
+                                                                                                       2022.104059.
+     cast: Solar API and weather forecast.
+[64] P. Lissa, M. Schukat, M. Keane, E. Barrett, Transfer learning applied to drl-based           [77] M.E. Taylor, P. Stone, Transfer learning for reinforcement learning domains: a sur­
+     heat pump control to leverage microgrid energy eﬃciency, Smart Energy 3 (2021)                    vey, J. Mach. Learn. Res. 10 (56) (2009) 1633--1685, http://jmlr.org/papers/v10/
+     100044, https://doi.org/10.1016/j.segy.2021.100044.                                               taylor09a.html.
+[65] M. Esrafilian-Najafabadi, F. Haghighat, Transfer learning for occupancy-based hvac           [78] A. Silvestri, D. Coraci, D. Wu, E. Borkowski, A. Schlueter, Comparison of two deep
+     control: a data-driven approach using unsupervised learning of occupancy pr­files                 reinforcement learning algorithms towards an optimal policy for smart building ther­
+     and deep reinforcement learning, Energy Build. 300 (2023) 113637, https://doi.org/                mal control, J. Phys. Conf. Ser. 2600 (7) (2023) 072011, https://doi.org/10.1088/
+     10.1016/j.enbuild.2023.113637.                                                                    1742-6596/2600/7/072011.
+[66] K. Kadamala, D. Chambers, E. Barrett, Enhancing hvac control systems through                 [79] L. Di Natale, B. Svetozarevic, P. Heer, C. Jones, Physically consistent neural net­
+     transfer learning with deep reinforcement learning agents, Smart Energy 13 (2024)                 works for building thermal modeling: theory and analysis, Appl. Energy 325 (2022)
+     100131, https://doi.org/10.1016/j.segy.2024.100131.                                               119806, https://doi.org/10.1016/j.apenergy.2022.119806.
+[67] M. Liu, M. Guo, Y. Fu, Z. O’Neill, Y. Gao, Expert-guided imitation learning for energy
+     management: evaluating gail’s performance in building control applications, Appl.
+     Energy 372 (2024) 123753, https://doi.org/10.1016/j.apenergy.2024.123753.
+
+
+
+
+                                                                                             22
+

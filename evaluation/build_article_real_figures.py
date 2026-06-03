@@ -309,6 +309,41 @@ def fig4_residuals(out_dir: Path, rows: list[dict]) -> None:
     manifest(rows, "block1_temperature_residual_histograms", "complete", sources, "Residuals are computed from all three full rollout CSVs.", png, pdf)
 
 
+def fig4b_stage_abc(out_dir: Path, rows: list[dict]) -> None:
+    stage_b_path = ROOT / "outputs" / "surrogate_v35_inverse_boptest_15min_episodeaware" / "stage_b_history_v35.csv"
+    stage_c_path = ROOT / "outputs" / "surrogate_v35_inverse_boptest_15min_episodeaware" / "stage_c_history_v35.csv"
+    summary_path = ROOT / "outputs" / "surrogate_v35_inverse_boptest_15min_episodeaware" / "calibration_summary_boptest_v35.json"
+    stage_b = read_csv(stage_b_path)
+    stage_c = read_csv(stage_c_path)
+
+    fig, axes = plt.subplots(1, 2, figsize=(11.6, 4.3))
+    axes[0].plot(stage_b["epoch"], stage_b["c_zon_j_per_k"] / 1e5, color="#21867a", linewidth=2.5)
+    axes[0].axhline(stage_b["c_zon_j_per_k"].iloc[0] / 1e5, color="#777777", linestyle="--", linewidth=1.2, label="initial")
+    axes[0].axhline(stage_b["c_zon_j_per_k"].iloc[-1] / 1e5, color="#111111", linestyle=":", linewidth=1.4, label="identified")
+    style_ax(axes[0], "Stage B identifies C_zon", "epoch", "C_zon (1e5 J/K)")
+    axes[0].legend(frameon=False, loc="lower right")
+
+    axes[1].plot(stage_c["epoch"], stage_c["val_rmse_temp"], color="#2f5d8c", linewidth=2.2, label="one-step val RMSE")
+    if "rollout_rmse_val" in stage_c.columns:
+        axes[1].plot(stage_c["epoch"], stage_c["rollout_rmse_val"], color="#b25f2c", linewidth=2.0, label="rollout val RMSE")
+    best_idx = int(stage_c["val_rmse_temp"].astype(float).idxmin())
+    axes[1].scatter([stage_c.loc[best_idx, "epoch"]], [stage_c.loc[best_idx, "val_rmse_temp"]], color="#111111", s=45, zorder=5)
+    style_ax(axes[1], "Stage C residual-head refinement", "epoch", "RMSE_T (C)")
+    axes[1].legend(frameon=False)
+
+    fig.suptitle("Block 1. Stage A/B/C calibration diagnostics", fontsize=14, weight="bold")
+    png, pdf = save(fig, out_dir, "block1_stage_abc_calibration_diagnostics")
+    manifest(
+        rows,
+        "block1_stage_abc_calibration_diagnostics",
+        "complete",
+        [stage_b_path, stage_c_path, summary_path],
+        "Stage B C_zon convergence and Stage C residual-head validation curves from real calibration histories.",
+        png,
+        pdf,
+    )
+
+
 def fig5_warmstart(out_dir: Path, rows: list[dict]) -> None:
     scratch_summary_path = ROOT / "outputs" / "block2_thermostatic_warmstart_utility" / "scratch_eval" / "summary.csv"
     warm_summary_path = ROOT / "outputs" / "block2_thermostatic_warmstart_utility" / "warmstart_eval" / "summary.csv"
@@ -623,6 +658,7 @@ def main() -> None:
     fig2_predictive(args.output_dir, rows)
     fig3_trace(args.output_dir, rows)
     fig4_residuals(args.output_dir, rows)
+    fig4b_stage_abc(args.output_dir, rows)
     fig5_warmstart(args.output_dir, rows)
     fig6_thermostatic(args.output_dir, rows)
     fig7_hdrl_lambda(args.output_dir, rows)

@@ -199,10 +199,65 @@ function loadImage(relPath, isReports = false) {
   const p = `${__dirname}/../${dir}/${relPath}`;
   return fs.existsSync(p) ? fs.readFileSync(p) : null;
 }
+function addArticleFigure(name, caption, width = 610, height = 300) {
+  const p = `${__dirname}/../reports/figures/article_real/${name}`;
+  if (!fs.existsSync(p)) {
+    children.push(para(`[Figure missing: reports/figures/article_real/${name}] ${caption}`, { italic: true }));
+    return;
+  }
+  const imgData = fs.readFileSync(p);
+  children.push(new Paragraph({
+    alignment: AlignmentType.CENTER,
+    spacing: { before: 220, after: 80 },
+    children: [new ImageRun({
+      type: "png",
+      data: imgData,
+      transformation: { width, height },
+      altText: { title: name, description: caption, name },
+    })],
+  }));
+  children.push(tableCaption(caption));
+}
+function addReportFigure(relPath, caption, width = 610, height = 300) {
+  const p = `${__dirname}/../reports/figures/${relPath}`;
+  if (!fs.existsSync(p)) {
+    children.push(para(`[Figure missing: reports/figures/${relPath}] ${caption}`, { italic: true }));
+    return;
+  }
+  const imgData = fs.readFileSync(p);
+  children.push(new Paragraph({
+    alignment: AlignmentType.CENTER,
+    spacing: { before: 220, after: 80 },
+    children: [new ImageRun({
+      type: "png",
+      data: imgData,
+      transformation: { width, height },
+      altText: { title: relPath, description: caption, name: relPath },
+    })],
+  }));
+  children.push(tableCaption(caption));
+}
 
 // ──────────────── DOCUMENT BODY ────────────────
 const D = DATA;
 const children = [];
+const Q1_FIGURES = [
+  ["1", "block1_q1_fig01_pipeline.png", "Figure 1. Block 1 experimental pipeline: from surrogate calibration to live BOPTEST validation.", "End-to-end Block 1 workflow from BOPTEST telemetry to live validation.", 560, 250],
+  ["2", "block1_q1_fig02_v3_dual_head.png", "Figure 2. Dual-head architecture of the control-oriented v3 surrogate.", "Compact dual-head v3 architecture and its two prediction heads.", 560, 255],
+  ["3", "block1_q1_fig03_stage_abc_improvement.png", "Figure 3. Effect of Stage A/B/C inverse calibration on v3.5 predictive fidelity.", "Before/after effect of Stage A/B/C on temperature and power fidelity.", 540, 270],
+  ["4", "block1_q1_fig04_czon_identification.png", "Figure 4. Bayesian inverse identification trajectory of C_zon during Stage B.", "Bayesian inverse trajectory of C_zon during Stage B.", 540, 260],
+  ["5", "block1_q1_fig05_matched_corpus_rmse.png", "Figure 5. Corpus-controlled decomposition of 24h rollout RMSE.", "Corpus-controlled 24h RMSE comparison across four variants.", 540, 260],
+  ["6", "block1_q1_fig06_fidelity_gain_waterfall.png", "Figure 6. Attribution of the v3-to-v3.5 predictive-fidelity gain.", "Attribution of the v3-to-v3.5 gain to corpus shift and calibration.", 540, 270],
+  ["7", "block1_q1_fig07_fidelity_vs_rl_utility.png", "Figure 7. Predictive fidelity does not imply RL training utility.", "Predictive fidelity vs live RL training utility paradox.", 500, 310],
+  ["8", "block1_q1_fig08_live_boptest_performance.png", "Figure 8. Live closed-loop BOPTEST performance of PPO controllers trained on different backends.", "Live BOPTEST maintenance score and energy comparison.", 560, 285],
+  ["9", "block1_q1_fig09_backend_speed.png", "Figure 9. Simulation throughput of BOPTEST and surrogate backends.", "BOPTEST vs surrogate throughput on log-scale.", 520, 275],
+  ["10", "block1_q1_fig10_transfer_gap_diagnostics.png", "Figure 10. Transfer-gap diagnostics reveal bang-bang saturation in standalone v3.5 training.", "Violation, action-gap, and first-divergence diagnostics.", 560, 260],
+  ["11", "block1_q1_fig11_action_saturation.png", "Figure 11. Policy action saturation under direct v3.5 training.", "Raw action distribution showing direct-v3.5 saturation.", 540, 260],
+  ["12", "block1_q1_fig12_per_episode_rmse.png", "Figure 12. Replicative validity across held-out BOPTEST episodes.", "Episode-wise replicative validity across held-out BOPTEST episodes.", 560, 285],
+  ["13", "block1_q1_fig13_residual_distributions.png", "Figure 13. Temperature residual distributions before and after calibration.", "Temperature residual distribution before and after calibration.", 560, 260],
+  ["14", "block1_q1_fig14_hybrid_loss.png", "Figure 14. Hybrid backend: v3 rollout dynamics with frozen-v3.5 soft regularization.", "Hybrid loss mechanism and role separation.", 560, 250],
+  ["15", "block1_q1_fig15_literature_positioning.png", "Figure 15. Positioning of this study against prior HVAC DRL and surrogate-model literature.", "Positioning against Block 1 related-work families.", 520, 360],
+];
 
 // ────── TITLE ──────
 children.push(new Paragraph({
@@ -211,7 +266,7 @@ children.push(new Paragraph({
 }));
 children.push(new Paragraph({
   alignment: AlignmentType.CENTER, spacing: { after: 200 },
-  children: [new TextRun({ text: "Complete Results with Scientific Narrative", font: "Arial", size: 28, color: "2E75B6" })],
+  children: [new TextRun({ text: "Q1 Paper-Ready Evidence Dossier", font: "Arial", size: 28, color: "2E75B6" })],
 }));
 children.push(new Paragraph({
   alignment: AlignmentType.CENTER, spacing: { after: 100 },
@@ -227,6 +282,12 @@ children.push(heading("Executive Summary", HeadingLevel.HEADING_1));
 children.push(para("Block 1 establishes the empirical foundation for the central scientific claim of this project: predictive fidelity and reinforcement-learning training utility are two different objectives, and a surrogate that excels at one can fail at the other. We constructed two surrogates of the BOPTEST bestest_air testcase. The first, v3 (RCNeuralODEv2), is a control-oriented black-box dynamics model with 8 482 parameters. The original frozen article baseline used a 51 200-row hourly corpus, but the current surrogate_v3 reference is now retrained and evaluated on the same 10 744-row, 900 s / fifteen-minute corpus used by v3.5. The second, v3.5 (RCNeuralODEv35), introduces a physical backbone parametrized by the zone thermal capacitance C_zon and is identified through a three-stage inverse calibration pipeline (Stage A preprocessing, Stage B inverse Bayesian identification of C_zon, Stage C residual head refinement) on 10 744 fifteen-minute transitions. The matched-corpus v3 achieves 24-hour rollout RMSE of 0.876 °C — cleanly between the legacy hourly-corpus v3 (1.557 °C) and the calibrated v3.5 (0.644 °C). This decomposition confirms that the calibration claim is real but bounded: moving v3 to 15-minute telemetry explains a large part of the original gap, while Stage A/B/C still delivers the final predictive-fidelity improvement."));
 children.push(para(`The calibrated v3.5 reduces 24-hour offline rollout RMSE from ${D.v35.raw_24h_rmse.toFixed(3)} °C (raw, uncalibrated) to ${D.v35.cal_24h_rmse.toFixed(3)} °C — a ${D.v35.rollout_improvement_pct}% improvement within the same 15-minute corpus that demonstrates the physical backbone is correctly identifying building dynamics. C_zon was identified as ${D.v35.c_zon_final_str} J/K, only ${D.v35.c_zon_change_pct.toFixed(1)}% above the physically motivated prior of ${D.v35.c_zon_prior_str} J/K, confirming both prior sanity and Stage B convergence. The matched-corpus experiment (§2.6) further shows that the active 15-minute v3 branch reduces the legacy v3 24-hour RMSE from ${D.v3.rollout_24h_rmse.toFixed(3)} °C to ${D.matched.v3_15min_24h.toFixed(3)} °C, while calibrated v3.5 reaches ${D.v35.cal_24h_rmse.toFixed(3)} °C. Thus the current Block 1 framing is corpus-aware: v3 is no longer treated as intrinsically hourly; the hourly checkpoint is retained only as the historical baseline and speed reference. The smaller v3 surrogate runs at ${D.speed.v3_steps_s.toFixed(0)} environment steps per second — ${D.speed.v3_speedup.toFixed(0)}× faster than the BOPTEST RTE HTTP testbed.`));
 children.push(para(`When the two surrogates are evaluated as stand-alone reinforcement-learning training environments using a thermostatic PPO controller, the relationship between fidelity and utility inverts: PPO trained on v3 produces live closed-loop temperature RMSE of ${D.s9.v3_peak_rmse.toFixed(2)} °C on the peak window, while PPO trained on the calibrated v3.5 produces ${D.s9.v35_peak_rmse.toFixed(2)} °C — a five-fold deterioration despite v3.5 having better one-step physical fidelity. We resolve the paradox with a hybrid backend that rollouts the policy through v3 but adds a frozen-v3.5 disagreement penalty to the PPO loss. This hybrid backend recovers the best of both worlds: live closed-loop RMSE drops to ${D.s9.hybrid_peak_rmse.toFixed(2)} °C on the peak window and ${D.s9.hybrid_typical_rmse.toFixed(2)} °C on the typical window, while sustaining ${D.speed.hybrid_steps_s.toFixed(0)} environment steps per second (${D.speed.hybrid_speedup.toFixed(0)}× the BOPTEST testbed).`));
+children.push(subhead("Figure-led evidence map"));
+children.push(para("For Q1-paper readiness, this dossier no longer treats figures as a detached appendix. The visual evidence is embedded where each claim is made: Stage A/B/C calibration diagnostics in Section 2, multi-horizon predictive validity in Sections 1-2, and the fidelity-to-control gap in Section 4/6. Tables remain as audit artifacts; figures carry the main scientific narrative for reviewer-facing interpretation."));
+children.push(para("To avoid numbering ambiguity in Word, the complete final Q1 figure set is presented below in strict numerical order. The later sections explain the same evidence in detail and provide the tables, source files, and interpretation."));
+for (const fig of Q1_FIGURES) {
+  addArticleFigure(fig[1], fig[2], fig[4], fig[5]);
+}
 
 // ════════════════════ 1. V3 SURROGATE ════════════════════
 children.push(new Paragraph({ children: [new PageBreak()] }));
@@ -236,7 +297,6 @@ children.push(para(`The v3 surrogate is the workhorse of all PPO training in thi
 
 children.push(subhead("1.1 Architecture (from rc_node_v2.py)"));
 children.push(para(`The 8-dimensional input vector is constructed deterministically from the observation by _build_features() in rc_node_v2.py. The eight components are listed in Table 1.0 below; the construction is identical for the temperature head and the power head, so the two heads share representational structure even though they have disjoint parameters.`));
-
 children.push(tableLabel("Table 1.0 — v3 input feature vector (8 dimensions)"));
 children.push(new Table({
   width: { size: 9360, type: WidthType.DXA },
@@ -331,7 +391,6 @@ children.push(new Table({
   ],
 }));
 children.push(tableCaption(`v3.5 calibrated achieves lower 24h rollout RMSE (0.644 °C) than the hourly-corpus v3 (1.557 °C), a 2.4× reduction. However, v3 and v3.5 differ simultaneously in corpus, time step, and architecture — so this number is corpus-confounded. The matched-corpus experiment in §2.6 controls for this: retraining v3 on the same 15-minute corpus yields 0.876 °C, attributing ${D.matched.corpus_share_pct.toFixed(1)}% of the RMSE gap to corpus shift and ${D.matched.calibration_share_matched_pct.toFixed(1)}% to Stage A/B/C calibration. Separately, v3 and raw-v3.5 have similar 1-hour RMSE (~1.47 °C) at comparable corpus — the gap opens only after the physical backbone of v3.5 is calibrated.`));
-
 children.push(para(`Two scientific observations follow from Table 1.3. First, comparing v3 (24h = ${D.v3.rollout_24h_rmse.toFixed(3)} °C, hourly corpus) against raw v3.5 (24h = ${D.v35.raw_24h_rmse.toFixed(3)} °C, 15-min corpus) shows that the bare v3.5 backbone, before any inverse calibration, is not measurably better than v3 — physical structure alone does not buy fidelity. The matched-corpus experiment in §2.6 sharpens this point: on the same 15-minute corpus the v3 black-box achieves 0.876 °C while raw v3.5 achieves 1.466 °C — the structured-but-uncalibrated backbone is actually worse, meaning the physical architecture is a liability unless paired with proper identification. Second, comparing raw v3.5 (${D.v35.raw_24h_rmse.toFixed(3)} °C) against calibrated v3.5 (${D.v35.cal_24h_rmse.toFixed(3)} °C) isolates the within-v3.5 contribution of inverse calibration at a fixed corpus: a 56 % reduction achieved purely by identifying C_zon and recalibrating residual heads, without changing the network topology. Combined with the matched-corpus decomposition in §2.6, this empirically validates the entire Stage A/B/C pipeline with a precise, corpus-controlled attribution before we even ask whether v3.5 is useful as an RL training environment.`));
 
 // ════════════════════ 2. V3.5 INVERSE CALIBRATION ════════════════════
@@ -340,7 +399,6 @@ children.push(heading("2. Physically Informed Surrogate v3.5 — Stage A/B/C Inv
 
 children.push(para("The v3.5 surrogate replaces v3's purely black-box dynamics with a physically structured backbone: a first-principles zone-temperature ODE parametrized by a single learnable thermal capacitance C_zon, with neural residual heads on top for unmodelled effects. The motivation is interpretability and transferability — C_zon is a property of the building, not of the policy that generated the training data, so it should remain physically meaningful across testcases (an empirical claim later confirmed by Block 3 transferability experiments). The challenge is identifying C_zon from closed-loop telemetry that is dominated by quasi-steady operating regions; this is what Stage B addresses with an excitation-filtered Bayesian inverse problem."));
 children.push(para("The Stage A/B/C protocol is adapted from Hou & Evins (2024) and is split into three sequential operations: Stage A preprocesses the raw 15-minute telemetry to align timestamps, remove sensor bias, and bring the BOPTEST power channel into a comparable scale; Stage B solves the inverse problem for C_zon on the highest-excitation subset of the cleaned data; Stage C calibrates the temperature and power residual heads with C_zon frozen at the Stage B value. Each stage is reported separately so the contribution of physical identification can be cleanly separated from the contribution of head recalibration."));
-
 children.push(subhead("2.1 Stage A — preprocessing alignment"));
 children.push(para(`Stage A operates on ${D.v35.dataset_rows.toLocaleString()} rows from ${D.v35.dataset_episodes} closed-loop BOPTEST episodes at a 15-minute step. It first searches the latency between the requested supply-temperature setpoint and the observed zone-temperature response over a grid of integer lags, choosing the lag (${D.v35.latency_est_steps} step in our data) that minimises the surrogate's one-step prediction RMSE against observed next-step temperature. It then estimates a constant temperature bias (the median residual t_obs_next − t_pred = ${D.v35.temp_bias_est.toFixed(4)} °C) and a global affine scale+offset for the power channel. After Stage A the residual temperature RMSE on the calibration set is ${D.v35.postprocess_rmse.toFixed(4)} °C — close to the latency-search optimum of ${D.v35.latency_search_rmse.toFixed(4)} °C, confirming that no further temporal alignment is possible.`));
 
@@ -565,7 +623,6 @@ children.push(new Table({
   ],
 }));
 children.push(tableCaption("BOPTEST: 21 steps/s — fine for evaluation, prohibitive for training. v3: 4626 steps/s (220×). v3.5: 2400 steps/s (114×, half v3 because of the extra physical-backbone forward pass). Hybrid: 1787 steps/s (85×), the slowest surrogate but still 85× faster than BOPTEST."));
-
 children.push(para(`The hybrid is the slowest of the three surrogates (${D.speed.hybrid_steps_s.toFixed(0)} steps/s, ${D.speed.hybrid_median_ms.toFixed(3)} ms median) because every PPO update requires a forward pass through BOTH v3 (rollout dynamics) and v3.5 (regulariser target). That overhead is unavoidable by construction. The headline ${D.speed.hybrid_speedup.toFixed(0)}× speed-up against BOPTEST is still large enough to make the hybrid usable for PPO training on a single CPU core — a single 5×10⁶-step training run takes roughly ${(5e6 / D.speed.hybrid_steps_s / 60).toFixed(0)} minutes of pure environment time vs about ${(5e6 / D.speed.boptest_steps_s / 60 / 60).toFixed(1)} hours if BOPTEST were used directly.`));
 
 children.push(para(`Two practical points follow. First, although v3 is the fastest backend, we do not train PPO purely on v3 because that gives up the regularisation benefit measured in Section 4. Second, although v3.5 is faster than the hybrid (${D.speed.v35_steps_s.toFixed(0)} steps/s) we do not train PPO on v3.5 either — Section 4 shows that PPO trained on standalone calibrated v3.5 fails catastrophically on the live BOPTEST loop (RMSE > 4 °C). The hybrid backend is therefore the unique operating point where speed, fidelity, and trainability all reach acceptable levels simultaneously.`));
@@ -629,7 +686,6 @@ children.push(new Paragraph({
   alignment: AlignmentType.CENTER, spacing: { before: 200, after: 200 },
   children: [new TextRun({ text: "L_total = L_PPO + λ_temp · ‖T_v3 − T_v3.5‖² + λ_power · ‖P_v3 − P_v3.5‖²", font: "Arial", size: 24, bold: true, italics: true })],
 }));
-
 children.push(para("The canonical thermostatic values are λ_temp = 0.10 and λ_power = 5 × 10⁻⁵. Two design points are critical. First, v3.5 weights are frozen — gradients of the hybrid loss with respect to the policy parameters flow only through L_PPO and through the squared-disagreement term, not into v3.5 itself. This means v3.5 acts as a teacher whose targets evolve only with the observations, not with training. Second, the regulariser is a soft penalty, not a hard constraint: the policy is allowed to disagree with v3.5 when L_PPO finds a better trade-off, but every disagreement incurs a quadratic cost proportional to λ. This is what distinguishes the hybrid backend from a hard physics-informed neural network — there is no projection step and no constraint satisfaction, only an extra term in the loss."));
 
 children.push(para(`Two empirical claims about λ_temp come from the broader sweep in the supplementary tables and the thermostatic sensitivity (S10). At λ_temp = 0 the hybrid reduces to plain v3 training and produces v3-class live performance. At λ_temp = 0.10 (canonical) the hybrid produces the best typical-window m_s of ${D.s9.hybrid_typical_ms.toFixed(4)} reported in Table 4.1. Higher λ values (0.15 and above) over-regularize and start dragging the controller back toward the v3.5-trained failure regime. This sensitivity is also why HDRL and MORL — which are evaluated in Block 2 — use λ_temp = 0: the hierarchical and preference-conditioned controllers have different loss-surface topology and the v3.5 regulariser actively hurts them. The optimal λ is therefore controller-family specific, which is itself a non-trivial empirical finding.`));
@@ -653,57 +709,29 @@ children.push(new Table({
   ],
 }));
 children.push(tableCaption("Source: reports/hybrid_transfer_comparison.csv → boptest_m_s column. Note: m_s values here (pure_v3: 0.156/0.126, hybrid: 0.033/0.021) differ from Table 4.1 (0.073/0.095 and 0.087/0.041) because the two tables come from different CSV columns: Table 4.1 uses peak_control_m_s from architecture_justification_table.csv (a per-architecture summary), while this table uses boptest_m_s from the transfer-comparison protocol. Both are correct within their respective evaluation scope. first_divergence_step = 1 means the policy and BOPTEST disagree from step 1. Only hybrid_l010 on the typical window keeps the same action as BOPTEST for 16 steps (4 hours). action_gap_norm = 2.0 for direct_v35 means the policy saturates against the action bounds throughout the episode."));
-
 children.push(para(`The most diagnostic line of Table 6.1 is the action_gap_norm column. For pure_v3 the integrated gap is ~0.35 — the policy mostly tracks the action distribution that BOPTEST would also select. For hybrid_l010 the gap is similar (0.47 peak, 0.25 typical), which is consistent with hybrid being a regularised v3 rather than a fundamentally different policy. For direct_v35 the gap is exactly 2.0 on both windows. The action space is normalised to [−1, +1]; a gap of 2.0 means the policy is constantly choosing one extreme while BOPTEST would choose the opposite. In other words, the v3.5-trained policy has learned an extremum bang-bang behaviour against v3.5 that is wholly inconsistent with what BOPTEST actually rewards.`));
-
 children.push(para(`The first_divergence_step diagnostic adds the temporal dimension. For pure_v3 and direct_v35 both windows show first_divergence_step = 1: the policies disagree with BOPTEST from the very first action. For hybrid_l010 the peak window also shows step 1 — peak heating is a regime where even small surrogate-vs-BOPTEST gaps quickly amplify — but the typical window shows step 16. That is the first window where the hybrid keeps the policy on the BOPTEST-consistent action for four hours before drifting, and it is the operational explanation for why the hybrid achieves the lowest typical-window RMSE (0.612 °C) in the project: the regulariser keeps the policy in a region of the action space that BOPTEST also considers optimal, until external disturbances eventually push the policy elsewhere.`));
 
-// ════════════════════ 7. FIGURES ════════════════════
+// ════════════════════ 7. FIGURE PROVENANCE ════════════════════
 children.push(new Paragraph({ children: [new PageBreak()] }));
-children.push(heading("7. Figures from Project Artifacts", HeadingLevel.HEADING_1));
+children.push(heading("7. Figure Provenance and Q1 Presentation Logic", HeadingLevel.HEADING_1));
 
-children.push(para("The figures below visualise the same numerical findings discussed in Sections 1 – 6 directly from project artifacts (paper/figures/q1/, reports/figures/article_real/). They are reproduced here so the document is self-contained."));
+children.push(para("The Block 1 figures are presented once, in strict numerical order, near the beginning of the dossier. This section records the exact source files so the figure-led narrative remains auditable and reviewer-facing. The removed gallery entries that described Block 3 C_zon transferability are intentionally not repeated here because they belong to the transferability results section, not Block 1."));
 
-const figFiles = [
-  { file: "C1_pipeline_overview.png", caption: "Figure 7.1 — Full pipeline overview. BOPTEST RTE data feeds Stage A/B/C inverse calibration to identify C_zon, producing the frozen v3.5 physical twin. The hybrid backend couples v3 (smooth RL dynamics) and v3.5 (frozen regulariser) via the hybrid loss." },
-  { file: "C2_czon_consistency.png", caption: "Figure 7.2 — C_zon consistency across BOPTEST testcases. Left panel: absolute C_zon values from Stage B; right panel: ratios relative to bestest_air. The ratio 1.91 ± 0.03 across the hydronic family is the Block 3 transfer fingerprint." },
-  { file: "C3_component_decomposition.png", caption: "Figure 7.3 — Component decomposition of transferability. Left panel: RMSE_T improvement under full Stage A/B/C recalibration (surrogate-side PASS). Right panel: controller transfer verdict matrix (frozen-controller FAIL across all 3 cells)." },
-];
-
-for (const fig of figFiles) {
-  const imgData = loadImage(fig.file);
-  if (imgData) {
-    children.push(new Paragraph({
-      alignment: AlignmentType.CENTER, spacing: { before: 200 },
-      children: [new ImageRun({ type: "png", data: imgData, transformation: { width: 560, height: 250 }, altText: { title: fig.file, description: fig.caption, name: fig.file } })],
-    }));
-    children.push(new Paragraph({
-      alignment: AlignmentType.CENTER, spacing: { after: 240 },
-      children: [new TextRun({ text: fig.caption, font: "Arial", size: 19, italics: true, color: "555555" })],
-    }));
-  }
-}
-
-const reportFigs = [
-  { name: "block1_replicative_validity_bars.png", caption: "Figure 7.4 — Replicative validity: per-episode 24h rollout RMSE_T bars for v3, raw v3.5, and calibrated v3.5 across all 8 held-out BOPTEST evaluation episodes. The calibrated v3.5 wins on every episode without exception (0.486–0.964 °C); v3 stays in the 1.21–1.88 °C band; raw v3.5 is uniformly the worst at 1.47–1.49 °C. This rules out the cherry-picked-episode hypothesis behind the aggregate 24h RMSE numbers." },
-  { name: "block1_temperature_residual_histograms.png", caption: "Figure 7.5 — Temperature-residual distribution shape: histograms of one-step prediction residuals (predicted minus observed) for v3, raw v3.5, and calibrated v3.5. Calibrated v3.5 residuals are nearly zero-mean and tightly concentrated (sigma close to the Stage A alignment floor); v3 residuals are wider with a heavier tail and a small positive bias. This is the structural improvement Stage A/B/C provides: calibrated v3.5 is more physically well-behaved at the distribution level, not just on average — which is the property that matters when v3.5 is used as a frozen regulariser in the hybrid backend." },
-  { name: "v35_rollout_24h_peak_thermostatic.png", caption: "Figure 7.6 — Calibrated v3.5 24h offline rollout on the peak heating window (thermostatic policy). Predicted vs observed zone temperature stays within ±1 °C across the full 24h horizon, illustrating why the rollout RMSE drops to 0.486 °C on the best episode." },
-  { name: "v35_rollout_24h_typical_thermostatic.png", caption: "Figure 7.7 — Calibrated v3.5 24h offline rollout on the typical heating window. Similar accuracy to the peak window with somewhat larger excursions during nighttime setbacks; mean episode power RMSE = 687.6 W across all episodes." },
-];
-for (const fig of reportFigs) {
-  const p2 = `${__dirname}/../reports/figures/article_real/${fig.name}`;
-  if (fs.existsSync(p2)) {
-    const imgData = fs.readFileSync(p2);
-    children.push(new Paragraph({
-      alignment: AlignmentType.CENTER, spacing: { before: 200 },
-      children: [new ImageRun({ type: "png", data: imgData, transformation: { width: 560, height: 300 }, altText: { title: fig.name, description: fig.caption, name: fig.name } })],
-    }));
-    children.push(new Paragraph({
-      alignment: AlignmentType.CENTER, spacing: { after: 240 },
-      children: [new TextRun({ text: fig.caption, font: "Arial", size: 19, italics: true, color: "555555" })],
-    }));
-  }
-}
+children.push(tableLabel("Table 7.1 — Embedded Block 1 figure provenance"));
+children.push(new Table({
+  width: { size: 9360, type: WidthType.DXA },
+  columnWidths: [900, 3300, 5160],
+  rows: [
+    new TableRow({ children: [hdrCell("Figure", 900), hdrCell("File", 3300), hdrCell("Claim supported", 5160)] }),
+    ...Q1_FIGURES.map((r, i) => new TableRow({ children: [
+      cell(r[0], 900, { bold: true, shaded: i % 2 === 1 }),
+      cell(r[1], 3300, { shaded: i % 2 === 1 }),
+      cell(r[3], 5160, { shaded: i % 2 === 1 }),
+    ]})),
+  ],
+}));
+children.push(tableCaption("Figures 1-15 are generated by evaluation/build_block1_q1_figures.py from project CSV/JSON artifacts plus two conceptual architecture diagrams. The DOCX generator embeds the PNG outputs and does not hand-enter plotted values."));
 
 // ════════════════════ 8. DATA SOURCE INDEX ════════════════════
 children.push(new Paragraph({ children: [new PageBreak()] }));

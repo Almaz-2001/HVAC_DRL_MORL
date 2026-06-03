@@ -1,0 +1,1670 @@
+BUILD SIMUL (2024) 17: 739–770
+https://doi.org/10.1007/s12273-024-1109-6
+
+
+
+
+An innovative heterogeneous transfer learning framework to enhance
+the scalability of deep reinforcement learning controllers in buildings
+with integrated energy systems
+
+
+
+
+                                                                                                                                               Research Article
+Davide Coraci1, Silvio Brandi1, Tianzhen Hong2, Alfonso Capozzoli1 ()
+
+1. Politecnico di Torino, Department of Energy, TEBE research group, BAEDA Lab., Corso Duca degli Abruzzi 24, Torino, 10129, Italy
+2. Building Technology and Urban Systems Division, Lawrence Berkeley National Laboratory, One Cyclotron Road, Berkeley, CA 94720, USA
+
+
+
+
+Abstract                                                                                                 Keywords
+Deep Reinforcement Learning (DRL)-based control shows enhanced performance in the management             transfer learning
+of integrated energy systems when compared with Rule-Based Controllers (RBCs), but it still lacks        reinforcement learning
+scalability and generalisation due to the necessity of using tailored models for the training process.   building control
+Transfer Learning (TL) is a potential solution to address this limitation. However, existing TL          building energy management
+applications in building control have been mostly tested among buildings with similar features,
+not addressing the need to scale up advanced control in real-world scenarios with diverse energy         Article History
+systems. This paper assesses the performance of an online heterogeneous TL strategy, comparing           Received: 21 November 2023
+it with RBC and offline and online DRL controllers in a simulation setup using EnergyPlus and            Revised: 09 January 2024
+                                                                                                         Accepted: 18 January 2024
+Python. The study tests the transfer in both transductive and inductive settings of a DRL policy
+designed to manage a chiller coupled with a Thermal Energy Storage (TES). The control policy is
+                                                                                                         © The Author(s) 2024
+pre-trained on a source building and transferred to various target buildings characterised by an
+integrated energy system including photovoltaic and battery energy storage systems, different
+building envelope features, occupancy schedule and boundary conditions (e.g., weather and price
+signal). The TL approach incorporates model slicing, imitation learning and fine-tuning to handle
+diverse state spaces and reward functions between source and target buildings. Results show that
+the proposed methodology leads to a reduction of 10% in electricity cost and between 10% and
+40% in the mean value of the daily average temperature violation rate compared to RBC and online
+DRL controllers. Moreover, online TL maximises self-sufficiency and self-consumption by 9% and
+11% with respect to RBC. Conversely, online TL achieves worse performance compared to offline
+DRL in either transductive or inductive settings. However, offline Deep Reinforcement Learning
+(DRL) agents should be trained at least for 15 episodes to reach the same level of performance as
+
+
+
+                                                                                                                                          Building Systems and
+the online TL. Therefore, the proposed online TL methodology is effective, completely model-free
+and it can be directly implemented in real buildings with satisfying performance.                                                             Components
+
+
+1   Introduction                                                          energy consumed worldwide (IEA 2019; Pinto et al. 2021).
+                                                                          In this framework, incentive programs support the integration
+With the introduction of the European Green Deal (European                of Photovoltaic (PV) and Battery Energy Storage System
+Commission 2019), the European Commission has                             (BESS) in building energy systems, which traditionally
+established the penetration of Renewable Energy Sources                   consist of Heating, Ventilation and Air Conditioning (HVAC)
+(RES) in buildings as an ambitious countermeasure to achieve              systems (Coraci et al. 2023a). HVAC systems are the most
+net-zero carbon emissions by 2050 (Pinto et al. 2022a),                   energy-intensive source in building operations, therefore
+considering that buildings have a pivotal role in the ongoing             substantial efforts contributed in recent years to enhance
+energy transition process accounting for 40% of the primary               their energy efficiency through improved energy management
+E-mail: alfonso.capozzoli@polito.it
+740                                                                                      Coraci et al. / Building Simulation / Vol. 17, No. 5
+
+
+ List of symbols
+ α               Boltzmann temperature coefficient                       TLOW     lower threshold limit of temperature comfort
+ β               temperature term weight of reward function                       range [°C]
+ γ               discount factor                                         Ts,max   storage temperature upper boundary [°C]
+ δ               electricity cost term weight of reward function         Ts,min   storage temperature lower boundary [°C]
+ ηrte            round-trip efficiency of battery                        TS       source task
+ θ               peak term weight of reward function                     TT       target task
+ μ               learning rate                                           TUPP     upper threshold limit of temperature comfort
+ χi              internal heat capacity [kJ/(m2·K)]                               range [°C]
+ CBESS           nominal capacity of battery [kWh]                       Tviol    temperature violation [°C]
+ cel,sell        electricity price for selling [€/kWh]                   UOP      thermal transmittance of the opaque envelope
+ cel             electricity buying price [€/kWh]                                 [W/(m2·K)]
+ DS              source domain                                           UTR      thermal transmittance of the transparent
+ DT              target domain                                                    envelope [W/(m2·K)]
+ EBESS,b         total energy supplied to the building from BESS [kWh]   Abbreviations
+ Ech,max         maximum battery charging energy [kWh]
+ ECHILLER        chiller energy consumption [kWh]                        AC       alternate current
+ Ecost,source    electricity cost for source building [€]                AHUs     air handling units
+ Ecost           electricity cost for target buildings [€]               AI       artificial intelligence
+ Edis,max        maximum battery discharging energy [kWh]                BESS     battery energy storage system
+ ELOAD           non HVAC loads electrical consumption [kWh]             BCVTB    building control virtual test bed
+ EPUMP           circulation pumps energy consumption [kWh]              CF       cooling fraction
+ EPV,b           total energy supplied to the building from PV [kWh]     COP      coefficient of performance
+ EPV,tot         total energy produced by PV [kWh]                       DC       direct current
+ EPV             energy production from PV [kWh]                         DNNs     deep neural networks
+ ETOT,b          total building electricity consumption [kWh]            DoC      depth of charge
+ f(·)            objective predictive function                           DoD      depth of discharge
+ g               solar heat gain coefficient                             DR       demand response
+ IE              income from selling the excess of energy produced       DRL      deep reinforcement learning
+                                                                         DTW      dynamic time warping
+                 by PV to the grid [€]
+                                                                         FDD      fault detection and diagnosis
+ PBESS,ch,max    maximum battery charging power [kW]
+                                                                         HVAC     heating, ventilation and air conditioning
+ PBESS,ch        battery charging power [kW]
+                                                                         IES      integrated energy systems
+ PBESS,dis,max   maximum battery discharging power [kW]
+                                                                         IL       imitation learning
+ PBESS,dis       battery discharging power [kW]
+                                                                         IRL      inverse reinforcement learning
+ Qcap            capacity of chiller [kW]
+                                                                         KPIs     key performance indicators
+ RE              electricity cost term of reward function
+                                                                         LfD      learning from demonstration
+ RP              peak term of reward function
+                                                                         MILP     mixed-integer linear programming
+ RT              temperature term of reward function
+                                                                         ML       machine learning
+ rt              reward at control time step t
+                                                                         MPC      model predictive control
+ RBCCF           rule-based controller part choosing whether to          OM       operation mode
+                 supply cooling energy to the building                   OTL      online transfer learning
+ RBCel           rule-based controller managing the operation of         PID      proportional-integrative-derivative
+                 the electrical part of energy system                    PV       photovoltaic
+ RBCOM           rule-based controller part choosing the operation       RBC      rule-based controller
+                 mode of the energy system                               RES      renewable energy sources
+ RBCth           rule-based controller managing the operation of         RL       reinforcement learning
+                 the thermal part of energy system                       SAC      soft-actor-critic
+ SOCBESS         state-of-charge of the BESS                             SC       self-consumption
+ SOCTES          state-of-charge of the water storage                    SOC      state-of-charge
+ SPINT           indoor air temperature setpoint [°C]                    SS       self-sufficiency
+ ΔTviol,daily    mean value of the daily average temperature             TES      thermal energy storage
+                 violation rate                                          TL       transfer learning
+ Tch             chiller supply temperature [°C]                         TOU      time-of-use
+ TINT            indoor air temperature [°C]                             VAV      variable air volume
+Coraci et al. / Building Simulation / Vol. 17, No. 5                                                                             741
+
+
+(Coraci et al. 2021; Piscitelli et al. 2021). Moreover, buildings   an offline pre-training carried out on surrogate models
+have the potential to leverage flexibility sources on both          emulating the building dynamics. These models could be
+the thermal side (e.g., Thermal Energy Storage (TES) and            more detailed as physics-based engineering models developed
+building thermal inertia) and the electrical side (e.g., PV         in Modelica (Modelica Association 2000) and EnergyPlus
+and BESS) to shift or reduce their energy demand.                   (Crawley et al. 2001), or data-driven models based on
+    Currently, HVAC systems in buildings are managed                monitored building data (Zou et al. 2020).
+by easy to implement control strategies, as Rule-Based                  Despite the excellent performance demonstrated by
+Controller (RBC) or Proportional-Integrative-Derivative             the pre-trained offline DRL agents, a critical issue arises
+(PID), developed by experts and reported in ASHRAE                  concerning the limited scalability and generalisability of this
+Guideline 36-2021 (ASHRAE 2021). However, RBC and                   process. Given the uniqueness of each building, the definition
+PID controllers are unable to address conflicting objectives        of a tailored surrogate model is required. Furthermore, the
+(Salsbury 2005) and to automatically adapt their control            development of a data-driven surrogate model requires a
+policy to dynamic boundary conditions such as weather               minimum amount of monitoring data for the controlled
+conditions, electricity prices, and grid requirements (Finck        building, while the definition of physics-based models could
+et al. 2018). In this context, Reinforcement Learning (RL)          be a time-consuming task, demanding access to detailed
+emerged as a promising solution to overcome the limitations         building information (which may not always be accessible)
+of traditional control strategies (Nagy et al. 2023). RL is a       and domain expertise.
+model-free control approach that involves a control agent               To address these practical challenges, Transfer Learning
+learning the optimal control policy by means of interaction         (TL) emerges as a viable solution to enhance the scalability
+with the controlled environment through a reward mechanism          and to enable the implementation of RL-based controllers
+(Sutton and Barto 2018). RL-based control strategies avoid          in real buildings. Transfer learning is a Machine Learning
+the complex modelling efforts associated with model-based           (ML) technique where a model initially trained to solve
+control methods, as Model Predictive Control (MPC) (Wei             a specific task (i.e., source task) in a particular domain, is
+and Calautit 2023). The mainly implemented algorithm                transferred to address a new task (i.e., target task) that
+belonging to the RL family for control purposes is DRL,             shares similarities with the original task, either within the
+which combines RL with Deep Neural Networks (DNNs)                  same domain or across different domains (Pan and Yang
+as function approximators for control policies. The                 2010). The development of a transfer learning strategy
+implementation of DRL has been successfully employed                in the framework of energy management in buildings
+to address complex control problems as in real buildings,           can offer multiple advantages, such as enabling the direct
+achieving performance levels approaching human capabilities         implementation of DRL-based in real buildings with acceptable
+(Mnih et al. 2015).                                                 performance from the early stage of deployment and
+    In the framework of building energy management, DRL             enhancing the scalability of such controllers in buildings
+results as an effective control strategy when implemented           avoiding the development of surrogate models.
+to manage HVAC system for selecting the operation mode                  The following subsection offers an overview of relevant
+of thermal energy systems (Wang et al. 2023b), supply               studies concerning the integration of TL in the context of
+water temperature (Zhang et al. 2019) and supply water              building control applications, while theoretical principles
+flow at generation level (Wang et al. 2023a), indoor air            of TL are extensively discussed in Appendix A1.
+temperature setpoint (Elehwany et al. 2024), water pump
+speed (Xiong et al. 2023) and fan speed (Fulpagare et al.           1.1 Related works on TL applications for reinforcement
+2022). Moreover, several contributions in literature evaluated      learning control agents in buildings
+the implementation of DRL to manage the operation of
+thermal storage (by managing the charge/discharge process           In the framework of applications for smart buildings,
+(Deltetto et al. 2021) or storage temperature (Vázquez-Canteli      transfer learning ensures excellent performance in the
+et al. 2019)), PV systems coupled with BESS (Anvari-                knowledge sharing of ML-based model employed for
+Moghaddam et al. 2017) and hybrid photovoltaic-thermal              emulating building dynamics (Grubinger et al. 2017; Pinto
+panels (Yang et al. 2015).                                          et al. 2022b), load forecasting (Li et al. 2021; Li et al. 2022),
+    The training approaches for enabling the RL-based agent         occupancy detection (Mosaico et al. 2019), activity recognition
+to interact with the controlled environment and retrieve            (Chiang et al. 2017) and Fault Detection and Diagnosis
+the optimal control policy have two primary forms: online           (FDD) (Li et al. 2023). In the control field, TL is applied
+DRL and offline DRL. The offline DRL strategy is widely             mainly in the automotive (Wang et al. 2019) and robotics
+explored in literature since it guarantees a stable control         domains (Zelinka et al. 2022), particularly for controllers
+policy and near-optimal performances in buildings through           based on RL.
+742                                                                                 Coraci et al. / Building Simulation / Vol. 17, No. 5
+
+
+    Implementing transfer learning strategies for smart             fine-tuning process across multiple episodes would require
+building control is a topic of recent interest since the earliest   the definition of a surrogate building model, a task requiring a
+TL applications in this context are relatively recent compared      certain level of expertise.
+to others within the context of machine learning. Fang et al.            In light of these challenges, recent advancements in the
+(2023) developed a TL methodology to investigate the                literature have introduced TL-based methodologies to achieve
+cross-temporal and spatial transferability of a DRL controller      robust DRL controller performance right from the initial
+within an HVAC system, consisting of a chiller and three            stages of implementation in target buildings. Nweye et al.
+Air Handling Units (AHUs), to improve indoor temperature            (2023) developed a TL strategy implementing Imitation
+conditions while reducing energy consumption. This study            Learning (IL), by observing for 5 months an expert
+demonstrated that effective transfer occurs when the                RBC) and weight-initialisation for training, evaluating and
+DRL agent is moved between buildings situated in similar            deploying DRL-based controllers within an energy community
+climatic conditions, mainly when two out of the five layers         comprising 17 family houses, which operation is simulated
+of the neural network approximating the control policy in           using the CityLearn environment (Vázquez-Canteli et al.
+the source building were shared between source and target           2020). Each building was equipped with high-efficiency
+control agents. Zhang et al. (2022a) introduced a strategy          appliances, electric heating, a water heating system and PV
+aimed at transferring a multi-agent RL from a source building       panels, while six of these buildings featured 6.4 kWh BESS
+with multiple zones to a target building. In this work, the         managed by independent DRL controllers to minimise
+authors developed a methodology to choose the most suitable         electricity costs and carbon emissions from the grid electricity
+pre-trained RL policy obtained from the source building             supply. The results suggested that transferring the DRL
+prior to the transfer learning process, managing zone               control policy from one building to another within the
+temperature setpoints in a Variable Air Volume (VAV)                energy community yielded comparable performance while
+system. This approach was effective since the HVAC system           reducing the training costs. Coraci et al. (2023b) developed
+in the target building saved 40% of energy consumption              an online transfer learning approach that exploits two
+compared to the baseline controller and 50% when compared           knowledge-sharing techniques, weight-initialisation and IL,
+to an RL controller trained from scratch over 5000 episodes.        to transfer a DRL controller pre-trained on a source office
+Esrafilian-Najafabadi and Haghighat (2023) developed an             building that minimises electricity cost while enhancing
+occupancy-based TL methodology exploiting the K-means               indoor temperature conditions by managing a cooling system.
+algorithm and Dynamic Time Warping (DTW) to match                   The proposed online transfer learning approach aims to
+similar occupancy patterns in 26 residential units. This            replicate real-world implementation by simulating the
+approach enhanced the control performance for the HVAC              transferred DRL agent in the target buildings for a single
+system compared to a state-of-the-art model-free controller,        episode. Source and target buildings have the same energy
+minimising thermal discomfort during the learning process           system and geometry but differ in several other aspects such
+and increasing by 25% and 5% the jumpstart and asymptotic           as weather conditions, electricity price, occupancy schedules
+performances. Lissa et al. (2021) introduced parallel transfer      and building envelope characteristics. The results show that
+learning, an intra-transfer learning technique enabling the         the online transfer learning strategy performed significantly
+knowledge transfer among five distinct agents throughout            better than the RBC and online DRL strategies, enhancing
+their training without the need to wait until the end of the        indoor temperature conditions of 50% and 80%, respectively,
+training process. This approach has been applied within a           while improving energy system operation and achieving
+microgrid comprising five individual homes, leading to a            electricity cost savings ranging from 20% to 40%. In their
+five-fold reduction in training time and a 10% decrease             works, Dey et al. (2023b) introduced respectively IL and
+in energy consumption compared to scenarios with no                 Inverse Reinforcement Learning (IRL) strategies for a DRL
+knowledge transfer. Each home is equipped with its energy           agent managing indoor temperature setpoints within a 5-zone
+system, consisting of a PV system and a heat pump, managed          office building model created using Spawn (Wetter et al.
+by a DRL controller that optimises heat pump operation to           2023). The building was equipped with five AHUs and
+minimise energy costs.                                              operated within the framework of a Demand Response (DR)
+    The applications discussed so far have been evaluated           program, to reduce energy consumption and minimise
+on target buildings after transferring the controller and           thermal discomfort. In Dey et al. (2023b), an IL strategy is
+training it across multiple episodes (i.e., temporal segments       designed to leverage knowledge extracted from a RBC to
+representative of the particular control problem). However,         expedite DRL training and mitigate the unstable behaviour
+running multiple episodes corresponds to several months             often encountered by DRL agents during initial exploration
+or years in reality before achieving acceptable performance         phases. The results demonstrated the effectiveness of the
+for DRL-based controllers. Furthermore, the training or             imitation learning approach, resulting in a 6% reduction
+Coraci et al. / Building Simulation / Vol. 17, No. 5                                                                           743
+
+
+in average cost and an average score improvement of 7%             different state and/or action spaces among DRL controllers
+during the testing period when compared to a rule-based            implemented in different buildings, thereby limiting the
+heuristic policy. In Dey et al. (2023a), the authors develop       application of the weight-initialisation technique.
+an IRL framework consisting of two steps: inverse learning              To address these limitations, this paper explores the
+and forward learning. Results showed that when compared            implementation of online heterogeneous transductive and
+with three DRL-based training strategies (i.e., direct training,   inductive transfer learning strategies for DRL controllers
+offline training and meta-model training), the IRL approach        having different state-spaces (i.e., heterogeneous TL), since
+achieved a performance level better or comparable to those         they operate in buildings having different energy systems to
+of RBC before the DRL agent begins its learning through            optimise different objective functions (i.e., inductive TL).
+direct interaction with the building while mitigating the               The developed online TL strategy includes the model
+erratic exploratory behaviour typically exhibited by an            slicing technique and imitation learning in the knowledge-
+untrained DRL agent during the initial training phase when         sharing process. The model slicing technique, commonly
+directly implemented in a building environment.                    used in training and deploying neural networks (Zhang
+                                                                   et al. 2022b), enables the weightinitialisation for the target
+1.2   Novelty and contributions of the paper                       controller by employing the pre-trained weights from the
+                                                                   source controller, even when the state-space of source and
+From the literature review, it emerges that the development        target controllers differs. Imitation learning is employed
+and implementation of TL-based methodologies have                  to initialise the memory buffer of the target controller
+increased in recent years. To the best of the authors’             with transitions obtained from a warm-up phase conducted
+knowledge, these applications refer to transfer procedures         with a RBC.
+of DRL-based control agents in homogeneous and transductive             The proposed approach is designed to transfer a
+settings. In detail, the homogeneous TL occurs between             pre-trained DRL control policy based on the discrete formulation
+controllers having the same action and state-spaces, since         of Soft-Actor-Critic (SAC) algorithm, developed by
+they manage the operation in different buildings (i.e.,            Christodoulou (2019) to allow the selection of discrete
+domain) having similar geometric properties and the same           actions. Theoretical aspects regarding DRL and the discrete
+energy system, while transductive TL indicates that source         SAC controllers can be found in the literature (Bellman
+and target controllers optimise the same objective function.       1966; Sutton and Barto 2018; Christodoulou 2019; Haarnoja
+    However, buildings are not unique entities, since they         et al. 2019). EnergyPlus and Python were coupled in a
+are often equipped with distinct energy systems controlled         simulation environment to test the effectiveness of the
+in different ways to meet specific objectives. Consequently,       developed online transfer learning strategy. The SAC controller
+there is a growing demand to develop a systematic procedure        is pre-trained on a source building to minimise electricity
+that facilitates the effective transfer of pre-trained DRL         cost while enhancing indoor temperature conditions by
+controllers in buildings where the energy systems and              effectively managing the operation of a cooling system
+objectives differ from those in the source building.               consisting of a chiller and a TES. In detail, the SAC controller
+Furthermore, the transfer learning approach to be developed        chooses the optimal operation mode of the cooling system
+should enable a transferred agent to achieve acceptable            and the fraction of nominal cooling energy to be delivered
+performance from the early stage of deployment in the              to the building. The pre-training phase of the DRL agent in
+target building, enhancing the scalability of DRL controllers      the source building also involved an automated optimisation
+in a real-world context.                                           procedure of DRL controller hyperparameters carried out
+    In this scenario, a possible solution could involve the        by means of the Python library Optuna (Akiba et al. 2019),
+development of an Online Transfer Learning (OTL) strategy.         considering that the values of hyperparameters significantly
+According to this strategy, the weights of the neural              influence the performance of DRL agents.
+networks are initialised to values obtained for the source              Then, the DRL agent pre-trained on the source building
+building and then further fine-tuned on the target building        was transferred in heterogeneous setting to multiple target
+while the DRL agent actively controls the system. The              buildings that shared similar geometric properties but with
+weight-initialisation helps retain the acquired knowledge          a more integrated energy system compared to the source
+from the source building in cases where certain boundary           building, since PV panels and BESS are installed in addition
+conditions match those of the target building. Subsequently,       to the thermal components (i.e., chiller and TES). PV and
+fine-tuning the control policy would be necessary to adapt         BESS are managed in all target buildings by a RBC strategy.
+to the new conditions (e.g., energy systems) present in the        In both the source and target buildings, DRL controllers
+target buildings. However, this procedure is not always            share the same action space, enabling DRL agents to take
+feasible as the presence of different energy systems leads to      similar actions in both domains. However, the state space
+744                                                                                Coraci et al. / Building Simulation / Vol. 17, No. 5
+
+
+differs between these buildings. This difference arises from          within the developed knowledgesharing strategy including
+the integration of PV and BESS into the energy system of              imitation learning, weight-initialisation and fine-tuning
+target buildings, resulting in a more complex and expanded            to effectively transfer a DRL agent to several target
+state space compared to the source building. Including                controllers with different state-space.
+information about PV and BESS operation within the state                The remaining paper is structured as follows: Section 2
+space of DRL controllers enables the DRL agent to make              outlines the methodological framework and provides details
+optimal decisions regarding the sequence of control actions         about the formulation of the control problem. Implementation
+for operating the cooling system. Three control strategies          details about source and target buildings, as well as
+based respectively on offline DRL, online DRL and RBC               information on online transfer learning and the controllers
+were defined to benchmark the performance of the online             are elaborated in Section 3. Section 4 and 5 respectively
+TL strategy in terms of electricity cost and temperature            provide an overview of the results obtained and discuss
+violations in heterogeneous transductive setting. Moreover,         them. To conclude, Section 6 offers concluding remarks and
+a performance comparison for online TL is carried out in            outlines future directions.
+terms of peak violations compared with the offline DRL
+strategy when the source DRL controller is transferred in           2   Methodology
+heterogeneous inductive setting.
+     Based on existing research on the application of TL            This section describes the methodology used in this paper
+for DRL controllers, this paper includes a set of novel             to evaluate the implementation of transductive and inductive
+contributions that could be summarised as follows:                  transfer learning techniques in heterogeneous settings. The
+– An online transfer learning strategy was developed to             framework is organised into three main parts, as shown in
+  transfer a pre-trained DRL controller from a source office        Figure 1:
+  building for minimising electricity cost and improving            1) Design of RBC and DRL controllers and training of the
+  indoor temperature conditions. To the best of the authors’            source DRL controller.
+  knowledge, the implementation of transfer learning in             2) Transfer of DRL control policy in heterogeneous inductive
+  heterogeneous settings for building control systems has               and transductive settings.
+  not been explored in the existing literature. The effectiveness   3) Performance benchmarking of online TL strategy on
+  of the online transfer learning methodology was tested                target buildings.
+  in heterogeneous transductive settings by including                    The developed methodological framework enables
+  differences, in addition to the different energy systems, in      the sharing of a control policy between source and target
+  climatic conditions, electricity price schedules, occupancy       buildings that have the same geometric design and end-use
+  schedules, and building thermophysical properties.                (i.e., office buildings). However, they differ in terms of the
+– The performance of the developed online transfer learning         configuration of the energy system.
+  methodology was assessed in the heterogeneous inductive                The experiments are carried out during the cooling
+  setting, evaluating a target building with the same boundary      season, as a consequence the heating system is not considered.
+  conditions as the source but including in the objective           The cooling system consists of an air-to-water chiller,
+  function a term related to peak shaving in addition to            operating at a constant cold water temperature setpoint
+  the electricity cost minimisation and the improvement of          (denoted as Tch), and a TES, acting as a buffer between
+  indoor temperature conditions for occupants. To the best          chiller and building and operating at constant water flow
+  of our knowledge, TL applications for DRL controllers             rate. The TES system operates within a temperature range
+  operating in different building environments to address           defined between a minimum Ts,min and a maximum
+  different objective functions have not been explored in           temperature Ts,max. These temperatures correspond respectively
+  literature.                                                       to the maximum and minimum State-Of-Charge (SOC) of
+– The current state-of-the-art applications for TL in the           the TES system. This study evaluates the effectiveness of
+  context of building control have primarily been limited to        thermostatic control within the building, whereby the cooling
+  homogeneous settings, where both source and target                system modulates the supply of cooling energy according
+  agents share an identical number of states and actions            to building dynamics to ensure indoor temperature control
+  through a strategy combining weight-initialisation and            for the occupants. In detail, the cooling system can be
+  fine-tuning. Nevertheless, this conventional scenario             operated by a high-level controller that:
+  does not align with the specific case study analysed in this      – optimal selects the cooling system operation mode,
+  work, given that the state-space of the source controller            determining the most appropriate considering relevant
+  includes fewer states than that of the target controllers. In        influencing factors (e.g., outdoor conditions, occupancy
+  this framework, the model slicing technique is included              patterns, electricity price schedules);
+Coraci et al. / Building Simulation / Vol. 17, No. 5                                                                               745
+
+
+
+
+                                         Fig. 1 Methodological framework developed in this work
+
+
+– chooses the fraction of nominal cooling energy (i.e.,               both on the DC bus and they are connected to the AC
+  cooling fraction) to be delivered to the building based on the      bus via a DC/DC converter. Modelling features for the PV
+  desired indoor temperature and the measured temperature.            system and BESS are provided in Section 3. According to
+  By dynamically adjusting the cooling fraction, the controller       Italian regulations, the BESS charge from grid is not allowed.
+  ensures that the indoor temperature remains within the              However, the grid operates to assist in balancing the electricity
+  defined acceptability range.                                        demand of the building with the renewable power generation
+    Regarding the operation mode of the cooling system, the           from the PV system. This ensures that the energy needs of
+controller can choose between three different operation modes:        the building are met efficiently employing a combination of
+– Discharging mode (operation mode = −1): the cooling                 grid power and RES, while complying with the specified
+  energy needed by the building is provided by discharging            requirements. The BESS system is always managed through
+  the TES. In this mode, the cooling system operates by               a RBC controller identified as RBCel and detailed in Section 3.
+  supplying variable water temperature (i.e., constant water          A simplified scheme of the energy system investigated for
+  mass flow rate) to meet the cooling demands.                        target buildings is presented in Figure 2. This case study
+– Chiller mode (operation mode = 0): the cooling energy               is designed to assess the performance of online TL for a
+  required by the building is provided by the chiller. In this        DRL-based controller.
+  setting, the cooling system operates at constant supply                  The objective of the high-level controller managing the
+  water temperature.                                                  cooling system is to minimise the electricity cost associated
+– Charging mode (operation mode = 1): the cooling                     with the operation of the chiller and circulation system while
+  system operates at constant supply water temperature to             ensuring that the indoor temperature remains within an
+  simultaneously supply cooling energy to both the thermal            acceptable range. The temperature range is defined with a
+  storage and the building (if required).                             deviation of [−1, +1] from the desired indoor temperature
+    The cooling system configuration is the same for source           setpoint of 26 °C (i.e., [25, 27] °C). To this purpose, in
+and target buildings. The configuration of the electrical             target buildings the controller can leverage renewable energy
+system differs from source to target buildings. The total             directly produced by the PV or stored in the BESS. Despite
+building electrical load is determined by the electrical demand       the controller is not capable of directly managing the BESS,
+of the chiller, circulation pump, appliances and lighting             its actions can influence the utilisation patterns of energy
+services. The electrical system of the building consists of           produced by the PV since the chiller is the most demanding
+a Direct Current (DC) bus and an Alternate Current (AC)               electrical equipment of the considered system. Furthermore,
+bus, which are interconnected through a unidirectional                in the framework of heterogeneous inductive transfer
+AC/DC inverter. The PV system and the BESS are installed              learning it was tested the capability of the controller to
+746                                                                                Coraci et al. / Building Simulation / Vol. 17, No. 5
+
+
+
+
+                           Fig. 2 Scheme of the integrated energy system installed in target buildings
+
+
+perform peak shaving (i.e., power withdrawal from the grid        2.2 Transfer of DRL control policy in heterogeneous
+less than a defined threshold) in addition to the planned         inductive and transductive settings
+objectives for electrical cost and indoor temperature
+requirements.                                                     The second phase of the framework aimed at executing TL
+                                                                  to share the optimal control policy of the source controller
+2.1 Design of baseline rule-based and DRL control agents          with the agents to be deployed in the target buildings.
+and training of the source DRL controller                              The TL strategy employed in this paper is categorised as
+                                                                  heterogeneous TL since DRL controllers implemented on
+The initial phase of the proposed methodology involves            the source and target buildings have different state-space
+the development of RBC and DRL controllers for source             due to the integration of PV and BESS in energy systems
+buildings for the management of the cooling system.               implemented in target buildings in addition to chiller and
+    The RBC controller RBCth is divided into two agents:          TES. Nevertheless the energy system is different between
+the first one determines the provisioning of cooling energy       source and target buildings, the action-space remains the
+to the building (identified as RBCCF), and the second             same as in source DRL controller, managing the operation
+one determines the operational mode of the energy system          of chiller and TES. In this framework, the operation of PV
+(identified as RBCOM). These two agents are correlated            and BESS in target buildings is managed by RBCel. Thus,
+since the operation mode of the energy system depends             the size of the output layer corresponding to the action
+on the supply of cooling energy to the building.                  chosen by the DRL controller remains the same, therefore
+Comprehensive insights into the design of the RBC can be          all the layers of the neural network approximating the DRL
+found in Section 3.                                               control policy are transferred. The experiments are conducted
+    The primary objective of the source DRL agent lies            to evaluate heterogeneous TL in both transductive and
+in minimising electricity expenses while ensuring suitable        inductive settings. In the transductive setting, the DRL
+indoor temperature conditions during occupancy hours.             controller transferred to target buildings optimises the
+Developing a DRL controller requires the definition of its        same objective function as in the source building, while in
+pivotal elements: action space, state space and the reward        the inductive setting the objective function to be optimised
+function. The DRL controller undergoes offline training           is different compared to the one considered in the source
+within the source building. During this phase, an automated       building. An online TL strategy is developed to enhance the
+process is executed through Optuna (Akiba et al. 2019) to         scalability of the transfer procedure.
+establish the best configuration of hyperparameters for the            The knowledge transfer strategy employed is weight-
+DRL control algorithm. Complete details on the DRL training       initialisation, which entails the exploration of the exchange
+phase can be found in Section 3.                                  of neural network parameters between the source and target
+Coraci et al. / Building Simulation / Vol. 17, No. 5                                                                                 747
+
+
+controllers. In detail, the weights of the Actor and Critic           resource-constrained devices (Zhang et al. 2022b). This
+networks within the target controllers are initialised using          strategy mainly involves partitioning a neural network
+the weights of the pre-trained source DRL controller. Then,           model into smaller, independent segments, each of which
+a fine-tuning procedure is conducted to update the neural             can be treated as a self-contained model with a subset of the
+network weights and adjust the control policy in response to          original parameters. However, the model slicing technique
+the unexplored boundary conditions inherent in the target             should be adapted for the specific application and available
+buildings.                                                            resources.
+    However, this knowledge transfer strategy that combines               In this paper, model slicing was implemented to enhance
+weight-initialisation and fine-tuning would operate effectively       the performance of the online TL process. Specifically, for
+only if the number of states and actions is the same for the          each controller implemented on the target building, the
+source agent and the target agents. This scenario does                corresponding Actor and Critic neural networks are initialised.
+not align with the case study of this work, as the number             These networks have a larger number of neurons in the input
+of states in the state-space of the source controller is lower        layer (i.e., 86 inputs) compared to the source controller (i.e.,
+compared to that of the target controllers. In fact, new              59 inputs). Afterwards, the input layer is divided into
+variables related to the operation of the PV system and               two parts as shown in Figure 3: one with an input layer of
+BESS are included in the state-space of target controllers to         the same dimensions as that of the source agent (i.e., 59 ×
+achieve an optimal control policy.                                    64 neurons), and the other part corresponding to the new
+    In this framework, the traditional approach would involve         inputs introduced to obtain an optimal control policy in
+initialising the weights of all layers in the neural networks         the target controllers (i.e., 27 × 64 neurons). This approach
+approximating the control policy of the target building               allowed the weight-initialisation process for the target
+with those pre-trained on the source building, except for             controller to employ the pre-trained weights of the source
+the weights corresponding to the input layer, which would             controller, preserving the pre-existing knowledge of the
+be initialised from scratch. However, this approach is not            source controller regarding the operation of the components
+compatible with the online TL methodology adopted in                  that remained unchanged in the target building (i.e., chiller
+this study, since the single training episode employed for the        and TES). Then, the target controller is fine-tuned while
+fine-tuning process (as expected by the online TL strategy),          operating within the building implementing a different
+would be insufficient to retrieve an optimal control policy           energy system and new environmental conditions (e.g.,
+for the target building. The solution adopted in this work            different weather conditions).
+to overcome the aforementioned challenges is related to the               However, the fine-tuning process is preceded by an
+implementation of the model slicing technique.                        imitation learning phase where the RBC strategy is
+    Model slicing is a technique frequently employed in the           implemented during the first week of the deployment
+training and inference of neural networks to address various          period (i.e., from 1 June to 7 June) to initialise the memory
+objectives such as model size reduction or deployment on              buffer of the OTL agent with transitions derived at each
+
+
+
+
+Fig. 3 Implementation of slicing technique to transfer control policy for DRL agents with different numbers of inputs (in a heterogeneous
+setting)
+748                                                                             Coraci et al. / Building Simulation / Vol. 17, No. 5
+
+
+control time step from the RBC operation. This process           further updates of the control policy occur since the agent
+has proven effective in enhancing the capability of OTL          does not modify its behaviour according to the feedback
+agent in learning the relationship between selected actions,     received from the environment after taking an action
+states and the reward function during the initial days of        (Brandi et al. 2022a). This approach ensures a certain level
+deployment.                                                      of stability for the control policy but exhibits a notable
+    Throughout the fine-tuning process, the values of two        drawback: in the event of modification in the controlled
+DRL hyperparameters, learning rate and number of gradient        environment, the controller must be retrained. Additionally,
+steps, should be properly selected to enhance controller         its practical implementation proves challenging as it mandates
+performance. The learning rate determines the extent of          several episodes to enhance the control policy and requires
+network adjustment in response to the computed error each        modelling effort to derive a reliable model of the building
+time the network weights are updated, while the number of        to be controlled.
+gradient steps indicates how many randomly drawn batches              The online DRL training strategy foresees that the
+from the memory buffer experience gradient updates at            control agent learns the parameters of the optimal policy
+each control time step (Brandi et al. 2022a). According to       while actively managing the system and without any prior
+Li et al. (2020), the learning rate adjustment is carried out    understanding of the dynamics inherent to the controlled
+to ensure that the target agent can update its control policy    environment (Brandi et al. 2022a). To replicate a real-time
+without entirely discarding the pre-existing knowledge           implementation scenario, the training of the online DRL
+obtained from the source building. Therefore, the learning       strategy is executed within a single episode, as opposed to
+rate is reduced by half compared to the value adopted            multiple episodes in the case of offline DRL. The strength
+during the training phase of the DRL source control agent.       of the online DRL strategy lies in its model-free nature,
+Additionally, a number of gradient steps higher than the         eliminating the need to develop a model of the building.
+standard values typically employed for offline DRL controllers   Nevertheless, in the early stages of the training period, the
+is adopted to prevent performance degradation in the OTL         agent possesses limited knowledge about the control problem,
+controller. For detailed information regarding the values        and there exists a significant risk that the chosen controller
+of the specific parameter employed in the OTL strategy,          actions yield suboptimal performance. In this framework,
+please refer to Section 3.                                       the memory buffer of the online DRL agent is initialised
+                                                                 with transitions acquired from the operation of the RBC,
+2.3 Performance benchmarking of online TL strategy on            which is essentially an imitation learning approach (Coraci
+target buildings                                                 et al. 2023b). The performance of the online DRL strategy
+                                                                 depends strongly on the value of the number of gradient
+In the final phase of the methodology, the performance of        steps and learning rate. In the offline approach, a constant
+OTL is benchmarked with that of offline and online DRL           value for both the learning rate and the number of gradient
+controllers, as well as the RBC. The inclusion of RBC serves     steps is employed, considering that the agent benefits from
+as a benchmark to offer a comparison with a conventional         the collection of experiences in the replay buffer garnered
+control strategy frequently employed in real buildings. The      across numerous episodes. In contrast to the offline DRL
+effectiveness of these controllers is evaluated in the context   strategy, within the online DRL approach a higher number
+of different target buildings, established by integrating        of gradient steps is employed, facilitating the exploration
+PV and BESS into the energy systems. This enables a              process and expediting learning following the initial week
+comprehensive evaluation of online TL performances in            of online DRL implementation. However, employing an
+heterogeneous transductive settings, characterised by changing   extensive number of gradient steps could lead to the potential
+weather conditions, electricity price schedules, occupancy       convergence of the control agent to an optimal deterministic
+patterns and thermal properties of both opaque and               control policy as the training progresses. To address this
+transparent building envelopes with respect to the source        issue, the time step in which the learning process happens
+building. Moreover, the implementation of PV and BESS            is increased relative to the offline DRL strategy. Further
+allows the evaluation of the heterogeneous inductive TL          details about offline and online DRL control strategies are
+where the objective function of the transferred DRL controller   provided in Section 3.
+is modified compared to the source building scenario.
+    The offline DRL training strategy envisages a recursive      3 Implementation
+process in which the control agent interacts with the
+environment to be controller over multiple training episodes     This section describes the implementation details for the
+to achieve a stable control policy. The recursive training is    analysed case study and for the methodological framework
+followed by the static deployment of the agent in which any      described in Section 2.
+Coraci et al. / Building Simulation / Vol. 17, No. 5                                                                           749
+
+
+3.1 Implementation details on case study                            of the design mass flow rates of the office rooms and control
+                                                                    room, equal to 0.35 kg/s.
+As stated in Section 2, source and target buildings are                  The same sizing approach is employed to determine the
+identical from a geometrical point of view and they are             design features of the cooling system for each target building,
+served by the same cooling system consisting of a chiller           according to the specific weather conditions.
+and a TES. The case study is a prefabricated building with a             A time-based tariff structure commonly implemented
+rectangular layout and it covers a floor area of 196 m2 and a       in Italy, known as Time-Of-Use (TOU), determines the
+net conditioned floor area of 97 m2. The facility comprises         electricity price for the electricity withdrawn from the grid
+two 10-person office rooms, one 3-person control room               to operate the chiller unit and auxiliary equipment. The
+and a technical room. The technical room is not connected           TOU structure divides the electricity price into low price,
+to the HVAC system and it houses the storage tank and the           medium price and high price as a function of the day of the
+battery. The window-to-wall ratio is 7% while the average           week and the time of the day. These tariff rates are designed
+transmittance values for the opaque and transparent envelope        to differentiate the values for the optimisation application,
+components of the source buildings are 0.16 W/(m2·K) and            starting from a real value of the high price period. In detail,
+0.55 W/(m2·K), respectively. The source building is located         the medium price is derived from the average electricity
+in Turin (Italy), and it is occupied at maximum capacity            price of 0.143 €/kWh observed during the period June–
+from Monday to Friday between 8:00 and 18:00. In addition           September 2021, as indicated by the Italian grid regulating
+to the load associated with the HVAC system, in the two             authority (ARERA 2022), while the low price and high
+office rooms a total electric load (ELOAD) of 0.9 kW for lighting   price are set respectively to 1/2 (i.e., 0.071 €/kWh) and 3/2
+services, appliances and office equipment is measured               (i.e., 0.214 €/kWh) of the medium price. Moreover, since
+during the occupancy hours.                                         the energy system designed for target buildings includes PV
+    The building and the cooling system are modelled                and BESS, it is required to define the price cel,sell at which
+in EnergyPlus. Terminal units within buildings were not             the excess electrical energy generated by the PV system is
+modelled. Consequently, the cooling energy is technically           sold to the grid, assumed to be 0.02 €/kWh based on data
+provided to the building by means of the OtherEquipment
+                                                                    obtained from the Italian regulator (Brandi et al. 2022b).
+object in EnergyPlus. The use of the OtherEquipment object
+                                                                         The main difference between the source building and
+allows for a simplified representation of the cooling energy
+                                                                    the target buildings lies in the integration of PV system
+supply. The cooling system is sized considering as an external
+                                                                    and BESS on the energy system. A 3-kW nominal power
+disturbance the cooling power to meet the demand of the
+                                                                    for the PV system is selected to align with the peak power
+building demand and employing the ideal-load EnergyPlus
+                                                                    requirement of the overall electrical demand of the building.
+calculation for the reference weather file available in
+                                                                    The PV system is modelled in the simulation environment
+EnergyPlus for a specific location.
+                                                                    by means of a Python class as in Brandi et al. 2022(b), and
+    For the source building the reference weather file for
+                                                                    employing solar position data from the Python library pvlib
+Turin, Italy (ITA-TORINOCASELLE-IGDG.epw) is employed.
+                                                                    (Holmgren et al. 2018). The PV system consists of mono-
+The sizing process results in a design cooling power required
+                                                                    crystalline silicon modules, each having a nominal power
+to maintain an indoor temperature of 26 °C and relative
+                                                                    of 200 W/m2 and efficiency (η) defined in Equation (1) and
+humidity of 55% during the occupancy period of 1.8 kW
+                                                                    equal to 15%.
+and 1 kW respectively for each office zone and the control
+room, while the chiller is designed with a Qcap capacity of         η = f (G, AM,Tout )                                        (1)
+4.7 kW. Moreover, the reference Coefficient of Performance
+(COP) of the chiller is equal to 2.7, determined according              The efficiency of PV modules is evaluated under standard
+to a reference leaving and entering fluid temperatures equal        conditions (i.e., solar irradiance GSTC = 1000 W/m2, cell
+to 6.7 °C and 35 °C, while the supply water temperature at          temperature TSTC = 25 °C, air mass AMSTC = 1.5) as described
+chiller outlet is 7 °C. TES is designed to have a size of 3 m3,     in Durisch et al. (2007). To compute the PV power production
+corresponding to three times the maximum ideal hourly               PPV as the product of efficiency and incident solar radiation
+cooling demand of the building. The minimum Ts,min and              is required to define the tilt and azimuth angles. The
+maximum Ts,max operative temperatures of TES are 10 °C              inclination angle of the PV panels is retrieved from the
+and 18 °C. These temperatures correspond respectively to            global dataset presented by Jacobson and Jadhav (2018).
+the maximum state of charge (SOCTES = 1) and the minimum            Consequently, the tilt angle is fixed at 33° while the azimuth
+state of charge (SOCTES = 0) of the TES. During the charging        angle depends on the testing facility orientation and is
+phase, the design water mass flow rate is set at 0.2 kg/s,          equal to 116°.
+while during the discharging phase, it corresponds to the sum           A modular Lithium-ion BESS is implemented in the
+750                                                                                                 Coraci et al. / Building Simulation / Vol. 17, No. 5
+
+
+simulation environment by employing a Python class as                               by the manufacturer. For a Li-ion BESS technology, these
+defined in the literature (Amato et al. 2021; Brandi et al. 2022b)                  values are set respectively at 10% and 90% of the total
+that simply emulates the BESS operation by estimating                               capacity, allowing for a total Depth of Charge (DoC)/Depth
+the SOCBESS since the BESS degradation is not considered.                           of Discharge (DoD) of 80% (Amato et al. 2021).
+However, this approach is sufficiently accurate for conducting                           As introduced in Section 2, the electrical part of the
+an initial assessment of the effects of BESS installation.                          energy system is always managed by an RBC strategy
+Therefore, SOCBESS is defined as follows:                                           identified as RBCel across the different experiments carried
+                                                                                    out in the paper. Figure 4 shows a flowchart of RBCel strategy
+ìï                                          P          (t ) ⋅ Δt
+ ïï SOCBESS (t ) = SOCBESS (t - 1) + ηrte BESS,ch                  (charge)         which is inspired by state of the art BESS management
+  ïï                                               CBESS                            strategies (Ruusu et al. 2019; Amato et al. 2021). The RBCel
+   í
+   ïï                                   PBESS,dis (t ) ⋅ Δt                         operates according to the energy production from PV (i.e.,
+    ïï SOCBESS (t ) = SOCBESS (t - 1) -                            (discharge)
+     ïî                                      CBESS                                  EPV), the electricity cost (i.e., cel) and the state of charge of
+                                                                              (2)   the BESS (i.e., SOCBESS). According to Italian regulations,
+                                                                                    BESS charging from the grid is not permitted. Therefore,
+     The SOC of the BESS is computed per each time step t as
+                                                                                    the BESS can only be charged when the energy generated
+a function of the SOC at the previous time step SOCBESS(t−1)                        by the PV system exceeds the energy demand of the building
+and the battery capacity CBESS. In detail, during the BESS                          to satisfy the energy required by the cooling system and
+charging process, the SOC is evaluated by including a                               non-HVAC electrical loads. At each control time step, if
+round-trip efficiency ηrte of 96% and the power charged                             the local energy production from PV system is not zero,
+from PV to BESS between two consecutive time steps                                  RBCel injects energy into the building/grid environment
+(i.e., Δt, equal to 15 minutes). Otherwise, during the BESS                         following this priority order: (i) PV energy production is
+discharging process the SOCBESS(t) is computed as a function                        employed to meet building electrical demand, (ii) PV
+of the power discharged from BESS in Δt. The BESS capacity                          energy production is employed to charge the BESS, (iii) PV
+is 2.4 kWh, defined according to the building electrical                            energy production is sold to the grid. The BESS charging
+peak demand on hourly basis. To ensure the lifespan of the                          process complies with the limits defined for the maximum
+battery and prevent excessively rapid charging and discharging                      chargeable energy Ech,max and SOCBESS. When the PV energy
+operations, two limits are imposed on the charging and                              production exceeds the total electrical demand of the
+discharging processes. These limits are defined as PBESS,ch,max                     building and the capacity of the BESS, the excess energy
+and PBESS,dis,max corresponding to 25% and 50% of the nominal                       is sold to the grid. Based on information obtained from the
+capacity of the (BESS). Moreover, to safeguard the health                           Italian regulator, the price for the electricity sold to the grid
+of the battery and optimise its performance, SOC levels are                         is 0.02 €/kWh. Otherwise, when the PV energy production
+bounded by minimum and maximum values, as indicated                                 is not sufficient to meet the total building electrical demand,
+
+
+
+
+           Fig. 4 Flowchart of the action selection process of the rule-based controller for the electrical part of the energy system
+Coraci et al. / Building Simulation / Vol. 17, No. 5                                                                           751
+
+
+the BESS should be discharged. The discharge process is                  The EnergyPlus side of the co-simulation environment
+carried out according to the electricity purchasing price from       receives at each simulation time step control actions from
+the grid cel, the prescribed limits for the maximum amount           the Python side. The EnergyPlus model implements the
+of dischargeable energy by the BESS Edis,max and SOCBESS.            control action and generates outputs related to the thermal
+The BESS is discharged when the electricity purchasing price         energy system (i.e., TES SOC), indoor environmental
+from the grid is greater than the minimum electricity price          parameters (i.e., indoor air temperature), and supplementary
+of the implemented TOU electricity price schedule of the             data (i.e., total building electrical consumption) integrated
+building to maximise cost savings associated with energy             within the state-space of the controller. Furthermore, the
+purchasing from the grid. However, if the energy discharged          EnergyPlus model provides supplementary details, such as
+from the BESS is not sufficient to meet the electrical demand        direct and diffuse solar irradiation, employed by the PV
+of the building, the energy is purchased from the grid.              model to compute the PV power generation.
+    The experiments are executed by means of a two-side                  The outputs from the EnergyPlus and information
+co-simulation environment shown in Figure 5. The                     about the electricity price schedule are supplied as inputs to
+co-simulation environment employs a Building Control Virtual         the Python side. In detail, information about electricity
+Test Bed (BCVTB) middleware and the ExternalInterface                price and building total electrical consumption is provided
+function of EnergyPlus to establish a connection between             as input to the RBC strategy managing the BESS. The
+EnergyPlus (Crawley et al. 2001), where the building dynamics        updated BESS SOC value is obtained from the BESS model,
+and the thermal part of the energy system (i.e., air-to-water        which receives directives regarding whether to charge or
+chiller and TES) are modelled, and a Python interface built          discharge the battery. Then, BESS SOC, PV electricity
+upon OpenAI Gym (Brockman et al. 2016) employed to                   production and electricity price are additionally relayed as
+develop PV, BESS and RBC/DRL controllers models. In                  state variables. These variables are used by DRL controller
+this paper, the simulation time step is set to 15 minutes,           or RBC to determine the cooling mode and the cooling
+ensuring convergence of the EnergyPlus simulation process            fraction during each control time step. To conclude, the
+(Coraci et al. 2023b). The control time step is set to 30 minutes,   controller learns the optimal control strategy through the
+as a consequence, each control action is executed across a           assessment of a reward function, formulated as a function of
+span of two simulation time steps.                                   the analysed scenario (e.g., inductive or transductive TL).
+
+
+
+
+             Fig. 5 Co-simulation environment architecture (modified from Brandi et al. (2022b) and Coraci et al. (2023b))
+752                                                                                Coraci et al. / Building Simulation / Vol. 17, No. 5
+
+
+3.2 Implementation of baseline rule-based controller               3.3.1 Design of action-space
+
+The baseline controller consists of a RBC, defined as RBCth,       The action-space is discrete, as a discrete version of the
+managing the operation of the chiller and TES and serves           SAC is employed. The action-space remains unchanged
+as the baseline controller. The RBCth consists of two parts        between the DRL agents implemented in the source and
+responsible for determining the fraction of nominal cooling        target buildings, as the electrical part of the energy system
+energy (i.e. cooling fraction) to be delivered to the building     (i.e., PV+BESS) serving the target buildings is always
+(RBCCF) and for determining the operational mode of the            controlled by the RBCel strategy. In this framework, the
+cooling system (RBCOM) respectively. The control strategy          action-space is defined as indicated in Equation (3).
+of RBCCF is activated on weekdays when the building is             A = OM ´ CF = (om, cf ) : om Î OM, cf Î CF                       (3)
+occupied and it is divided into two stages: pre and post-initial
+switch ON phase. In the pre-switch ON phase, the agent                  The action-space includes the combination of five feasible
+chooses the starting time to supply cooling energy to the          control actions, expressed in the range [0, 4], that can be
+building based on specific indoor temperature conditions           executed by the DRL control agent to manage the operation
+and the time of day. After the switch ON, RBCCF supplies           mode of the cooling system (i.e., Operation Mode (OM))
+cooling energy to the thermal zone as per the conditions           and decide whether or not to supply cooling energy to the
+outlined in Table 1. Once the initial phase is completed,          building (i.e., Cooling Fraction (CF)). The five combinations
+cooling energy is provided to the building until the indoor        of feasible control actions are included in Table 2. Furthermore,
+temperature drops below the lower acceptability threshold,         safety constraints are implemented to prevent the system
+TLOW (i.e., 25 °C). Conversely, when the indoor temperature        from operating in charging mode when the storage is fully
+exceeds the upper temperature acceptability threshold TUPP         charged (i.e., SOCTES = 1) and in discharging mode when
+(i.e., 27 °C) the RBCCF agent resumes the cooling energy           the storage is empty (i.e., SOCTES = 0). In such scenarios,
+supplying to the building. The cooling energy is provided          the system operates in chiller mode.
+until the occupants leave the building (i.e., 18:00). The
+second part of the RBCth, defined as RBCOM, is developed to        3.3.2 Design of state-space
+manage the operation mode of the cooling energy system.            The state-space consists of a collection of observations
+In detail, when the electricity price is low and the state         provided as inputs to the agent, influencing its decision-
+of charge (SOCTES) is below 0.75 (i.e., TES temperature of         making process regarding the action selection. In this work,
+12 °C), RBCOM operates the cooling system in charging              the state-space varies between the source and target DRL
+mode until the electricity price rises above the minimum           controllers, as per the definition of heterogeneous TL, since
+value or SOCTES reaches the maximum value (i.e., SOCTES            the target agents should receive information concerning
+equals 1 or TES temperature equals 10 °C). If RBCCF decides        the operation of the electrical side of the energy system
+to supply cooling energy to the building and the electricity       (implemented in the target buildings). This aspect allows
+price is not low, RBCOM operates the cooling system in             the DRL agent to effectively determine the optimal sequence
+discharging mode as long as SOCTES is non-zero, and in             of control actions for the cooling system operation, leveraging
+chiller mode if the storage is empty.                              the information on the PV system and BESS. Figure 5
+                                                                   reports in States boxes the variables included in the state-space
+3.3     DRL controller design                                      for the DRL controller. In detail, three supplementary
+                                                                   variables associated with the operation of the electrical
+This section describes the design process of the DRL control       system and the building have been integrated for the
+agent, providing details about the definition of its main          controllers implemented in target buildings in addition
+features: action-space, state-space and reward function.
+                                                                   Table 2 Correspondence between action picked by DRL controller
+Table 1 Starting time conditions followed by RBCCF to start        and the two control actions required by cooling system
+providing cooling energy to the building                              Action          Operation mode             Cooling fraction
+      Combination     Time period         Indoor temperature             0                   0                          0
+           1         4:00 ≤ t < 5:00      TINT − TUPP ≥ 3 °C             1                   1                          0
+           2         5:00 ≤ t < 6:00      TINT − TUPP ≥ 2 °C             2                  −1                         −1
+           3         6:00 ≤ t < 7:00      TINT − TUPP ≥ 1 °C             3                   0                         −1
+           4           t ≥ 7 : 00         TINT − TUPP ≥ 0 °C             4                   1                         −1
+Coraci et al. / Building Simulation / Vol. 17, No. 5                                                                          753
+
+
+to the variables included in the state-space of DRL source          normalisation technique to ensure that the observations are
+controller.                                                         converted within a range of (0, 1) before being fed into the
+     Including the TES SOC in the state-space is crucial to         neural network.
+provide the agent with sufficient information to enhance
+the cooling system management. This variable is observed            3.3.3 Design of reward function
+at the current time step t and the two previous timesteps           The formulation of the reward function should be aligned
+(i.e., t − 1 and t − 2) having insights about the stored            with the objectives of the control problem. In this work,
+cooling energy amount and its temporal evolution.                   two different formulations of the reward function are
+Information about Indoor temperature conditions is included         developed, based on the type of TL experiments evaluated.
+in the state-space for the same timesteps by employing              In the heterogeneous transductive TL setting the source
+the difference between the indoor setpoint and the actual           and target controllers optimise the same objective function.
+indoor air temperature. This allows the agent to account            Otherwise, in the case of heterogeneous inductive TL the
+for the temperature fluctuations within the building over           controller is trained on a source building to optimise a
+time and consider the thermal dynamics impact of the                specific objective function and then transferred to a target
+building and energy system, as discussed in Brandi et al.           building with a different objective function.
+(2022b). Including Electricity price in the state-space is
+                                                                         In the case of transductive TL, the reward function for
+crucial due to its impact on the reward. As the electricity
+                                                                    both source and target DRL controllers is defined as a
+price schedules are assumed to be known, the state-space
+                                                                    linear combination of two terms: an electricity cost-related
+incorporates perfect predictions of the electricity price for
+                                                                    term and a temperature-related term. The objective of the
+the next 12 hours. This allows the agent to optimise the
+                                                                    DRL control agents is to minimise the costs associated with
+operation mode of the cooling system. By combining three
+                                                                    energy withdrawn from the grid while also improving indoor
+features included in the state space, namely Day of the week,
+                                                                    temperature conditions. Furthermore, this formulation of
+Time of the day and the (0, 1) binary variable Occupants’
+                                                                    the reward function does not consider the excess of energy
+presence status, the controller can recognise the occupancy
+                                                                    generated by the PV system and sold to the grid, as the goal
+schedule. This latter variable is included in the state-space
+                                                                    is also to maximise Self-Sufficiency (SS) and Self-Consumption
+for the current time step and the following 12 hours. The
+                                                                    (SC). The importance of the two reward terms is determined
+last variable evaluated in the state-space for both the source
+                                                                    by two weights, δ for the electricity cost term and β for the
+and target controllers is the Outdoor air temperature, as it
+                                                                    temperature term. The general formulation of the reward
+affects the operation and energy consumption of the cooling
+                                                                    function is as follows:
+system and indoor temperature. The three variables added
+to the state-space for the target DRL controllers are the           R = -( δ ´ RE + β ´ RT )                                  (4)
+BESS SOC, PV energy production and the Building total
+electrical consumption. The Building total electrical consumption       The electricity cost-related term corresponds to the cost
+and PV energy production play a pivotal role in the optimal         incurred for the energy withdrawn from the grid to supply
+management of the controlled system. Moreover, the                  the chiller, circulation systems and non HVAC electrical
+information related to the PV operation is provided to the          loads and it is defined as:
+agent from the current control time step t to the subsequent
+time steps t + 24 (i.e., the next 12 hours), with the               RE = cE ´( ECHILLER + EPUMP + ELOAD )                     (5)
+assumption that perfect predictions are known in advance.
+Solar radiation is not included in the state-space despite          where cE [€/kWh] represents the electricity price for buying
+the PV energy production is inherently dependent on                 energy from the grid and depends on the implemented price
+this variable. However, the agent indirectly accounts for the       schedule. The variables ECHILLER [kWh] and EPUMP [kWh]
+impact of solar irradiation on the system dynamics by               correspond to the energy consumption of the chiller and
+incorporating the PV energy generation. The BESS SOC is             pumping system respectively, while ELOAD [kWh] represents
+another necessary information provided to the agent for             the energy consumption of lighting services, appliances
+the optimal management of the cooling system. The BESS              and building equipment. However, ELOAD is not included in
+is employed to supply electricity to the chiller, pumping           RE for source agent since the energy required to satisfy the
+system, lighting services and appliances in building during         energy demand of lighting services and building equipment
+periods when the electricity price is not low. However,             can be purchased only from the grid and the control action
+unlike the TES that exhibits greater inertia, the BESS SOC          of the DRL agent can not influence their operation.
+is provided only at the current timestep t due to its lower             The temperature-related term is determined by evaluating
+inertia. The state-space variables are scaled using a min-max       the presence of occupants and the indoor temperature
+754                                                                                 Coraci et al. / Building Simulation / Vol. 17, No. 5
+
+
+conditions. When the building is not occupied, the                   integrating PV and BESS in the energy system in addition
+temperature-related term is zero (i.e., RT = 0). Conversely,         to chiller and TES and modifying the objective function to
+during working hours the temperature-related term is                 accommodate the inductive transfer learning process. The
+formulated differently based on the indoor temperature               objective function used in the source building R is represented
+values, as reported in Equation (6).                                 by Equation (4), while the one considered for the building
+                                                                     after the implementation of PV and BESS Rinductive is
+     ì
+     ï                      if TLOW - 2 £ TINT < TLOW and TUPP <     presented in Equation (7), including the peak shaving term.
+     ï
+     ï  (| SPINT - TINT |)3
+     ï
+     ï                         TINT £ TUPP + 2                       Otherwise, the performances related to transferring the
+     í
+RT = ïï 50                  if TINT < TLOW - 2 and TINT > TUPP + 2   source controller to various target buildings with the same
+      ï
+      ï
+      ï
+      î0
+      ï                     if TLOW £ TINT £ TUPP                    geometrical features but improved energy system and
+                                                              (6)    different boundary conditions are evaluated in the case of
+                                                                     heterogeneous transductive TL. The modification of boundary
+    The reward was computed using the third power (n = 3)            conditions between the source building and target buildings
+of the |SPINT − TINT | term after a sensitivity analysis where       involved adjustments to various factors, including weather
+three different values (i.e., n = 1,2,3) were evaluated, since       conditions, electricity price schedules, occupancy schedules,
+this formulation of the reward ensured better performance            and building thermophysical properties.
+concerning the control objectives. To mitigate convergence                The experiments are carried out in simulative way by
+issues in the learning process related to the high magnitude         developing for each target building an EnergyPlus model
+of the reward, a fixed value was assigned to the reward if           employed as a proxy of the real building. The target building
+                                                                     models are retrieved by changing the features of the source
+the indoor temperature is below 23 °C or above 29 °C. This
+                                                                     model and employing those indicated in Figure 6.
+approach avoids convergence issues since the learning
+                                                                          To assess the influence of climate on the control policy
+process of the SAC algorithm influences the definition
+                                                                     transfer process, various scenarios are evaluated based on
+of the Boltzmann temperature coefficient α, defined as a
+                                                                     the classification provided by the European Commission,
+function of the reward magnitude (Coraci et al. 2023b).
+                                                                     accounting for Cooling and Heating Degree Days to
+    The implementation of heterogeneous inductive TL
+                                                                     categorise areas with distinct climate characteristics
+involved the introduction of a new term within the reward
+                                                                     (Tsikaloudaki et al. 2012; PVSites 2016). These scenarios
+function designed for the source DRL controller. This term
+                                                                     included the use of the same (i.e., Turin) or similar (i.e.,
+is related to the reduction of peak energy consumption
+                                                                     Paris) climatic conditions as the source building, as well as
+from the grid. In this case, the objective function is defined
+                                                                     significantly different conditions in warmer (i.e., Palermo)
+as follows:
+                                                                     or colder (i.e., Helsinki) locations.
+Rinductive = -( δ ´ RE + β ´ RT + θ ´ RP )                    (7)         Additionally, the target building configurations are
+                                                                     characterised by the adoption of different electricity price
+     RP is the peak-related term, defined as RP = 1 when             and occupancy schedules. Specifically, two price schedules
+the power absorption from the grid is greater than 2 kW              are considered: the first schedule is based on TOU similar to
+(i.e., 0.5 kWh since the simulation time step is equal to            that of the source building. The second schedule followed
+15 minutes). The RP is combined with the other two reward            an on-off peak price scheme, utilising the electricity tariffs
+terms (defined as above) by employing θ as peak-related              from Austin, Texas (Austin Energy 2023) and considering
+term weight.                                                         the price for the electricity sold to the grid equal to 0.008
+                                                                     €/kWh. Details about the two price schedules are provided
+3.4   Implementation details on design of target buildings           in Table 3.
+                                                                          The two implemented occupancy schedules differ in terms
+In this paper, a series of experiments are conducted to              of weekdays and occupancy hours. The first occupancy
+compare the performance of heterogeneous online TL in                schedule assumes that the building is occupied during the
+the context of both inductive and transductive scenarios,            period from Monday to Friday between 8:00 and 18:00. The
+against three benchmark controllers: RBC, online DRL, and            other schedule accounted for the presence of occupants
+offline DRL. Inductive transfer learning involves modifying          throughout the week, from Monday to Sunday from 7:00 to
+the objective function between source and target building            19:00. In conclusion, different combinations of envelope
+controllers. Specifically, it simulates a scenario where the         efficiency for each target building matching the thermophysical
+controller pre-trained in the source building and designed           properties of both the opaque envelope (i.e., opaque thermal
+to minimise energy cost and optimise indoor temperature              transmittance UOP and internal heat capacity χi) and the
+control, remained implemented in the same building after             transparent envelope (i.e., transparent thermal transmittance
+Coraci et al. / Building Simulation / Vol. 17, No. 5                                                                              755
+
+
+
+
+           Fig. 6 Overview of the main features of the target buildings analysed during the performance benchmarking phase
+
+
+Table 3 Comparison of electricity price schedules [€/kWh]           as the deployment in the target buildings of the OTL and
+implemented in target buildings                                     DRL controllers trained both offline and online.
+                           (a) Time-of-use                              The training phase of the DRL controller in the source
+                                               Day                  building involves an automated procedure to identify the
+     Hour of the day         Mon–Fri            Sat    Sun
+                                                                    best set of hyperparameters between twenty configurations
+                                                                    of the DRL control agent. Each configuration is trained for
+       00:00–07:00                             0.071
+                                                                    30 episodes consisting of 90 days (from 1 June to 29 August).
+       07:00–08:00                     0.143           0.071
+                                                                    On average, the simulation process of each episode required
+       08:00–19:00             0.214           0.143   0.071
+                                                                    approximately 35 minutes to complete on a machine
+       19:00–23:00                     0.143           0.071        equipped with an 8th Generation Intel® Core™ i7-8550U
+        3:00–24:00                             0.071                processor operating at 4.0 GHz and 16.0 GB of RAM. The
+                                                                    optimisation process is carried out by means of the open-source
+                           (b) On-off peak
+                                                                    Python library Optuna (Akiba et al. 2019). Optuna operates
+                                               Day
+                                                                    by either minimising or maximising an objective function
+     Hour of the day         Mon–Fri            Sat     Sun
+                                                                    over a set of hyperparameters defined within an acceptability
+       00:00–07:00                             0.029                range. In this paper, the DRL source controller hyperparameters
+        07:00–0:00                     0.063              0.029     involved in the optimisation are Reward weights δ and β,
+        0:00–24:00                             0.029                Learning rate μ, Discount factor γ, Number of hidden layers
+                                                                    and Number of neurons per hidden layer, while the Batch
+UTR and solar heat gain coefficient g) are evaluated. Table A1      size is fixed at 128. The objective of the optimisation
+in Appendix A2 provides details about the five envelope             process is to identify the best configuration that enables
+configurations for the target buildings.                            the agent to effectively minimise electricity cost (Ecost,source),
+                                                                    measured in €, and the cumulative sum of temperature
+3.5 Implementation details on training of DRL source                violations (Tviol), measured in °C. Ecost,source is the total cost
+controller and benchmarking strategies                              of electricity withdrawn from the grid since the implemented
+                                                                    energy system does not include a PV system.
+This section offers a comprehensive overview of the DRL
+control agent training phase in the source building, as well         Ecost,source = cE ´( ECHILLER + EPUMP )                      (8)
+756                                                                               Coraci et al. / Building Simulation / Vol. 17, No. 5
+
+
+    Tviol is computed as the cumulative of Tviol,i (i.e., i-th    the memory buffer to properly train the control agent.
+temperature violation). Tviol,i is determined by computing        Moreover, a learning step of three days degrades the online
+the absolute difference between the indoor temperature            DRL strategy performances in the early stages of training,
+TINT and either the lower limit TLOW or upper limit TUPP          but it ensures that the control agent accumulates a larger
+of the temperature acceptability range, which is defined as       number of transitions before proceeding to the next learning
+[25, 27] °C, when the indoor air temperature exceeds these        step and improves the performance throughout the training
+boundaries during the occupancy period.                           period. In the case of OTL, the increase of the number of
+         N
+                                                                  gradient steps to 15 coupled with the reduction of the batch
+Tviol = åTviol,i                                           (9)    size (i.e., 32) and of the learning rate (i.e., 0.0005) with
+        i =0                                                      respect to the source controller ensures that the pre-trained
+where N is the number of simulation time steps in a cooling       source control strategy is not entirely overwritten.
+season. Details about the search domain and the best values           The learning rate adjustment allows the control policy
+for DRL hyperparameters are included in Table A2 in the           to be optimised according to the different boundary
+Appendix A2. The magnitude of the search domain was               conditions in the target building while preventing excessive
+defined according to the values adopted for Learning rate μ,      exploration of the action space, which could lead to
+Discount factor γ, Number of hidden layers and Number of          deviations from the optimal control policy learned at the
+neurons per hidden layer adopted in previous works reported       beginning of the training phase (Li et al. 2020). The learning
+in the literature (Brandi et al. 2020), while the magnitude of    rate value is reduced by half compared to that used for the
+the search domain for the reward weights was designed to          source DRL controller following a sensitivity analysis in
+avoid any convergence issues of the DRL algorithm related         which different learning rate values are evaluated while
+to high reward magnitude values.                                  keeping other DRL hyperparameters the same. The sensitivity
+    DRL-based control agents implemented in target                analysis is carried out by evaluating the online TL in target
+buildings during the performance benchmarking phase have          building T19, representing the building with the highest
+different values for some hyperparameters, such as batch          degree of modifications in boundary conditions compared
+size, learning rate, learning step and gradient steps, while δ,   to source building.
+β and α remain consistent with those of the transferred               In this framework, Table 4 provides a performance
+source DRL agent since the re-optimisation process is not         comparison in terms of electricity cost and the cumulative
+carried out during the benchmarking phase. The automated          sum of temperature violations considering different learning
+optimisation of hyperparameters performs better when the          rate values, suggesting that a value of 0.0005 for the learning
+controllers are trained over multiple episodes (e.g., multiple    rate ensures the best performance for the developed online
+seasons in real building applications) as in source DRL           transfer learning process. It is worth noting that the learning
+agent or offline DRL strategy implemented in target buildings.    rate is a hyperparameter depending on the specific task and
+However, this procedure is in contrast with the online DRL        the similarity between source and target domains. Therefore,
+and OTL strategies developed in this study, implemented           it might be useful to provide a guideline in future research
+for only one episode during the cooling season (from 1            to assist energy managers and system integrators in choosing
+June to 29 August) and aiming to represent their direct           the correct learning rate value.
+implementation in real buildings. The offline DRL strategy            Moreover, the Mahalanobis distance (Kaya and Bilge
+has a control time step of 30 minutes, a batch size of 128        2019) is computed to demonstrate the effectiveness of
+and a single gradient step. Conversely, for the online DRL        learning rate adjustment during the online TL process. The
+and OTL strategies the batch size is 32, the learning step is
+extended to every three days while the number of gradient         Table 4 Performance comparison considering different learning
+steps and learning rate is respectively 30 and 0.001 for          rate values for online TL implemented in T19
+online DRL and 15 and 0.0005 for OTL. As suggested in                    Learning rate             Ecost [€]           Tviol [°C]
+Smith et al. (2017), the batch size is reduced to 32 for both               0.0001                   31.9               194.6
+online strategies due to the limited data volume available                  0.0002                   32.2               185.9
+for training the online controllers and to speed up the                     0.0003                   34.1               179.0
+convergence process towards an optimal solution. Increasing                 0.0004                   33.1               172.5
+the number of gradient steps to 30 provides significant
+                                                                            0.0005                   32.1               146.6
+benefits to the online DRL controller, expediting the training
+                                                                            0.0006                   36.0               193.5
+process during the initial weeks of implementation where
+                                                                            0.0007                   39.3               216.9
+the agent has a limited amount of transition data (i.e.,
+                                                                            0.0008                   40.0               225.6
+consisting of state, action, new state and reward) stored in
+Coraci et al. / Building Simulation / Vol. 17, No. 5                                                                               757
+
+
+learning rate adjustment allowed the transferred controller         minimising Tviol) by managing the operation mode of the
+buildings to adapt the DRL control policy to the new                cooling system and choosing the fraction of cooling energy
+boundary conditions in target buildings without completely          to be supplied to the thermal zones compared to the RBC
+overwriting the knowledge pre-acquired in the source                baseline.
+building. In this framework, the Mahalanobis distance is                Figure 7 compares DRL and RBC during the last week
+computed for the target building T19, considering the               of July (starting from Sunday) in terms of the electrical
+difference for the weights of neural network representing           energy consumption of chiller and circulation pump, also
+the DRL control policy before and after fine-tuning in online       providing details regarding the utilisation of TES by showing
+TL and online DRL (with weights randomly initialised).              the SOC time series. RBC and DRL controllers exhibited
+The average Mahalanobis distance for the weights differences        similar energy consumption profiles during high-price
+of all layers is lower for the online TL approach (i.e., 0.96)      periods (in dark blue), since they operated the cooling
+compared to the case of online DRL (i.e., 1.42), indicating         system in discharging mode by activating only the circulation
+that the weights distribution for online TL is more similar         pump to supply cooling energy to the environment from
+than the case of online DRL. Therefore, employing a lower           the TES.
+learning rate ensures that the pre-existing knowledge from              During weekends, RBC and DRL controllers employed
+source building is not entirely discarded.                          a different strategy to manage the cooling system. In detail,
+     To conclude, when the price schedule implemented               the RBC charged the TES starting from Friday night and
+in the target building follows an on-off peak pattern, the          during Saturday morning (i.e., 07/30–07/31), while the
+reward weight factor δ for the electricity cost term is doubled     DRL controller charged the TES during Sunday (i.e., 07/25).
+compared to that of the source agent for offline DRL,               As a result, the DRL approach minimised TES losses and
+online DRL and OTL controllers. This adjustment is required         maintained the maximum SOC at the beginning of the
+to maintain a balance between the two terms in the reward           occupancy period, in contrast to the RBC strategy. Moreover,
+function since TOU price tariff implemented in the source           during weekdays DRL controller charged the TES during
+building features a higher average weekly electricity price         low-price periods (in white) by operating the system in
+compared to the on-off peak tariff. The performances                charging mode, supplying at the same time cooling energy
+of OTL in target building are benchmarked with those of             to the environment through the chiller. This strategy allowed
+offline DRL, online DRL and RBC in terms of Ecost and Tviol.        to reduce the energy consumption from the chiller during
+Ecost is computed as the product of the electricity cost            medium or high electricity price periods by operating the
+withdrawn from the grid and the sum of the energy                   cooling system in discharging mode. Conversely, RBC
+consumption in kWh of the chiller, auxiliaries (similarly to        strategy operated the cooling system in chiller mode during
+the Ecost,source) and non-HVAC electrical loads (i.e., associated   the last stages of high-price periods, as the TES was discharged
+to appliances and lighting services) reduced by revenues            before the end of the occupancy period, to meet indoor
+derived from surplus of PV energy sales to the grid (IE).           temperature requirements by providing cooling energy to
+                                                                    the building. The management of the energy system for
+Ecost = c E ´( ECHILLER + EPUMP + ELOAD ) - I E             (10)    RBC and DRL controllers followed a recurrent weekly
+                                                                    pattern throughout the entire 90-day cooling season,
+4 Results                                                           resulting in a 20% electricity cost saving (i.e., Ecost,source,DRL =
+                                                                    56.0 € vs Ecost,source,RBC = 70.0 €). Moreover, DRL controller
+This section summarises in two separate subsections the             ensured better performance in terms of indoor temperature
+results of the pre-training phase of the DRL controller on the      control (i.e., Tviol,source,DRL = 54.0 °C), since it reduced the
+source building and those related to the implementation of          cumulative sum of temperature violation by 70% compared
+the online TL strategy.                                             to RBC (i.e., Tviol,source,RBC = 176.0 °C).
+                                                                        Figure 8 compares the indoor temperature profiles
+4.1   DRL controller pre-training process on source building        related to the operation of DRL and RBC strategies during
+                                                                    the same week analysed in Figure 7. The reward function
+Before implementing the online TL process, the DRL                  formulation encouraged the DRL agent to supply cooling
+controller was offline pre-trained on the source building.          energy to the building by activating the chiller during
+The offline pre-training process, as defined in Section 3,          low-cost hours, as illustrated in Figure 7. Since the low-cost
+included the optimisation of its hyperparameters, for which         electricity price tariff occurred during the night, over this
+values are included in Table A2 in the Appendix. The                period the DRL controller pre-cooled the indoor environment
+objective of the DRL agent was to optimise both electricity         in advance compared to RBC to ensure that the temperature
+cost Ecost,source and indoor temperature conditions (by             remained closest to the acceptable range as the occupancy
+758                                                                                 Coraci et al. / Building Simulation / Vol. 17, No. 5
+
+
+
+
+              Fig. 7 Source building total electricity use (Chiller+TES) and SOC profiles for RBC and DRL controllers
+
+
+
+
+                        Fig. 8 Source building indoor air temperature profiles for RBC and DRL controllers
+
+period begins. This pattern was more evident on Mondays            setpoint of 26 °C, minimising temperature violations related
+(i.e., 07/26) since the building must be pre-cooled earlier        to exceeding the upper value of the indoor temperature
+compared to the other weekdays, as on Saturdays and                acceptability range (i.e., 27 °C).
+Sundays there were no occupants and temperature control
+is not required given the temperature term formulation in          4.2 Benchmarking of heterogeneous online transfer
+the reward function (see Equation (6)). Overall, during            learning performance on target buildings
+the occupied hours the DRL controller exhibited a more
+homogeneous temperature profile around the temperature             The results related to the implementation of the heterogeneous
+Coraci et al. / Building Simulation / Vol. 17, No. 5                                                                              759
+
+
+online TL strategy on the target buildings are summarised            conditions compared to the source building. The locations
+in this section, providing a benchmark of its performance            include those with equal (Turin), similar (Paris), colder
+compared to RBC, offline DRL and online DRL strategies.              (Helsinki), and warmer (Palermo) climates compared to
+The benchmarked controllers were implemented over a                  the source building. Each target building is identified by a
+single cooling season (i.e., one episode) lasting 90 days, while     specific ID, whose main features are indicated in Figure 6.
+the offline DRL strategy involved pre-training on 30 episodes            As emerged from Figure 9 and Table 5 the offline DRL
+for each target building before its static deployment on the         controller provided the best performances compared to
+same building to test controller performance.                        the other strategies due to a more refined control policy
+    Figure 9 and Table 5 provide an overview of the                  retrieved from a 30 episodes training period. Conversely,
+performance obtained from the implementation of the                  online TL and online DRL were directly implemented on
+investigated control strategies across all target buildings in       target buildings while actively controlling the energy system
+heterogeneous transductive settings, respectively in terms           to emulate their direct implementation in physical buildings,
+of total electricity cost (Ecost) and indoor temperature control.    and then its implementation relies on a single simulation
+Indoor temperature control performances are assessed in              episode. As a result, offline DRL outperformed online TL
+terms of the mean value of the daily average temperature             within a range of 1% (i.e., T4) and 58% (i.e., T18) in terms of
+violation rate ΔTviol,daily , computed as the daily average of       electricity cost, even reaching differences exceeding 80% in
+the ratio between the cumulative daily sum of temperature            target buildings with different weather conditions compared
+violations Tviol,daily and the daily temperature violations          to source building (e.g., Helsinki T11 and Palermo T16).
+occurrences Tviol,occ,daily. Hence, the buildings are clustered      Moreover, offline DRL enhanced indoor temperature
+from the upper to the lower side of Figure 9 and Table 5 in          conditions by reducing on average the mean value of the
+ascending order based on the degree of deviation in weather          daily average temperature violation rate by 40% compared
+
+
+
+
+ Fig. 9 Comparison of total electricity cost for the controllers implemented in target buildings during performance benchmarking phase
+760                                                                                 Coraci et al. / Building Simulation / Vol. 17, No. 5
+
+
+to the online TL strategy. However, the online TL agent           Table 5 Comparison of the mean value of the daily average
+achieved better performance in terms of both total electricity    temperature violation rate ΔTviol,daily over the testing period for RBC,
+cost and indoor temperature control when compared to              offline DRL, online DRL controllers with online TL implemented
+RBC and online DRL controllers. In detail, the online TL          in heterogeneous transductive setting in target buildings
+agent achieved significant electricity cost savings, ranging                               Average temperature violation rate [°C]
+                                                                    ID target
+from 5% (i.e., Paris T7) to 40% (i.e., Palermo T15), and
+                                                                    building       RBC         Offline DRL     Online DRL      Online TL
+ensured an average reduction of 10% for ΔTviol,daily across all
+                                                                       T0          0.18            0.09             0.3              0.16
+experiments compared to the RBC. Moreover, the online TL
+                                                                       T1          0.18            0.11            0.21              0.16
+strategy outperformed online DRL by reducing the electricity
+cost between 5% (i.e., target buildings T10) and 31% (i.e.,            T2          0.26            0.21            0.39              0.24
+
+target building T16) and on average ΔTviol,daily by 41%.               T3          0.25            0.18            0.36              0.24
+     From an accurate analysis of the results shown in                 T4          0.27            0.19            0.37              0.24
+Figures 9 and Table 5, climatic conditions emerged as the              T5          0.17             0.1            0.41              0.12
+primary driver that affected the performances of the developed         T6          0.17            0.12            0.33              0.17
+TL methodology. The weather-related differences played a               T7          0.26            0.18            0.33              0.24
+pivotal role since thermal and electrical load patterns within         T8          0.24            0.12            0.38              0.26
+the analysed building were influenced by weather conditions.           T9          0.27            0.27            0.32              0.27
+Specifically, the overall performance achieved by online               T10         0.17            0.15            0.35              0.17
+TL outperformed on average those of RBC and online DRL                 T11         0.18            0.09            0.31              0.16
+when climatic conditions are similar to those of source
+                                                                       T12         0.24            0.14            0.38              0.25
+building, while also being more similar to those obtained
+                                                                       T13         0.25            0.15            0.52              0.21
+by implementing offline DRL.
+                                                                       T14         0.24            0.15            0.34              0.22
+     For target buildings located in Turin or Paris, online TL
+                                                                       T15         0.22            0.15            0.35              0.16
+reached electricity cost savings of approximately 9% and
+                                                                       T16         0.23             0.1            0.35              0.17
+18% compared to RBC and online DRL, even though its
+performance was approximately 13% worse than offline                   T17         0.26            0.15            0.44              0.22
+
+DRL. Similarly, a better indoor temperature control was                T18         0.26            0.15            0.34              0.26
+established by implementing online TL since ΔTviol,daily is            T19         0.29            0.17             0.3              0.24
+reduced by 15% and up to 40% Tviol compared to RBC and
+online DRL and achieved an average value of ΔTviol,daily          was occupied also during weekends and for a larger period
+that is approximately 25% higher than that of offline DRL.        compared to the source building.
+     Conversely, the effectiveness of the TL process was              As defined in Section 3, the electricity-related term
+reduced for the target buildings located in Helsinki (i.e.,       reward function in target buildings does not include
+colder climate) and Palermo (i.e., warmer climate). In these      the income from selling energy to the grid to maximise
+buildings, the savings achieved through online TL decreased       self-sufficiency and self-consumption. Self-sufficiency and
+respectively to 6% and 9% in terms of electricity cost and        self-consumption are computed taking into account that
+approximately to 8% and between 20% and 35% in terms              PV system and BESS can both provide electrical energy to
+of ΔTviol,daily compared to RBC and online DRL. Similarly,        the building to activate chiller and the circulation pump
+the negative gap in performance between online TL and             and to feed lighting services and appliances in building.
+offline DRL was 50% greater both in terms of electricity cost     Specifically, the formulations for SS and SC are as follows:
+and ΔTviol,daily .
+                                                                         EPV,b + EBESS,b
+     Lastly, from Figure 9 and Table 5 emerged that changing      SS =                                                                      (11)
+the price schedule under the same weather conditions has                     ETOT,b
+not affected the relative performance level achieved by                  EPV,b + EBESS,b
+online TL when compared to the benchmark controllers.             SC =                                                                      (12)
+                                                                             EPV,tot
+Contrarily, the effectiveness of the knowledge-sharing
+process experienced a slight decrease when the occupancy          where EPV,b and EBESS,b are the total energy provided
+schedule was changed, but not to the same extent observed         respectively by PV and BESS to the building, ETOT,b is the
+when changing climatic conditions. This outcome might             total building electrical energy consumption and EPV,tot is
+be related to the transferred controller requiring more           the PV total energy production.
+engagement with the target building for adapting the control          In this framework, Table 6 provides a performance
+policy to the new occupancy schedule where the building           benchmarking in terms of SS and SC achieved by the RBC,
+Coraci et al. / Building Simulation / Vol. 17, No. 5                                                                             761
+
+
+offline DRL, and online TL controllers for the buildings               building with ID Tinductive (see Figure 6 for more details) in
+in which the transfer methodology was evaluated in the                 the heterogeneous transductive setting.
+transductive heterogeneous setting. The online DRL strategy                In this case, the RBC was used to assess whether the
+has not been included in this comparison, as demonstrated              online TL strategy could maintain acceptable performance
+by the results presented in Figure 9 and Table 5, suggesting           in terms of electricity cost and indoor temperature control
+that its implementation leads to significantly adverse                 while maintaining below 0.5 kWh the energy purchased
+performance in terms of Ecost and ΔTviol,daily compared to             from the grid (or the power absorption from the grid below
+the other controllers. Table 6 demonstrates that the results           2 kW, since it is evaluated during each simulation time step
+obtained for SS and SC were consistent with those found                of 15 minutes). Despite the cost reduction (i.e., −3%) and
+for Ecost and ΔTviol,daily for RBC, offline DRL and online TL          the enhancement in indoor temperature conditions compared
+strategies. In detail, the online TL strategy effectively managed      to a potential implementation of RBC (i.e., −21% in Tviol),
+the energy system to harness the flexibility provided by the           the online TL strategy exceeded the 0.5 kWh limit for
+PV and BESS to meet the building energy demand in all                  grid-supplied energy on 132 occurrences during the first
+target building configurations, resulting in an increase of            cooling season with a peak demand of 0.8 kWh, demanding
+9% for SS and 11% for SC compared to RBC. In contrast,                 the extension of the implementation period to assess the
+online TL values for SS and SC were respectively 24% and               period required (i.e., number of episodes or cooling seasons)
+19% lower than those obtained by implementing the offline              to achieve adequate performance also in terms of peak
+DRL agent.                                                             shaving. Thus, it emerges that two episodes are sufficient
+     To conclude, Figures 10 and 11 show respectively for              for transferring to the target building Tinductive a DRL
+offline DRL and online TL, an overview of electrical and               controller in heterogeneous inductive setting, since during
+thermal energy flows, as well as indoor temperature and                the second cooling season the peak shaving limit was
+TES/BESS SOC profiles. These figures allow for a comparative           exceeded only 12 times out of 8640 observations, reducing
+analysis of how these controllers manage the energy system             the maximum peak value of energy withdrawn from the
+when the source controller was transferred to the target               grid to 0.55 kWh. Furthermore, the online TL strategy
+                                                                       revealed excellent performance in both electricity cost
+Table 6 Comparison of self-sufficiency and self-consumption for        (Ecost,TL = 34.3 €) and cumulative sum of temperature
+RBC and offline DRL controllers with online TL implemented in          violations (Tviol,TL = 17.2 °C). However, the offline DRL
+heterogeneous transductive settings in target buildings                controller exceeded the peak shaving limit only two times
+             Self-sufficiency (SS) [%]    Self-consumption (SC) [%]    out of 8640 observations since it relies on a more refined
+ID target            Offline    Online             Offline    Online   control policy as being trained on 30 episodes, reducing
+building    RBC       DRL        TL       RBC       DRL        TL
+                                                                       electricity cost by 50% (Ecost,off−DRL = 16.5 €) but having
+   T0        48.9      68.5       56.2    47.8         66.8    56.5    poorer performance in terms of internal temperature control
+   T1        49.2      75.9       52.9    48.1         72.7    50.5    (Tviol,Off−DRL = 96.3 °C) compared to online TL.
+   T2        48.6      62.7       53.7    75.5         94.9    85.4        Figures 10 and 11 reveal several similarities in how the
+   T3        46.7      60.5       50.3    72.7         92.5    79.5    energy system was managed by the offline DRL controller
+   T4        48.5      60.6       51.1    72.5         92.5    88.4    and the online TL controller after updating its control
+   T5        51.1      63.8       55.7    47.2         59.4    51      policies while actively managing the system two successive
+   T6        51.1      76.7       53.5    47.4         72.9    59.4    cooling seasons. Offline DRL and online TL approaches
+   T7        51.1      55.2       51.8    76.5         82.2    77.3    managed the system to withdraw energy from the grid
+   T8        48.9      62.4       50.6    73.4         93.8    76.3    during low-electricity price periods. The energy import
+   T9        52.2      66.3       52.5     72          89.6    72.5    from the grid was used to activate the chiller to pre-cool the
+   T10       52.6      83.9       56.8    43.5         66.1    62.7    indoor environment and to charge the TES (especially
+   T11       52.5      80.5       61.4    43.5         66.7    50.3    closer to the occupancy period to minimise TES losses).
+   T12       53.8      67.3        54     72.6         89.7    72.4
+                                                                       This operational pattern led to an increased electricity
+   T13       51.7      65.9       53.7    70.1         90.1    72.2
+                                                                       demand during nighttime hours when there was no PV
+                                                                       electricity generation. During the occupancy period in working
+   T14       51        65.9       51.1     70          92      70.5
+                                                                       days, both offline DRL and online TL agents maximised
+   T15       46.8      85.6       62.6    41.4         73.3    56
+                                                                       self-consumption by leveraging the energy production
+   T16       47        86.3        54     41.8         75.7    48.6
+                                                                       from PV system and minimised the energy selling to the
+   T17       47.1      74.5       50.7    62.5         95.8    65.1
+                                                                       grid. In detail, the chiller was activated using the energy
+   T18       44.6       73        51.5    59.4         93.8    67.5
+                                                                       produced by the PV system, both to meet the building
+   T19       45.4      79.8       52.3    61.4         84.6    68.6
+                                                                       energy demand and to charge the TES if the SOCTES was
+762                                                                                  Coraci et al. / Building Simulation / Vol. 17, No. 5
+
+
+
+
+Fig. 10 Overview of electrical/thermal energy flows associated to building and energy system, BESS/TES SOC and indoor air temperature
+for offline DRL strategy (after 30 cooling seasons)
+
+not at the maximum charge level. If there was surplus               a 0.52 kWh amount of energy was drawn from the grid,
+energy generated by the PV system and the SOCBESS was not           exceeding the prescribed limit and resulting in two peak
+at the maximum value (i.e., SOCBESS = 0.9), the BESS was            violations.
+charged before selling energy to the grid. Conversely, when              In conclusion, during the weekends (i.e., 08/01 and
+the PV electricity generation was not sufficient to meet the        08/07), the offline DRL controller sold a smaller amount
+overall building energy demand, TES and BESS were                   of energy back to the grid compared to the online TL
+discharged. The TES satisfied the building thermal energy           controller to maximise self-consumption, according to the
+demand, while the BESS supplied energy to the auxiliary             definition of the electricity cost-related term in reward
+pump, appliances and lighting in building. During the               function in target buildings. Notably, on August 1st the
+analysed week, the offline DRL agent did not exceed the             offline DRL exploited the energy production from PV to
+peak limit, while the online TL strategy violated the peak          activate the chiller. Considering that the TES is fully charged,
+limit twice during the last hours of the occupancy period           the temperature drop is associated with the supply of
+on August 6th. These violations occur due to a mishandling          cooling energy to thermal zones. As a result, the indoor
+of the thermal-side energy system. Specifically, the chiller        environment is pre-cooled to ensure that the temperature
+was incorrectly activated to provide cooling energy to the          is maintained as close as possible to the temperature
+environment, even though it did not require energy, as its          acceptability range during the early stages of the occupancy
+temperature was within an acceptable range. Consequently,           period on Monday, rather than waiting until the nighttime
+the indoor temperature drops below 25 °C (resulting in a            hours near the start of the occupancy period on Monday,
+temperature violation), and the total energy demand of the          as carried out by the online TL controller. This different
+building cannot be met solely by the PV system. Therefore,          approach contributes to the difference in energy sold to the
+Coraci et al. / Building Simulation / Vol. 17, No. 5                                                                             763
+
+
+
+
+Fig. 11 Overview of electrical/thermal energy flows associated to building and energy system, BESS/TES SOC and indoor air temperature
+for online TL strategy (after 2 cooling seasons)
+
+
+grid during the weekend periods between the two analysed            system and BESS, which are crucial for achieving an optimal
+strategies.                                                         control policy. This difference in the state-space between the
+                                                                    source and target controllers poses a significant challenge.
+5 Discussion                                                        To overcome this limitation, model slicing was strategically
+                                                                    employed to enhance the performance of the online TL
+In recent years the need for systematic procedures that             process.
+enable the effective transfer of pretrained DRL controllers              The implementation of model slicing in this study
+to buildings with different characteristics has emerged since       showcases a practical solution to address the challenge of
+real buildings are equipped with different energy systems           divergent state-spaces between source and target controllers.
+and should be managed to handle different objectives. In this       By partitioning the neural networks and selectively
+context, this study introduced a novel online heterogeneous         preserving knowledge relevant to both buildings, this strategy
+transductive and inductive TL strategy for DRL controllers,         contributes to the successful deployment of the online TL
+combining model slicing, imitation learning, weight-                methodology in a heterogeneous transfer setting. Model
+initialisation and fine-tuning techniques.                          slicing not only overcomes the limitations posed by differences
+    The weight-initialisation strategy operates effectively         in state-space but also enhances the adaptability and
+only when the number of states and actions is consistent            efficiency of DRL controllers in real-world building energy
+between the source and target agents. However, this ideal           management applications.
+scenario does not align with the case study presented in this            The primary focus of this study was to explore the
+work. In the case of the target controllers, the state-space        implementation of online heterogeneous TL for a DRL
+includes additional variables related to the operation of PV        controllers pre-trained offline in a source building. The
+764                                                                                 Coraci et al. / Building Simulation / Vol. 17, No. 5
+
+
+source DRL controller managed the operation mode of the                  Furthermore, the developed online TL strategy succeeded
+cooling system, consisting of an electric chiller and a TES,        in adapting the pre-trained DRL controller to new control
+and chose whether or not to provide cooling energy to the           objectives in two episodes (corresponding to two cooling
+building with the objectives of minimising electricity cost         seasons) when it is tested for a target building with the
+and enhancing indoor temperature conditions. This approach          same energy system as the other target buildings (i.e.,
+was applied in transductive and inductive setting.                  heterogeneous TL), identical boundary conditions as in the
+    In heterogenous transductive TL, target buildings are           source building but including in the objective function the
+equipped with a different energy system, since PV and BESS          peak shaving in addition to the source controller objectives
+are introduced. In this context, the results obtained for           (i.e., inductive TL).
+target buildings implementing the same weather conditions                While offline DRL remains the best solution, even if it
+as source buildings demonstrate how TL can support the              is not practically model-free, online TL emerges as a valuable
+revamping process of an existing energy system. Online TL           and efficient solution to enhance the scalability of DRL
+was found effective in extreme scenarios where target               controllers in real buildings while ensuring performance
+buildings are characterised by different climatic conditions,       comparable to offline DRL controllers. To quantify the
+electricity pricing, occupancy and thermo-physical properties       effectiveness of the developed online TL, the definition of
+compared to source building. In this context, the results           metrics and Key Performance Indicators (KPIs) could be
+demonstrate the effectiveness of the online TL strategy,            beneficial. However, in the context of TL applications for
+since the developed methodology significantly outperforms           building control, KPIs are not generalisable and should be
+RBC and online DRL controllers, achieving substantial               defined according to each control problem. Therefore, to
+electricity cost savings and enhancing indoor temperature           assess the benefits of online TL in avoiding the development
+control while maximising SS and SC in all target building           of a building surrogate model for pre-training purposes as
+configurations. Despite offline DRL consistently outperforming      in offline DRL controllers, Figure 12 shows a bar chart
+the other strategies its applicability is limited compared to       indicating the number of episodes required for offline DRL
+the online TL controllers since it requires to perform again        to achieve comparable performance to online TL for each
+the offline training process.                                       target building. The proposed transfer methodology allows
+    Moreover, this study demonstrates that climatic                 for direct deployment of the transferred DRL controller,
+conditions are the primary driver affecting the performance         achieving performance comparable to a DRL agent trained
+of the online TL strategy, since it performed better when           offline for a number of episodes ranging between 15 and
+climatic conditions were similar to those of the source             30 episodes as indicated in Figure 12, depending on the
+building (i.e., Turin or Paris), while the performance gap          characteristics of the target building.
+between online TL and offline DRL increased for buildings                It’s worth noting that the results presented in this study
+located in significantly different climates (as in Helsinki or      are based on simulations, and the validation in real buildings
+Palermo).                                                           could be included in future works. Conducting real-world
+
+
+
+
+           Fig. 12 Number of training episodes required by offline DRL to achieve the same performance level of online TL
+Coraci et al. / Building Simulation / Vol. 17, No. 5                                                                             765
+
+
+validations requires comprehensive data collection from             to initialise the memory buffer of the target controller with
+buildings, including sensor data related to energy systems,         transitions collected during a one-week RBC implementation.
+weather conditions, and building occupancy. Moreover,               Weight-initialisation is applied to initialise the control policy
+certain challenges need to be addressed to implement the            of the target agent employing pre-trained weights from
+developed online TL methodology in real buildings, such as          the DRL source control policy. The model slicing technique
+ensuring compatibility with existing control systems and            is integrated into the weight-initialisation process to allow
+the need for continuous data acquisition. To conclude, the          pre-trained weights from the source controller could be
+sizes and capacities of chillers, TES, PV, and BESS are critical    employed to initialise the weights of the neural networks
+factors influencing the results. In practical applications,         approximating the control policy for the online TL strategy.
+the choice of equipment sizes will significantly impact the              The performance of the online TL strategy was compared
+performance of the control strategy. While acknowledging            with that of three different strategies: RBC, offline DRL and
+the importance of the influence of the sizes of energy              online DRL. In heterogeneous transductive setting, the online
+components on building energy performance in practical              TL strategy performed on average worse than the offline
+contexts, the primary goal of this study was to assess the          DRL controller in all analysed target buildings in terms of
+effectiveness of online TL in scenarios where the energy            electricity cost (i.e., 37%), SS (i.e., 24%), SC (i.e., 19%) and
+systems are different between source and target buildings.          indoor temperature control (i.e., the mean value of the daily
+However, a sensitivity analysis to assess the effects of            average temperature violation rate was 40% higher than
+different sizes and capacities of chillers, TES, PV, and BESS       offline DRL).
+could be carried out in future works to provide valuable                 Meanwhile, online TL was more effective than RBC and
+insights into the optimal configurations for specific building      online DRL respectively when evaluating average savings
+scenarios.                                                          on electricity cost (i.e., −12% and −11%) and mean value
+                                                                    of the daily average temperature violation rate (i.e., −10%
+6 Conclusion                                                        and −41%). Moreover, online TL allowed to increase SS
+                                                                    by 9% and SC by 11% when compared to RBC. In the
+The present paper aimed to evaluate the effectiveness of an         heterogeneous inductive scenario, the online TL controller
+online transfer learning strategy applied to a DRL-based            achieved a near-optimal control policy capable of limiting
+control agent in heterogeneous settings. The DRL controller,        peak shaving violations beyond the 2 kW threshold of
+based on discrete SAC algorithm, was pre-trained on a               power absorption from the grid in two cooling seasons.
+source office building equipped with a chiller and a thermal        In this scenario, the online TL agent enhanced indoor
+cold water storage. The objective of the controller is to reduce    temperature conditions by 82% compared to offline DRL,
+the cost of electricity drawn from the grid while enhancing         but performed worse by 50% in terms of electricity cost
+indoor air temperature control by choosing the operating            and peak shaving (i.e., 12 versus 2 peak limit violations).
+mode of the energy system and the amount of energy to be            While the online transfer learning methodology generally
+provided to the building. The hyperparameters of the source         performed worse compared to offline DRL, it offers the
+DRL control agent were optimised through an automated               advantage of enhancing the scalability and generalisability
+procedure based on the Python library Optuna.                       of advanced controllers in buildings since it does not require
+    Several transfer experiments were performed to assess           the definition of a building surrogate model for training
+the performance of transferring the pre-trained controller          purposes as per offline DRL controllers.
+to multiple target buildings. The target buildings have the              Future works are expected to cover the following
+same geometry as the source building but implemented a              directions:
+PV system and a BESS, managed by a RBCel, in addition to            – Evaluating the performance of the proposed method in
+chiller and TES managed by the transferred DRL controller.             comparison to other advanced control strategies, such as
+Two different settings of heterogeneous TL were evaluated:             MPC, to offer a more comprehensive assessment of the
+transductive and inductive. In the first scenario, weather             advantages it offers when deployed.
+conditions, price and occupancy schedules, and thermophysical       – Implementing safety guards to ensure safe operating
+properties of the building envelope were modified compared             conditions (e.g., reverting to the baseline control or
+to the source building. In the second scenario, the effectiveness      implementing a fail-safe strategy) to ensure that indoor
+of online TL was assessed when the objective function was              temperature is maintained within the allowed temperature
+modified to include peak shaving.                                      range.
+    The online TL framework introduced in this study                – Enhancing the building simulation by utilising Spawn of
+integrates three key techniques: model slicing, imitation              EnergyPlus (Wetter et al. 2023) to create a more detailed
+learning and weight-initialisation. Imitation learning is used         simulation environment. Spawn allows for the integration
+766                                                                              Coraci et al. / Building Simulation / Vol. 17, No. 5
+
+
+  of the energy system modelled in Modelica with the building    In this framework, Pinto et al. (2022c) identified different
+  energy model developed in EnergyPlus. Consequently,            classifications according to the similarity of tasks (i.e., label
+  the results obtained through the proposed approach are         classification), features and labels (i.e., space classification),
+  close to those observed in real-world building operations.     and modalities of knowledge sharing (i.e., solution
+– Developing building archetypes to discover when TL is          classification). For clarity and conciseness, this section
+  effective between source and target buildings of different     describes extensively only the elements included in each
+  types, avoiding negative TL. This process could exploit        classification discussed below, while the others are provided
+  the potentialities of TL since building managers and           useful references in the literature.
+  operators can pre-determine, given a target building, the          Three categories are defined for classifying TL approaches
+  best source building from which to transfer a DRL-based        based on task similarity and the availability of labelled data
+  control policy.                                                in the source and target domains.
+– Developing an infrastructure to explore the implementation     – Inductive Transfer Learning, where labelled data is
+  of the online TL methodology in a real-world testbed.            available in both the source and target domains, and the
+                                                                   source and target tasks are different. The focus is not on
+Appendix                                                           domain differences but rather on leveraging labelled data
+                                                                   from the source domain to improve learning in the target
+A1 Transfer learning fundamentals and applications for             domain.
+reinforcement learning                                           – Transductive Transfer Learning, where, the source and
+                                                                   target domains are different, but they share the same task.
+Transfer Learning is a machine learning approach aimed at          However, labelled data is only available for the source
+leveraging previously acquired knowledge in one task to            domain. The objective is to employ the labelled data from
+enhance performance in a different yet related problem             the source domain to enhance learning in the target
+(Pinto et al. 2022c). This method involves sharing knowledge       domain.
+at the initial stages of the learning process, which expedites   – Unsupervised Transfer Learning, where labelled data is
+the convergence of machine learning models compared to             not available in either the source or target domains. The
+starting from scratch without any prior knowledge. As              domains may be equal or not, and the tasks in the source
+stated in Pan and Yang (2010) and Pinto et al. (2022c), TL         and target domains are different. The aim is to leverage
+enhances the learning of a predictive function in the target       the shared information or structure between the domains
+domain DT, associated with task TT, by leveraging the              to enhance learning in the target domain.
+knowledge gained from the source domain DS with task TS.              A further classification is defined according to the
+To mathematically define TL, it is necessary to consider the     differences in source and target features (i.e., spaces) and
+concepts of domain and task, as outlined by Pan and Yang         labels:
+(2010). The domain is composed of a feature space X and a        – Homogeneous Transfer Learning, considering applications
+marginal distribution probability P(X), while the task             where the source and target spaces, as well as labels, are
+encompasses the label space Y and an objective predictive          identical. In this case, there are no differences in the feature
+function f(·). This function is learned from the training          spaces or labels between the source and target domains.
+data, represented as pairs (xi,yi), and it is employed to        – Heterogeneous Transfer Learning, considering applications
+approximate the conditional probability P(y|x) and make            where there are differences in the feature spaces and/or
+predictions for new instances.                                     labels between the source and target domains. In this case,
+    Since this paper evaluates the knowledge sharing               the feature spaces or labels (or both) vary between the
+between DRL-based controllers, it is necessary to establish        source and target domains.
+a correspondence between the domain, label space, and                Additionally, TL is classified based on the knowledge-
+task defined in generic ML problems and the state-space,         sharing method employed in solution classification:
+action-space, and reward function in RL. In the context of       instance-based, feature representation-based, relation
+RL, several studies such as Taylor and Stone (2009) and Da       knowledge-based and model parameter-based transfer
+Silva and Costa (2019) provide insights for potential            learning (Pinto et al. 2022c). This work implements model
+applications of TL for this control algorithm. Specifically,     parameter-based TL, focused on sharing certain parameters
+in RL the input feature space (i.e., domain) corresponds         or their distributions between the source and target tasks,
+to the state-space, while the label space aligns with the        such as model weights. Furthermore, model parameter-based
+action-space. In general, for ML problems knowledge              TL includes three sub-classifications based on the methods
+sharing can occur in scenarios where the source and target       of model parameter sharing: feature-extraction, weight-
+domains, tasks, and solutions may be different or similar.       initialisation and relational knowledge-based (Pinto et al.
+Coraci et al. / Building Simulation / Vol. 17, No. 5                                                                                              767
+
+
+2022)c. In this paper, weight-initialisation is employed              However, unlike in pure IL, the expert controller in LfD
+since the target model weights are initialised by means of            can inform the target agent about the chosen set of actions.
+the pre-trained model weights from the source task. This              Additionally, in LfD, the target agent may have access to
+initialisation provides a starting point for the target model         reward signals associated with the actions selected by the
+to benefit from the knowledge learned in the source domain.           expert.
+After the weights are initialised, an additional fine-tuning
+process can be performed. During fine-tuning, the target            A2 Details on envelope features of target buildings and
+model is further trained using the data specific to the target      hyperparameters of source DRL controller
+task to refine its parameters based on the characteristics of
+the target domain.                                                  Table A1 reports the five envelope configurations for the
+     An additional classification for TL can be established         target buildings.
+based on the differences associated with the source of
+knowledge, its availability, and the required domain                Table A1 Opaque and transparent envelope features for target
+knowledge (Da Silva and Costa 2019; Coraci et al. 2023b):           buildings
+intra-agent and inter-agent transfer learning. This paper              Efficiency     UOP          χi                                         Solar
+evaluates the implementation of Intra-Agent Transfer                 configuration [W/(m2·K)] [kJ/(m2·K)]          UTR[W/(m2·K)]             factor g
+Learning, which encompasses transfer methods that do not                   0              0.16         38.9               0.5                 0.49
+require explicit communication or direct interaction between               1              0.3          43.5               1.3                 0.35
+agents to access internal knowledge. In this case, the transfer            2              0.34         44.2               1.9                 0.65
+of knowledge occurs within a single agent, specifically the                3              0.18         40.0                1                   0.5
+source agent, without the target agent being aware of the                  4              0.45         48.0               2.5                 0.35
+future implications of the new training process for the source
+agent. In Intra-Agent TL, the knowledge acquired by the
+                                                                        The envelope efficiency configuration labelled as “0”
+source agent up to a certain point, regardless of whether the
+                                                                    corresponds to the reference building used as source. The
+training process has been completed or not, is transferred
+                                                                    remaining configurations are defined based on the building
+to the target agent. This knowledge transfer can include
+                                                                    standards of each specific location. The thermophysical
+learned representations, model parameters, or other internal
+                                                                    feature values for the reference buildings in Turin (i.e.,
+knowledge that the source agent has accumulated during
+                                                                    configuration 1), Paris (i.e., configuration 2), Helsinki (i.e.,
+its training.
+                                                                    configuration 3), and Palermo (i.e., configuration 4) were
+     To conclude, Da Silva and Costa (2019) and Zhu et al.
+                                                                    chosen according to Ministry of Economic Development
+(2020) indicate three possible settings of knowledge reuse
+                                                                    (2015a, 2015b); Bienvenido-Huertas et al. (2019) and Huynh
+in addition to transfer learning, such as:
+                                                                    et al. (2021).
+− Imitation Learning (IL), where the target control agent
+                                                                        Table A2 reports the search domain and the best values
+  learns an optimal strategy for a specific task by observing
+                                                                    of DRL hyperparameters for the source controller.
+  the behaviour of an expert. The expert, such as a RBC,
+  optimises the same task and serves as a source of
+                                                                    Table A2 Search domain and best values of DRL hyperparameters
+  knowledge for the target agent. During the IL process, the
+                                                                    for the source controller
+  target agent has access to the transitions generated by the
+  expert. These transitions represent the actions from the                                                                                     Best
+                                                                    Hyperparameter                                   Search domain             value
+  expert and the resulting state transitions. The target agent
+                                                                    # Hidden layers                                        [2, 4]                2
+  can store these transitions in a buffer for later use.
+− Inverse Reinforcement Learning (IRL), where expert                # Neurons per layer                               [64, 128, 256]             64
+
+  demonstrations of a specific task are observed and employed       Discount factor γ                                [0.9, 0.95, 0.99]          0.99
+  to extract an underlying reward function, used to train a                                                         [0.0005, 0.001, ...,
+                                                                    Actor/critic learning rate μ                                               0.001
+                                                                                                                         0.005]
+  RL agent straightforwardly, aiming to optimise performance
+  in the same task. This approach represents a form of              Reward electricity cost-term weight factor δ       [1, 2, ... 20]            8
+
+  indirect imitation, leveraging the underlying intentions          Reward temperature-term weight factor β        [0.01, 0.015, ..., 0.1]     0.045
+  and objectives of the expert instead of direct mapping
+  from states to actions as seen in behavioural cloning.            Acknowledgements
+− Learning from Demonstration (LfD), where the target
+  control agent learns from the demonstrations of the expert        The work of Silvio Brandi and Alfonso Capozzoli is funded
+  by observing their actions and the resulting state transitions.   by the project NODES which has received funding from the
+768                                                                                            Coraci et al. / Building Simulation / Vol. 17, No. 5
+
+
+MUR – M4C2 1.5 of PNRR funded by the European Union –                        ARERA (2022). Arera - andamento del prezzo dell’energia elettrica
+NextGenerationEU (Grant agreement no. ECS00000036).                               per il consumatore domestico tipo in maggior tutela. Available at
+                                                                                  https://www.arera.it/it/dati/eep35.htm. Accessed 23 Aug 2022.
+Funding note: Open access funding provided by Politecnico                         (in Italian)
+di Torino within the CRUI-CARE Agreement.                                    ASHRAE (2021). High performance sequences of operation for
+                                                                                  HVAC systems. Atlanta, GA, USA: American Society of Heating,
+Declaration of competing interest                                                 Refrigerating and Air-Conditioning Engineers.
+                                                                             Austin Energy (2023). Electricity Tariff Pilot Programs. Available
+The authors have no competing interests to declare that are                       https://austinenergy.com/ae. Accessed 23 Aug 2022.
+                                                                             Bellman R (1966). Dynamic programming. Science, 153: 34–37.
+relevant to the content of this article. Tianzhen Hong and
+                                                                             Bienvenido-Huertas D, Oliveira M, Rubio-Bellido C, et al. (2019). A
+Alfonso Capozzoli are Editorial Board members of Building
+                                                                                  comparative analysis of the international regulation of thermal
+Simulation.
+                                                                                  properties in building envelope. Sustainability, 11: 5574.
+                                                                             Brandi S, Fiorentini M, Capozzoli A (2022a). Comparison of online
+Author contribution statement
+                                                                                  and offline deep reinforcement learning with model predictive
+                                                                                  control for thermal energy management. Automation in
+Davide Coraci: conceptualization, methodology, software,                          Construction, 135: 104128.
+investigation, formal analysis, data curation, writing –                     Brandi S, Gallo A, Capozzoli A (2022b). A predictive and adaptive control
+original draft, visualization; Silvio Brandi: conceptualization,                  strategy to optimize the management of integrated energy systems
+methodology, investigation, writing – review & editing;                           in buildings. Energy Reports, 8: 1550–1567.
+Tianzhen Hong: methodology, validation, writing – review                     Brandi S, Piscitelli MS, Martellacci M, et al. (2020). Deep reinforcement
+& editing; Alfonso Capozzoli: conceptualization, methodology,                     learning to optimise indoor temperature control and heating energy
+validation, writing – review & editing, supervision.                              consumption in buildings. Energy and Buildings, 224: 110225.
+                                                                             Brockman G, Cheung V, Pettersson L, et al. (2016). Openai Gym.
+Open Access: This article is licensed under a Creative                       Chiang Y-T, Lu C-H, Hsu JY-J (2017). A feature-based knowledge
+Commons Attribution 4.0 International License, which                              transfer framework for cross-environment activity recognition
+permits use, sharing, adaptation, distribution and reproduction                   toward smart home applications. IEEE Transactions on Human-
+in any medium or format, as long as you give appropriate                          Machine Systems, 47: 310–322.
+credit to the original author(s) and the source, provide a                   Christodoulou P (2019). Soft actor-critic for discrete action settings.
+link to the Creative Commons license, and indicate if changes                     arXiv:1910.07207.
+                                                                             Coraci D, Brandi S, Piscitelli MS, et al. (2021). Online implementation
+were made.
+                                                                                  of a soft actor-critic agent to enhance indoor temperature control
+    The images or other third party material in this article
+                                                                                  and energy efficiency in buildings. Energies, 14: 997.
+are included in the article’s Creative Commons license,
+                                                                             Coraci D, Brandi S, Capozzoli A (2023a). Effective pre-training of a
+unless indicated otherwise in a credit line to the material. If
+                                                                                  deep reinforcement learning agent by means of long short-term
+material is not included in the article’s Creative Commons                        memory models for thermal energy management in buildings.
+license and your intended use is not permitted by statutory                       Energy Conversion and Management, 291: 117303.
+regulation or exceeds the permitted use, you will need to                    Coraci D, Brandi S, Hong T, et al. (2023b). Online transfer learning
+obtain permission directly from the copyright holder.                             strategy for enhancing the scalability and deployment of deep
+    To view a copy of this license, visit                                         reinforcement learning control in smart buildings. Applied Energy,
+http://creativecommons.org/licenses/by/4.0/                                       333: 120598.
+                                                                             Crawley DB, Lawrie LK, Winkelmann FC, et al. (2001). EnergyPlus:
+References                                                                        Creating a new-generation building energy simulation program.
+                                                                                  Energy and Buildings, 33: 319–331.
+Akiba T, Sano S, Yanase T, et al. (2019). Optuna: A next-generation          Da Silva FL, Costa AHR (2019). A survey on transfer learning for
+    hyperparameter optimization framework. In: Proceedings of the                 multiagent reinforcement learning systems. Journal of Artificial
+    25th ACM SIGKDD International Conference on Knowledge                         Intelligence Research, 64: 645–703.
+    Discovery & Data Mining.                                                 Deltetto D, Coraci D, Pinto G, et al. (2021). Exploring the potentialities
+Amato A, Bilardo M, Fabrizio E, et al. (2021). Energy evaluation of a             of deep reinforcement learning for incentive-based demand
+    PV-based test facility for assessing future self-sufficient buildings.        response in a cluster of small commercial buildings. Energies,
+    Energies, 14: 329.                                                            14: 2933.
+Anvari-Moghaddam A, Rahimi-Kian A, Mirian MS, et al. (2017). A               Dey S, Marzullo T, Henze G (2023a). Inverse reinforcement learning
+    multi-agent based energy management solution for integrated                   control for building energy management. Energy and Buildings,
+    buildings and microgrid system. Applied Energy, 203: 41–56.                   286: 112941.
+Coraci et al. / Building Simulation / Vol. 17, No. 5                                                                                               769
+
+
+Dey S, Marzullo T, Zhang X, et al. (2023b). Reinforcement learning            Lissa P, Schukat M, Keane M, et al. (2021). Transfer learning applied
+     building control approach harnessing imitation learning. Energy               to DRL-Based heat pump control to leverage microgrid energy
+     and AI, 14: 100255.                                                           efficiency. Smart Energy, 3: 100044.
+Durisch W, Bitnar B, Mayor J-C, et al. (2007). Efficiency model for           Ministry of Economic Development (2015a). Interministerial
+     photovoltaic modules and demonstration of its application to                  Decree of 26 June 2015. Appendix A. Available at
+     energy yield estimation. Solar Energy Materials and Solar Cells,              https://www.mise.gov.it/index.php/it/normativa/decretiintermin
+     91: 79–84.                                                                    isteriali/decreto-interministeriale-26-giugno-2015applicazione-
+Elehwany H, Ouf M, Gunay B, et al. (2024). A reinforcement learning                delle-metodologie-di-calcolo-delle-prestazionienergetiche-e-
+     approach for thermostat setpoint preference learning. Building                definizione-delle-prescrizioni-e-dei-requisiti-minimi-degli-difici?
+     Simulation, 17: 131–146.                                                      cldee=ZW5lcmdpYS5kZW1hcmNvQGxpYmVyby5pdA%3D%
+Esrafilian-Najafabadi M, Haghighat F (2023). Transfer learning for                 3D&urlid=0?hitcount=0. Accessed 23 Aug 2022.
+     occupancy-based HVAC control: A data-driven approach using               Ministry of Economic Development (2015b). Interministerial
+     unsupervised learning of occupancy profiles and deep reinforcement            Decree of 26 June 2015. Appendix b. Available at https://
+     learning. Energy and Buildings, 300: 113637.                                  www.mise.gov.it/index.php/it/normativa/decretiinterministeriali/
+European Commission (2019). European Green Deal.                                   decreto-interministeriale-26-giugno-2015applicazione-delle-
+Fang X, Gong G, Li G, et al. (2023). Cross temporal-spatial transferability        metodologie-di-calcolo-delle-prestazionienergetiche-e-definizione-
+     investigation of deep reinforcement learning control strategy in              delle-prescrizioni-e-dei-requisiti-minimi-degli-edifici?cldee=
+     the building HVAC system level. Energy, 263: 125679.                          ZW5lcmdpYS5kZW1hcmNvQGxpYmVyby5pdA%3D%3D&urlid=
+Finck C, Beagon P, Clauß J, et al. (2018). Review of applied and tested            0?hitcount=0. Accessed 23 Aug 2022.
+     control possibilities for energy flexibility in buildings—A technical    Mnih V, Kavukcuoglu K, Silver D, et al. (2015). Human-level control
+     report from IEA EBC Annex 67 Energy Flexible Buildings.
+                                                                                   through deep reinforcement learning. Nature, 518: 529–533.
+Fulpagare Y, Huang K-R, Liao Y-H, et al. (2022). Optimal energy
+                                                                              Modelica Association (2000). Modelica® – A unified object-oriented
+     management for air cooled server fans using deep reinforcement
+                                                                                   language for physical systems modeling. Tutorial (1.4 ed.). Available
+     learning control method. Energy and Buildings, 277: 112542.
+                                                                                   at http://www.modelica.org/documents/ModelicaTutorial14.pdf.
+Grubinger T, Chasparis GC, Natschläger T (2017). Generalized online
+                                                                              Mosaico G, Saviozzi M, Silvestro F, et al. (2019). Simplified state space
+     transfer learning for climate control in residential buildings.
+                                                                                   building energy model and transfer learning based occupancy
+     Energy and Buildings, 139: 63–71.
+                                                                                   estimation for HVAC optimal control. In: Proceedings of IEEE
+Haarnoja T, Zhou A, Hartikainen K, et al. (2019). Soft actor-critic
+                                                                                   5th International Forum on Research and Technology for
+     algorithms and applications. arXiv: 1812.05905.
+                                                                                   Society and Industry (RTSI), Florence, Italy.
+Holmgren WF, Hansen CW, Mikofski MA (2018). Pvlib python: a
+                                                                              Nagy Z, Henze G, Dey S, et al. (2023). Ten questions concerning
+     python package for modeling solar energy systems. Journal of
+                                                                                   reinforcement learning for building energy management. Building
+     Open Source Software, 3: 884.
+                                                                                   and Environment, 241: 110435.
+Huynh A, Dias Barkokebas R, Al-Hussein M, et al. (2021). Energy-
+                                                                              Nweye K, Sankaranarayanan S, Nagy Z (2023). MERLIN: Multi-agent
+     efficiency requirements for residential building envelopes in
+                                                                                   offline and transfer learning for occupant-centric operation of
+     cold-climate regions. Atmosphere, 12: 405.
+                                                                                   grid-interactive communities. Applied Energy, 346: 121323.
+IEA (2019). World Energy Outlook 2019. Available at https://
+                                                                              Pan SJ, Yang Q (2010). A survey on transfer learning. IEEE Transactions
+     www.iea.org/reports/world-energy-outlook-201. Accessed 14
+                                                                                   on Knowledge and Data Engineering, 22: 1345–1359.
+     Sept 2023.
+Jacobson MZ, Jadhav V (2018). World estimates of PV optimal tilt              Pinto G, Deltetto D, Capozzoli A (2021). Data-driven district energy
+     angles and ratios of sunlight incident upon tilted and tracked PV             management with surrogate models and deep reinforcement
+     panels relative to horizontal panels. Solar Energy, 169: 55–66.               learning. Applied Energy, 304: 117642.
+Kaya M, Bilge H (2019). Deep metric learning: A survey. Symmetry,             Pinto G, Kathirgamanathan A, Mangina E, et al. (2022a). Enhancing
+     11: 1066.                                                                     energy management in grid-interactive buildings: a comparison
+Li H, Chaudhari P, Yang H, et al. (2020). Rethinking the hyperparameters           among cooperative and coordinated architectures. Applied Energy,
+     for fine-tuning. arXiv: 2002.11770.                                           310: 118497.
+Li A, Xiao F, Fan C, et al. (2021). Development of an ANN-based               Pinto G, Messina R, Li H, et al. (2022b). Sharing is caring: An
+     building energy model for information-poor buildings using                    extensive analysis of parameter-based transfer learning for the
+     transfer learning. Building Simulation, 14: 89–101.                           prediction of building thermal dynamics. Energy and Buildings,
+Li G, Chen L, Liu J, et al. (2023). Comparative study on deep transfer             276: 112530.
+     learning strategies for cross-system and cross-operation-condition       Pinto G, Wang Z, Roy A, et al. (2022c). Transfer learning for smart
+     building energy systems fault diagnosis. Energy, 263: 125943.                 buildings: a critical review of algorithms, applications, and future
+Li J, Zhang C, Zhao Y, et al. (2022). Federated learning-based                     perspectives. Advances in Applied Energy, 5: 100084.
+     short-term building energy consumption prediction method                 Piscitelli MS, Brandi S, Capozzoli A, et al. (2021). A data analytics-
+     for solving the data silos problem. Building Simulation, 15:                  based tool for the detection and diagnosis of anomalous daily
+     1145–1159.                                                                    energy patterns in buildings. Building Simulation, 14: 131–147.
+770                                                                                            Coraci et al. / Building Simulation / Vol. 17, No. 5
+
+
+PVSites (2016). European climate zones and bio-climatic design                    (TES) systems in commercial buildings. Energy and Buildings,
+     requirements. Available at https://www.pvsites.eu/downloads/                 301: 113696.
+     category/project-results? page=4. Accessed 23 Aug 2022.                 Wei Z, Calautit J (2023). Evaluation of model predictive control
+Ruusu R, Cao S, Manrique Delgado B, et al. (2019). Direct                         (MPC) of solar thermal heating system with thermal energy storage
+     quantification of multiple-source energy flexibility in a residential        for buildings with highly variable occupancy levels. Building
+     building using a new model predictive high-level controller.                 Simulation, 16: 1915–1931.
+     Energy Conversion and Management, 180: 1109–1128.                       Wetter M, Benne K, Tummescheit H, et al. (2023). Spawn: coupling
+Salsbury TI (2005). A survey of control technologies in the building              Modelica Buildings Library and EnergyPlus to enable new energy
+     automation industry. IFAC Proceedings Volumes, 38: 90–100.                   system and control applications. Journal of Building Performance
+Smith SL, Kindermans PJ, Ying C, et al. (2017). Don’t decay the                   Simulation, https://doi.org/10.1080/19401493.2023.2266414.
+     learning rate, increase the batch size. arXiv: 1711.00489.              Xiong Q, Li Z, Cai W, et al. (2023). Model free optimization of building
+Sutton RS, Barto AG (2018). Reinforcement Learning: An Introduction,              cooling water systems with refined action space. Building
+     2 edn. Cambridge, MA, USA: MIT Press.                                        Simulation, 16: 615–627.
+Taylor ME, Stone P (2009). Transfer learning for reinforcement learning      Yang L, Nagy Z, Goffin P, et al. (2015). Reinforcement learning for
+     domains: A survey. Journal of Machine Learning Research, 10:                 optimal control of low exergy buildings. Applied Energy, 156:
+     1633–1685.                                                                   577–586.
+Tsikaloudaki K, Laskos K, Bikas D (2012). On the establishment of            Zelinka J, Prágr M, Szadkowski R, et al. (2022). Traversability transfer
+     climatic zones in Europe with regard to the energy performance               learning between robots with different cost assessment policies.
+     of buildings. Energies, 5: 32–44.                                            In: Proceedings of International Conference on Modelling and
+Vázquez-Canteli JR, Ulyanin S, Kämpf J, et al. (2019). Fusing                     Simulation for Autonomous Systems.
+     TensorFlow with building energy simulation for intelligent energy       Zhang Z, Chong A, Pan Y, et al. (2019). Whole building energy model
+     management in smart cities. Sustainable Cities and Society, 45:              for HVAC optimal control: a practical framework based on deep
+     243–257.                                                                     reinforcement learning. Energy and Buildings, 199: 472–490.
+Vázquez-Canteli JR, Dey S, Henze G, et al. (2020). CityLearn:                Zhang T, Aakash Krishna GS, Afshari M, et al. (2022a). Diversity for
+     Standardizing research in multi-agent reinforcement learning                 transfer in learning-based control of buildings. In: Proceedings of
+     for demand response and urban energy management.                             the 13th ACM International Conference on Future Energy Systems.
+     arXiv:2012.10504.                                                       Zhang Z, Li Y, Wang J, et al. (2022b). ReMoS: Reducing defect
+Wang L, Geng X, Ma X, et al. (2019). Ridesharing car detection by                 inheritance in transfer learning via relevant model slicing. In:
+     transfer learning. Artificial Intelligence, 273: 1–18.                       Proceedings of IEEE/ACM 44th International Conference on
+Wang D, Zheng W, Wang Z, et al. (2023a). Comparison of                            Software Engineering (ICSE), Pittsburgh, PA, USA.
+     reinforcement learning and model predictive control for building        Zhu Z, Lin K, Jain AK, et al. (2020). Transfer learning in deep
+     energy system optimization. Applied Thermal Engineering, 228:                reinforcement learning: A survey. arXiv: 2009.07888.
+     120430.                                                                 Zou Z, Yu X, Ergan S (2020). Towards optimal control of air handling
+Wang X, Kang X, An J, et al. (2023b). Reinforcement learning                      units using deep reinforcement learning and recurrent neural
+     approach for optimal control of ice-based thermal energy storage             network. Building and Environment, 168: 106535.
+

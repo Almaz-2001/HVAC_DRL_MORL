@@ -1,0 +1,735 @@
+                                                                       Energy & Buildings 323 (2024) 114799
+
+
+                                                                     Contents lists available at ScienceDirect
+
+
+                                                                         Energy & Buildings
+                                                          journal homepage: www.elsevier.com/locate/enbuild
+
+
+
+
+Individual room air-conditioning control in high-insulation residential
+building during winter: A deep reinforcement learning-based control model
+for reducing energy consumption
+Luning Sun ∗ , Zehuan Hu, Masayuki Mae, Taiji Imaizumi
+Department of Architecture, Graduate School of Engineering, The University of Tokyo, Japan
+
+
+
+
+A R T I C L E             I N F O                          A B S T R A C T
+
+Keywords:                                                  In recent years, the thermal insulation performance of residential buildings has been enhanced to reduce energy
+Deep reinforcement learning                                consumption. However, this enhancement often leads to air conditioning systems operating under ultra-low
+DQN                                                        load conditions for extended periods, especially in individual rooms, which frequently results in sustained low
+Room air-conditioner
+                                                           eﬃciency. Additionally, during the winter, rooms tend to overheat due to the inﬂuence of solar radiation. In
+Residential building
+                                                           this study, we developed a deep reinforcement learning-based real-time & prediction full-stack control model,
+Overheating
+                                                           which can automate user-end air-conditioning control through home energy management system (HEMS). In
+                                                           this model, weather forecasts are utilised to mitigate overheating caused by solar radiation, thereby reducing
+                                                           energy consumption. Additionally, it can enhance the COP of air conditioners in low-load domains. Our successful
+                                                           empirical results indicate that the implementation of this model can reduce energy consumption by approximately
+                                                           40% in winter.
+
+
+
+
+1. Introduction                                                                              ings. This is especially evident in high-insulation residential buildings,
+                                                                                             where air-conditioning systems are forced to operate at ultra-low loads
+1.1. Background                                                                              owing to the minimal heating load in winter, particularly in individual
+                                                                                             rooms where the heating load in winter is minimal, resulting in poor
+    With the growing global focus on climate change, achieving carbon                        eﬃciency according to the coeﬃcient of performance (COP) curve [4].
+neutrality by 2050 has become a key target for the Japanese government                       Moreover, during daylight hours, solar radiation can frequently lead to
+[1]. Energy consumption in buildings, which accounts for 20% to 40% in                       room overheating, resulting in unnecessary energy consumption. There-
+developed nations [2], is under increasing pressure to be reduced. This                      fore, to address the ineﬃciencies of air conditioners and enhance energy
+is especially true in residential buildings, where air-conditioning sys-                     savings in high-performance residential buildings, optimizing the con-
+tems are signiﬁcant energy consumers that impact household budgets.                          trol of air conditioning systems is of paramount importance.
+Reducing energy use in these systems is not only crucial for alleviating                         Rule-based control (RBC) is a traditional control method, wherein
+ﬁnancial strain but also essential for achieving carbon neutrality goals.                    system operations are adjusted based on predeﬁned rules and strategies.
+    In recent years, enhancing building thermal performance has been                         The advantages of RBC include its simplicity, ease of implementation,
+prioritized in research and practice to address energy challenges. Ad-                       and suitability for basic energy optimisation tasks. However, its per-
+vances in building materials, design, and construction have notably                          formance is constrained by the eﬀectiveness and applicability of ﬁxed
+improved insulation and heat resistance. In 2022, Japan’s Ministry of                        rules, and it cannot adapt to the dynamic changes in the system. Con-
+Land, Infrastructure, Transport and Tourism introduced superior insu-                        sequently, RBC has proven to be a suboptimal approach [5]. Model
+lation levels 6 and 7 to the existing standards, aiming to reduce the                        predictive control (MPC) is an advanced control method that predicts
+thermal load [3].                                                                            the future behaviour of the system based on mathematical models, and
+    However, relying solely on improving thermal insulation perfor-                          accordingly implements control decisions. It is capable of adapting to
+mance to reduce thermal loads has limited eﬀectiveness in energy sav-                        changes in the system and its dynamic nature. Empirical results obtained
+
+
+ * Corresponding author.
+   E-mail address: sun.luning@maelab.arch.t.u-tokyo.ac.jp (L. Sun).
+
+https://doi.org/10.1016/j.enbuild.2024.114799
+Received 9 April 2024; Received in revised form 22 August 2024; Accepted 9 September 2024
+Available online 12 September 2024
+0378-7788/© 2024 The Author(s). Published by Elsevier B.V. This is an open access article under the CC BY license (http://creativecommons.org/licenses/by/4.0/).
+L. Sun, Z. Hu, M. Mae et al.                                                                                                           Energy & Buildings 323 (2024) 114799
+
+
+                               Table 1
+                               DRL control in residential buildings.
+
+                                Ref.    Target system              Control action            Algorithm   Environment       Weather forecast
+
+                                [16]    AC                         Temperature set point     DQN         EnergyPLus        ×
+                                [17]    AC, Window                 ON/OFF                    DQN         Grey-box model    ×
+                                [18]    AC, Air-cleaner, Window    ON/OFF                    DQN         Grey-box model    ×
+                                [19]    AC                         Temperature set point     DQN         Grey-box model    ×
+                                [20]    AC                         Temperature set point     DQN         Black-box model   ×
+
+
+
+from practical applications in buildings have demonstrated its eﬀec-                       resource-intensive. Furthermore, none of the aforementioned studies on
+tiveness [6–8]. However, the computational complexity of MPC makes                         residential buildings have accounted for the uncertainty in long-term
+it diﬃcult to deploy on low-power, low-computational-capacity HEMS                         future weather variations.
+systems. Additionally, the eﬃcacy of MPC controllers highly dependent                          In summary, the following critical gaps have been identiﬁed in the
+on the accuracy of the system models used. Inaccuracies in these models                    existing literature, which underscore the need for further in-depth in-
+can lead to suboptimal performance in practical applications. As eluci-                    vestigation and research:
+dated by Afram et al. [9], MPC may not be apt for systems requiring the
+maintenance of a stable temperature, underscoring the method’s limita-                       • The Coeﬃcient of Performance (COP) of air conditioners is a critical
+tions in adapting to real-world complexities.                                                  factor in energy consumption. However, existing literature often
+    In recent years, with the emergence of big data, powerful comput-                          lack a simulation environment that includes a detailed COP model
+ing capabilities, and algorithmic advancements, machine learning-based                         and fail to provide suﬃcient explanations for their optimization
+control methods for building HVAC systems have been extensively ex-                            strategies.
+plored and applied. Notably, reinforcement learning approaches, which                        • There is a gap in the literature regarding the application of RL
+learn control strategies from historical data or energy simulation and                         in high-insulation residential buildings. Particularly during winter,
+then directly deploy the model to the target building, have signiﬁcantly                       these buildings can experience overheating due to solar radiation,
+enhanced the eﬃciency of practical deployment. [10]                                            underscoring the need to consider the uncertainty of future weather
+                                                                                               conditions. However, current studies have not adequately explored
+1.2. Reinforcement learning-based HVAC system control model                                    the impact of this uncertainty.
+                                                                                             • Existing research has extensively demonstrated the eﬀectiveness
+                                                                                               of RL. However, discussions on the challenges faced during actual
+    Deep reinforcement learning (DRL) is a machine learning-based con-
+                                                                                               deployment are scarce. For instance, the platforms used for deploy-
+trol method that maximises control rewards through interactions be-
+                                                                                               ment, the methodologies applied, and the collection of training data
+tween the agent and environment [11]. In non-residential buildings,
+                                                                                               are seldom addressed in the literature.
+numerous studies have substantiated that the application of DRL for con-
+trolling HVAC systems can result in signiﬁcant energy savings [12–15].
+                                                                                               To address these gaps, we have developed a comprehensive network
+However, in the context of residential buildings, the practical applica-
+                                                                                           strategy, inspired by the research on transfer learning conducted by Xu
+tion of DRL control is challenging as the load and the COP are more
+                                                                                           et al. [22]. This approach integrates a detailed model of the COP of
+signiﬁcantly aﬀected by external weather conditions, and users cannot
+                                                                                           air-conditioning systems developed by the Central Research Institute
+directly control the input heat of the air conditioner. Research on DRL
+                                                                                           of Electric Power Industry (CRIEPI), Japan [28], taking into account
+control in residential buildings is summarized in Table 1.
+                                                                                           their impact on energy consumption. This approach enables the precise
+    Huchuk et al. [16] conducted a year-long simulation on 500 resi-                       mapping of user settings to the input heat of the air-conditioning sys-
+dential models in EnergyPlus, discovering that, compared to traditional                    tem through a Home Energy Management System (HEMS) at the user
+heuristic control methods, the model predictive controller signiﬁcantly                    end, thereby facilitating the control based on strategy made by DRL and
+reduced the total cost of operation and discomfort. However, the RL ap-                    enhancing the interpretability of the strategies. Furthermore, we inte-
+proach underperformed due to sparse observational data and restricted                      grated the predictive data from weather forecasts into the DRL model,
+exploration range. Chen et al. [17] introduced a RL control strategy to                    which enables the intelligent adjustment of the air-conditioning system
+optimize decision-making for HVAC and window systems. In case stud-                        not only based on real-time state but also on predictive data, aiming to
+ies conducted in hot and humid Miami and warm and mild Los Angeles,                        mitigate overheating owing to solar radiation and enhance the eﬃciency
+this approach reduced HVAC energy consumption by 13% and 23%,                              of air-conditioning operation under low-load conditions. Compared with
+discomfort hours by 62% and 80%, and high humidity hours by 63%                            traditional DRL methods, our approach can achieve signiﬁcant improve-
+and 77%, respectively, compared to heuristic control. Similarly An et                      ments in energy use.
+al. [18] conducted pioneering research into the reinforcement learning                         The major contributions of our study are as follows:
+control of air conditioners, air cleaners, and window switches, aﬃrm-
+ing the promising application of DRL in residential buildings. However,                    (1) In our research, a DRL-based control model was crafted, meticu-
+the aforementioned study primarily focused on the rated capacity of air                        lously considering the complex eﬀects of external weather, indoor
+conditioners without considering the signiﬁcant impact of their Coef-                          conditions, and load rates on the Coeﬃcient of Performance (COP)
+ﬁcient of Performance (COP) on energy consumption. [19] utilized a                             of air conditioning systems. This model eﬀectively utilizes real-time
+DRL controller to manage air conditioning systems, aiming to enhance                           data and uncertain weather forecast information to manage the heat
+energy eﬃciency. Additionally, the study incorporated a simpliﬁed air                          input control of air conditioning systems, thereby achieving energy
+conditioner COP model described in [21]. However, in real-world resi-                          savings.
+dential settings, the COP of air conditioners is inﬂuenced by external                     (2) We developed a full-stack control model that maps planned in-
+weather conditions and indoor temperatures. [20] utilized Bayesian                             put heat to user-end air conditioning settings through supervised
+Convolutional Neural Networks (BCNNs) to model air conditioning sys-                           learning methods. This enhances the interpretability of RL control
+tems and trained RL agents in a black-box simulation environment. In                           strategies and enables intelligent management of air conditioning
+this approach, energy consumption is calculated based on the black-box                         systems via HEMS.
+model. However, in practice, training a high-accuracy model requires                       (3) We have detailed the approaches to data augmentation as well
+a large amount of high-quality data, which can be time-consuming and                           as the methods used for deployment. Subsequently, we tested the
+
+                                                                                     2
+L. Sun, Z. Hu, M. Mae et al.                                                                                              Energy & Buildings 323 (2024) 114799
+
+
+
+
+                                                                  Fig. 1. Our approach.
+
+
+     control model in a full-scale high-insulation laboratory. Empirical         categorised into black-, grey-, and white-box models. Considering the
+     results indicate that our model can achieve approximately 40% en-           diﬃculty in fully expressing complex building environments through
+     ergy savings in real-world applications.                                    white-box models, and the cost implications associated with the substan-
+                                                                                 tial real-world data required for training an accurate black-box model,
+    The structure of the remaining sections of this study is as follows:         we employed a grey-box model (RC model) [23]. The RC model is anal-
+Section 2 describes the methodology employed in this study. Section 3            ogous to electrical resistance and capacitance to thermal resistance and
+is dedicated to a case study based on simulations, where the target build-       capacitance, respectively. A wealth of research on the RC model has
+ing is conceptualised as a rooftop full-scale laboratory. Subsequently, in
+                                                                                 underscored its eﬃcacy and precision in replicating the thermal condi-
+section 4, we conducted real-world testing to validate the eﬀectiveness
+                                                                                 tions within indoor environments [24,25]. Consequently, we employed
+of the oﬄine learning methods. Lastly, section 5 serves as the conclusion
+                                                                                 the RC model to accurately simulate the temperature response of the
+and outlines potential future work in this ﬁeld.
+                                                                                 target building.
+2. Methodology                                                                       We considered the thermal resistance and thermal capacitance of the
+                                                                                 walls, as well as the thermal resistance and thermal capacitance of in-
+    Our approach is shown in Fig. 1. The control model consists of two           door air. We employed a 2R2C model to represent the thermal response
+parts: the front-end network and the back-end network. The front-end             of the target building. The model operates within the framework of lin-
+network optimizes the input heat of the air conditioning system using            ear state-space models, oﬀering a methodical approach to understanding
+DRL. While the back-end network, with an emphasis on building perfor-            how buildings react to thermal inputs over time. The equations of the
+mance and employing supervised learning, maps the planned input heat             model are expressed as follows (Equation (1)):
+to the air conditioning settings, realizing a full-stack network control.
+    The speciﬁc training steps are as follows:
+                                                                                 ⎧ 𝑑𝑇
+                                                                                 ⎪ 𝐶𝑖 𝑖 = 1 (𝑇𝑒 − 𝑇𝑖 )𝑑𝑡 + Φℎ 𝑑𝑡 + 𝐴𝑖 Φ𝑔 𝑑𝑡,
+(1) A simulation environment based on a grey-box model is created us-            ⎪   𝑑𝑡    𝑅𝑖
+    ing warm-up operation data. The model parameters are determined              ⎨ 𝑑𝑇                                                                     (1)
+                                                                                 ⎪𝐶    𝑒   1                1
+                                                                                         =    (𝑇 − 𝑇𝑒 )𝑑𝑡 +   (𝑇 − 𝑇𝑒 )𝑑𝑡 + 𝐴𝑒 Φ𝑔 𝑑𝑡,
+    by a Genetic Algorithm (GA).                                                 ⎪ 𝑒 𝑑𝑡    𝑅𝑖 𝑖             𝑅𝑜 𝑜
+(2) Based on this simulation environment, the front-end network is               ⎩
+    trained using DRL to learn the control strategy for the input heat of        where 𝑇𝑖 , 𝑇𝑒 , and 𝑇𝑜 denote the temperatures of the indoor environ-
+    the air-conditioning system.                                                 ment, building envelope, and outdoor environment, respectively. The
+(3) By employing Generative Adversarial Networks (GANs) for data                 temperature 𝑇𝑒 is associated with the thermal mass of the opaque sur-
+    augmentation on warm-up operation data, the back-end network                 faces within the envelope and does not correspond to a speciﬁc spatial
+    is then learned through supervised learning methods to achieve
+                                                                                 coordinate within the envelope. The model encompasses two states: 𝑇𝑒
+    user-end control of the planned input heat for the air-conditioning
+                                                                                 (unobserved) and 𝑇𝑖 (observed). The term Φℎ (W) represents the inter-
+    system.
+                                                                                 nal heating power, whereas Φ𝑔 (𝑊 ∕𝑚2 ) denotes the global horizontal
+                                                                                 solar irradiance. The coeﬃcient 𝑅𝑖 (𝐾∕𝑊 ) is the thermal resistance
+2.1. Front-end network
+                                                                                 between the indoor air temperature and envelope, and 𝑅𝑒 represents
+2.1.1. Establishment of the simulation environment                               the resistance between the envelope and ambient air. The heat capaci-
+    The front-end network is trained using reinforcement learning, typ-          tances of the interior and envelope are represented by 𝐶𝑖 and 𝐶𝑒 (𝐽 ∕𝐾 ),
+ically prioritizing the oﬄine training mode in the application of DRL            respectively. The coeﬃcients 𝐴𝑖 and 𝐴𝑒 (𝑚2 ) correspond to their solar
+due to its provision of safety and eﬃciency. The selection of a simula-          gain coeﬃcients.
+tion environment plays a pivotal role throughout the training process.               Based on the measured data, we can utilize a Genetic Algorithm (GA)
+In thermal simulations of buildings, the simulation environments are             to determine the optimal values of the aforementioned parameters.
+
+                                                                             3
+L. Sun, Z. Hu, M. Mae et al.                                                                                                                 Energy & Buildings 323 (2024) 114799
+
+
+2.1.2. Markov Decision Process (MDP)                                                             of the air conditioner at diﬀerent load rates. Based on this, the model
+    In our study, we analogize the control of air conditioning input heat                        also considers the air ﬂow rate and the coil’s bypass factor, as well as
+as a prototypical reinforcement learning issue, wherein each reinforce-                          the indoor and outdoor conditions, to estimate the temperatures of the
+ment learning challenge can be represented in a Markov Decision Pro-                             evaporator and condenser, thereby calculating the near-actual COP of
+cess (MDP) [26]. The MDP encompasses three key elements: states 𝑠,                               the air conditioner under various conditions.
+actions 𝑎, and rewards 𝑟. State transition 𝑃 from the MDP satisﬁes the                               The reward comprises the aforementioned components 𝑅1 , 𝑅2 , and
+following Markov assumption:                                                                     𝑅3 , adjusted through speciﬁc weights 𝑤1 , 𝑤2 , and 𝑤3 . The exact equa-
+                                                                                                 tion is as follows:
+𝑃 (𝑠𝑡+1 |𝑠𝑡 , 𝑎𝑡 , 𝑟𝑡 , … , 𝑠0 , 𝑎0 , 𝑟0 ) = 𝑃 (𝑠𝑡+1 |𝑠𝑡 , 𝑎𝑡 )                        (2)
+                                                                                                 Reward = 𝑤1 × 𝑅1 + 𝑤2 × 𝑅2 + 𝑤3 × 𝑅3                                        (5)
+    Here, 𝑠𝑡 represents the state at time 𝑡, 𝑎𝑡 represents the action taken
+at time 𝑡, and 𝑟𝑡 represents the reward received at time 𝑡. This equa-
+tion illustrates the Markov property, indicating that the future state 𝑠𝑡+1                      2.1.3. Deep Q-network (DQN)
+depends only on the current state 𝑠𝑡 and action 𝑎𝑡 , regardless of the                              To address the reinforcement learning challenge, we speciﬁcally em-
+previous history of states, actions, and rewards. In our study, states 𝑠,                        ployed the deep Q-network (DQN) method [29], based on Q-learning.
+actions 𝑎, and rewards 𝑟 are detailed as follows:                                                DQN is adept at discerning optimal actions from within the complex,
+                                                                                                 high-dimensional spaces characteristic of air-conditioning control sys-
+States 𝑠                                                                                         tems. Agents continually reﬁne their understanding of action values, or
+    To bolster the robustness of our model against the complexities and                          Q-values, through persistent exploration within the environment. The
+variabilities of external atmospheric conditions, our methodology en-                            Q-value update is governed by the following equation:
+compasses the assimilation of real-time operational data, denoted as                                                  [                               ]
+state1, with predictive forecast data, referred to as state2. Shin et al.                        𝑄(𝑠, 𝑎) ← 𝑄(𝑠, 𝑎) + 𝛼 𝑟 + 𝛾 max 𝑄(𝑠′ , 𝑎′ ) − 𝑄(𝑠, 𝑎)                       (6)
+                                                                                                                              𝑎′ ∈𝐴
+[27] employed GRU to extract features from predictive data. However,
+considering the complexity of GRUs, which are not conducive to being                             where 𝛼 is the learning rate, 𝛾 is the discount factor, 𝑟 is the reward, 𝑠
+implemented on low-power, compact computers, we directly incorpo-                                and 𝑠′ represent the current and next state, respectively, and 𝑎 and 𝑎′
+rated the prediction data as state2. The speciﬁc details are encapsulated                        denote the current and subsequent actions.
+in the following equation:                                                                           By leveraging a neural network to approximate the Q-function, the
+                                                                                                 system can eﬀectively forecast the impact of various actions, enabling
+state1𝑖 = [𝑡out,𝑖 , 𝑡room,𝑖 , onoﬀ 𝑖 , solar𝑖 , ℎ𝑖 ],                                            the realization of strategies to conserve energy.
+state2𝑖 = [𝑡out,ℎ𝑖 +1 , 𝑡out,ℎ𝑖 +2 , … , 𝑡out,ℎ𝑖 +12 , solarℎ𝑖 +1 , solarℎ𝑖 +2 , … ,   (3)           A Python-based agent was developed to facilitate the interaction
+                                                                                                 with this environment and iteratively update the Q-values. The speciﬁc
+            solarℎ𝑖 +12 ]                                                                        process is shown in Fig. 2.
+where, 𝑖 denotes the time step at the 𝑖𝑡ℎ moment, 𝑡out represents the
+                                                                                                 2.2. Back-end network
+outdoor temperature, 𝑡room indicates the room temperature. The variable
+onoﬀ reﬂects the current operational status of the air conditioner, with
+0 for oﬀ and 1 for on. The term solar stands for the global horizontal                               As users cannot directly control the heat input of air-conditioning
+solar irradiation, and ℎ signiﬁes the current absolute time.                                     systems, we employed a back-end network to learn the relationship
+                                                                                                 between the set temperature and heat input. The features include the
+                                                                                                 real-time operational data (state1) and the planned heat input of the
+Action 𝑎
+                                                                                                 air-conditioning system, wherein the set temperature served as the la-
+    The control action, deﬁned as the input heat of the air-conditioning
+                                                                                                 bel. Notably, this constitutes a supervised learning classiﬁcation task,
+system (𝐿), is discretised in intervals of 100 W, enabling a granular ap-
+proach to thermal management within the predeﬁned operational range.                             necessitating the learning of the back-end network through empirical
+The speciﬁc details are encapsulated in the following equation:                                  data. However, in newly constructed residences, warm-up operations
+                                                                                                 are required to collect data. Qian et al. [30] found that when using
+𝑎 = [0, 𝐿min , 𝐿min + 100, 𝐿min + 200, …]                                              (4)       an artiﬁcial neural network (ANN) for short- and medium-term cool-
+                                                                                                 ing load forecasting, the prediction accuracy of using short-term weekly
+Where 𝐿min denotes the minimum capacity of the air-conditioning sys-                             data as training and validation data for full cold-season forecasting
+tem.                                                                                             was signiﬁcantly lower than that of using full-year data to build the
+                                                                                                 model. However, prolonged warm-up operations could be detrimental
+Reward 𝑟                                                                                         to the cost-eﬀectiveness. Owing to the eﬀectiveness of GANs in data aug-
+    In high residential buildings, the heating load during winter is min-                        mentation [31–33], we utilised them to augment the limited warm-up
+imal, which leads to the operation of air conditioning systems in the                            operation data, enhancing the data utilisation eﬃciency and reducing
+low COP area. This is primarily because the compressor of the air-                               warm-up operation costs.
+conditioning system tends to frequently cycle on and oﬀ. Furthermore,                                GANs are a novel approach to generative modelling, comprising two
+the inﬂuence of solar radiation makes the rooms prone to overheat-                               neural networks contesting with each other in a game ([34]). The ob-
+ing. To mitigate overheating and reduce energy consumption, as well                              jective function of GANs is expressed as follows:
+as enhance the COP of the air-conditioning system, we designed a re-
+ward function. This function incorporates rewards induced by comfort                             min max 𝑉 (𝐷, 𝐺) = 𝔼𝑥∼𝑝data (𝑥) [log 𝐷(𝑥)] + 𝔼𝑧∼𝑝𝑧 (𝑧) [log(1 − 𝐷(𝐺(𝑧)))] (7)
+(𝑅1 ), penalties attributed to energy consumption are calculated through                          𝐺   𝐷
+
+the air-conditioning COP under various load rate (𝑅2 ), and penalties                            where 𝑥 represents real data sampled from the data distribution 𝑝data (𝑥),
+associated with overheating occurrences (𝑅3 ). We utilised a standard                            𝑧 is a noise vector sampled from a predeﬁned noise distribution 𝑝𝑧 (𝑧),
+air-conditioning model, developed by the Central Research Institute of                           𝐺(𝑧) denotes the data generated by the generator network from noise
+Electric Power Industry (CRIEPI), Japan, to accurately calculate the elec-                       𝑧, 𝐷(𝑥) is used to estimate the probability that real data 𝑥 are authen-
+tricity consumption based on the COP [28]. The model utilizes hyperpa-                           tic, as assessed by the discriminator network, and 𝐷(𝐺(𝑧)) is used to
+rameters such as rated capacity, minimum and maximum capabilities,                               estimate the probability that generated data 𝐺(𝑧) are real, according
+and their corresponding power consumptions (provided by the manu-                                to the discriminator. The generator is trained to maximise the likeli-
+facturer) to estimate the ratio of the actual COP to the theoretical COP                         hood of the discriminator making a mistake, equivalent to minimising
+
+                                                                                             4
+L. Sun, Z. Hu, M. Mae et al.                                                                                                 Energy & Buildings 323 (2024) 114799
+
+
+
+
+                                                         Fig. 2. Training framework of the DQN.
+
+
+
+
+                                                           Fig. 3. View of the target building.
+
+
+log(1 − 𝐷(𝐺(𝑧))), whereas the discriminator strives to accurately distin-                         Table 2
+guish between genuine and generated data, thus maximising 𝑉 (𝐷, 𝐺).                               Summary of target building.
+The training of GANs involves iterative updates to the discriminator and                           Item                      Value
+generator in a minimax game, converging to an equilibrium wherein the
+                                                                                                   Floor area 𝑆ﬂoor          16.00 [m2 ]
+data produced by the generator are indistinguishable from real data, ren-                          Floor height 𝐻            2.40 [m]
+dering the discriminator unable to eﬀectively diﬀerentiate between the                             Volume 𝑉                  38.4 [m3 ]
+two.                                                                                               U-Values 𝑈a               0.3 [W/(m2 ⋅K)]
+   Considering the use of GANs for data augmentation in this study,                                Window area 𝑆window       3.22 [m2 ]
+                                                                                                   Solar heat gain rate 𝜂𝑤   0.83
+we leveraged their capability to produce high-quality synthetic data.
+This method can eﬀectively overcome the constraints associated with
+the need for extensive preliminary operations to collect suﬃcient train-
+ing data. By enriching the dataset with synthetically generated samples         cooling heat of the FCU, we can obtain the actual value of the room’s
+that reﬂect the complex dynamics of air-conditioning systems, we en-            overheating quantity.
+hanced the model’s generalisation and performance.                                 To maintain the room temperature at the set point during winter, we
+                                                                                employed a room air conditioner with a rated heating capacity of 2.5
+3. Case study                                                                   kW, and a minimal heating capacity of 0.5 kW.
+
+
+3.1. Overview of the target building                                            3.2. Resistance-capacitance model for the target building
+
+    The target building was the outdoor full-scale laboratory located on           To determine the parameters of the 2R2C model (Fig. 4), a ﬁve-
+the rooftop of Engineering Building No. 1 at the University of Tokyo            day calibration campaign, with a measurement interval of 1 min, was
+(Fig. 3). The insulation performance of the laboratory and experimental         conducted in the target building in January. We collected external air
+conditions are presented in Table 2. The orientation of the windows is          data and solar radiation data. Additionally, we gathered data on the air
+southward, and there are no shading devices for solar radiation. The            conditioner’s inlet and outlet temperatures, as well as airﬂow data, to
+room’s air exchange rate was set at once per hour.                              calculate the heat input. To prevent system instability and ineﬃciency
+    In this experiment, we deﬁned the overheating condition as a room           caused by either excessively short or long control intervals, the 2R2C
+temperature in excess of 28 °C. When the room temperature surpasses             model was designed with a prediction interval of 20 min, necessitating
+28 °C, the fan coil unit (FCU) is automatically activated to maintain the       the averaging of the original data over this period. The data from the
+temperature at 28 °C, simulating actions, such as the opening of win-           ﬁrst four days served as the training set, and the parameters of the 2R2C
+dows and natural ventilation for cooling. Additionally, by measuring the        model were optimised by minimising the mean squared error (MSE)
+
+                                                                            5
+L. Sun, Z. Hu, M. Mae et al.                                                                                                 Energy & Buildings 323 (2024) 114799
+
+
+
+
+                                                                   Fig. 4. The 2R2C model.
+
+
+                        Table 3                                                   air-conditioning system merely for energy savings, a penalty of -500 is
+                        Parameters of the 2R2C model.                             imposed if the air conditioner is reactivated when the room temperature
+                          Parameter Description   Value                           is below 22 °C. For any scenario where the room temperature deviates
+                                                                                  from the comfort zone, a penalty of -200 is enforced. These values were
+                          𝑅𝑖 (K/W)                0.0055797
+                          𝐶𝑖 (J/K)                14527                           calibrated based on the relative scale of electricity consumption through
+                          𝑅𝑒 (K/W)                0.15711                         trial and error.
+                          𝐶𝑒 (J/K)                25829                               Subsequently, we deﬁne the penalty term 𝑅2 based on the electrical
+                                                                                  power consumption (𝑃 ). Owing to the inﬂuence of the COP on the en-
+                                                                                  ergy consumption of the air conditioner, the electrical power required is
+(Equation (8)) between the measured values 𝑦𝑖 and predictions 𝑦̂𝑖 of              derived from the COP model [28], which takes into account the charac-
+the 2R2C model by utilising a genetic algorithm (GA).                             teristic values of the air conditioner, the room temperature, the ambient
+               𝑛                                                                  temperature, and the input heat of the air conditioner.
+            1∑
+𝑀𝑆𝐸 =            (𝑦 − 𝑦̂𝑖 )2                                            (8)           If the air conditioner is operating at both the current time step 𝑡1 and
+            𝑛 𝑖=1 𝑖                                                               previous time step 𝑡0 , 𝑅2 is equal to the power consumption. However,
+    The parameters optimized through GA are presented in Table 3. Sub-            if the air conditioning is turned on at the current time step 𝑡1 , but was
+sequently, the accuracy of the calibrated 2R2C model was validated                switched oﬀ at the previous time step 𝑡0 , owing to the high energy con-
+using the data from the ﬁfth day. Comparative analysis revealed that              sumption during startup, we deﬁne 𝑅2 as twice the power consumption.
+the model showed an MSE of 0.03, thereby demonstrating its capability             The speciﬁc expression for 𝑅2 is as follows:
+for high-precision temperature reproduction.                                           {
+                                                                                        −2 × P if 𝑡1 = ON and 𝑡0 = OFF
+                                                                                  𝑅2 =                                                                     (10)
+3.3. Front-end network training                                                         −P     otherwise
+
+                                                                                      Finally, we deﬁne the reward function 𝑅3 focused on alleviating
+3.3.1. Design of reward function
+                                                                                  overheating. When overheating occurs, a penalty is incurred, expressed
+    In Chapter 2, we introduced the reward function as being composed
+                                                                                  as follows:
+of 𝑅1 , 𝑅2 , and 𝑅3 . In this section, we speciﬁcally discuss the design
+methodology of 𝑅1 , 𝑅2 , and 𝑅3 .
+                                                                                  𝑅3 = −1000                                                               (11)
+    First, we deﬁned the temperature range of 22 to 26 °C as the com-
+fort zone. In cases with signiﬁcant solar radiation, overheating can be              From the above, the reward is calculated by (Equation (5)). We es-
+mitigated by pre-emptively switching oﬀ the air conditioning in the               tablished the weight coeﬃcients 𝑤1 and 𝑤3 as 0.5, and 𝑤2 as 1 through
+morning, allowing the room temperature to slightly decrease. We hy-               a process of tuning and experimentation.
+pothesise that inhabitants wake up at 9 A.M. If the room temperature
+falls below the lower limit of the comfort zone, namely, 22 °C, upon              3.3.2. Exploring the learning process and outcomes of DQN
+waking, it may cause discomfort owing to cold. Therefore, our strat-                  To achieve the early shutdown of the air-conditioning system in re-
+egy aims to reduce the room temperature prior to the awakening of                 sponse to solar radiation, thereby mitigating overheating, the need for
+residents, targeting a temperature level slightly below 22 °C to both al-         such pre-emptive actions must accurately be determined. This deter-
+leviate overheating and decrease energy usage. The reward for comfort             mination involves the prediction of future conditions. Traditional DQN
+(𝑅1 ) is calculated using the following equation:                                 models primarily rely on the current environmental state for decision-
+                                                                                  making. However, this approach may not always be eﬀective in predict-
+     ⎧500          if 22 < 𝑇room < 26
+     ⎪                                                                            ing future environmental changes, especially regarding weather varia-
+     ⎪300          if 20 < 𝑇room < 22 and 5 ≤ ℎ < 9 and 𝑡0 = OFF                  tions. Basing future state predictions solely on the current state can lead
+𝑅1 = ⎨                                                                  (9)
+     ⎪−500         if 20 < 𝑇room < 22 and 5 ≤ ℎ < 9 and 𝑡0 = ON                   to an inadequate predictive capability in the state transition matrix. To
+     ⎪−200         otherwise                                                      overcome this limitation, we employed weather forecasts as a key com-
+     ⎩                                                                            ponent of our DQN model. Consequently, the state transition matrix no
+     We posit that maintaining the room temperature within the desig-             longer depends solely on the current environmental state but can in-
+nated comfort zone yields a reward of 500. To discourage overheating,             corporate both internal and external information, leading to a more
+we endorse the early deactivation of the air-conditioning system, which,          accurate reﬂection of future state changes. This enhancement enables
+if it results in a room temperature marginally below 22 °C, secures a re-         our model to more eﬀectively predict future states, facilitating more ra-
+ward of 300. Conversely, to avoid the indiscriminate shutdown of the              tional decision-making based on these forecasts.
+
+                                                                              6
+L. Sun, Z. Hu, M. Mae et al.                                                                                                        Energy & Buildings 323 (2024) 114799
+
+
+          Table 4                                                                      Table 5
+          Hyper-parameters of the DQN model.                                           Summary of comparisons in the test environment.
+
+            Parameter                 Description                                                   Mode                              Comfort time ratio    EC [kWh]
+
+            policy                    Neural network policy type (‘MlpPolicy’)          Baseline1   setpoint=23                       84%                   4.06
+            learning rate             Learning rate (1 × 10−3 )                         Baseline2   setpoint=22                       58%                   3.89
+            buﬀer size                Size of the replay buﬀer (2000000)                RL1         RL trained with rated power       83%                   3.70
+            batch size                Batch size (512)                                  RL2         RL trained with COP model         84%                   3.39
+            gamma                     Discount factor (0.9)                             RL3         RL trained with COP model and     86%                   2.77
+            train freq                Training frequency (256 steps)                                weather forecast data
+            gradient steps            Number of gradient steps (256)
+            exploration initial eps   Initial exploration probability (0.3)
+            exploration ﬁnal eps      Final exploration probability (0.05)                 In the test environment, the results of the comparison are summa-
+                                                                                       rized in Table 5, while the detailed comparison is illustrated in Fig. 6.
+                                                                                       We observed that in Baseline1 (setpoint=23 °C), the room temperature
+                                                                                       remained relatively stable at 23 °C. However, since the heating load was
+                                                                                       below the air conditioner’s minimum capacity at this time, the air con-
+                                                                                       ditioner was continuously in an intermittent operating state. This led to
+                                                                                       a high total energy consumption (EC) of 4.06 kWh over two days. In
+                                                                                       Baseline2 (setpoint=22 °C), when we lowered the set temperature by
+                                                                                       1 °C, the time the room temperature was below 22 °C increased due to
+                                                                                       the air conditioner’s own PID control. This resulted in a 26% decrease in
+                                                                                       the comfort time ratio, and the energy-saving eﬀect was limited, as in-
+                                                                                       dicated by the EC results. On the other hand, in the cases based on DRL,
+                                                                                       the agent adopted a threshold-based operation strategy, enabled the
+                                                                                       room temperature to ﬂuctuate within the comfort zone ranging from 22
+                                                                                       to 26 °C. This approach ensures that the air conditioner predominantly
+                                                                                       operates within the high-COP compliance range, thereby reducing the
+                                                                                       frequency of on-oﬀ cycles of the compressor and enhancing eﬃciency.
+                                                                                       Subsequently, we examined the test performance of each case.
+                                                                                           First, based on the results from the previous study’s case RL1, a com-
+Fig. 5. Reward convergence over training steps. (For interpretation of the
+                                                                                       parison reveals that RL1 achieves the same high level of comfort time
+colours in the ﬁgure(s), the reader is referred to the web version of this arti-
+                                                                                       ratio as Baseline1 while reducing energy consumption to 3.70 kWh. This
+cle.)
+                                                                                       performance surpasses the aforementioned two baselines. However, as
+                                                                                       the air conditioner can only operate at its rated capacity, it is not possi-
+    In our study, we developed three scenarios for comparative anal-                   ble to maintain the unit in a high COP state at all times. To address this
+ysis: RL1, RL2, and RL3. RL1 was trained using the rated capacity of                   issue, we proceed to analyze RL2 and RL3, which utilize a detailed COP
+the air-conditioning system, while RL2 employed a detailed COP en-                     model.
+ergy consumption model for training. RL3 also utilized the detailed COP                    Due to the adoption of a detailed COP model in RL2 and RL3, the
+model but further incorporated future weather conditions into the anal-                agent tends to operate the air conditioning during the mid-load, high-
+ysis. Both RL1 and RL2 were trained using only State1, which included                  performance phases, which signiﬁcantly reduces energy consumption.
+the current indoor temperature, outdoor temperature, global solar radi-                Furthermore, through a comparison between RL2 and RL3, we observed
+ation, the on/oﬀ status of the air-conditioning system, and the current                that after integrating predictive state, State2, into the model, the agent
+time (hour). In contrast, RL3 included both State1 and State2, with                    utilizes this predictive data to make informed decisions. This eﬀectively
+State2 encompassing predicted outdoor temperature and solar radiation                  leads to the proactive shutdown of the air conditioning on sunny days to
+information for the next 12 hours. Notably, these data were compressed                 prevent overheating. Additionally, following the assumed waking time
+into a single scalar value within the range of 0 to 1 using the sigmoid                of residents at 9 AM, the indoor temperature is restored to a comfortable
+function. Finally, the results of these three scenarios were compared                  range.
+against two baseline scenarios where the set temperature remained con-                     From the aforementioned comparison, we conclude that the adop-
+stant (22 and 23 °C).                                                                  tion of a detailed COP model along with the introduction of the pre-
+    By establishing these three scenarios, we aimed to evaluate the im-                dictive state (State2), can eﬀectively enhance the comfort of high-
+pact of employing a detailed COP model of the air conditioner and                      insulation residences, while reducing energy consumption by approx-
+integrating additional future weather information (State2) on the mod-                 imately 32%.
+el’s learning eﬃciency and decision-making quality.
+    The hyper-parameters of the DQN model are presented in Table 4.                    3.4. Back-end network training
+For training the Q-Network, we utilised a time step of 20 min. Addition-
+ally, we used data from January 2023 as meteorological data to train                       To realize the planned heat input determined by the front-end net-
+the agent.                                                                             work at the user-end, we learned the relationship between the air con-
+    The training process is illustrated in Fig. 5. As indicated by the                 ditioner’s heat input and the set temperature under various indoor and
+graph, after 500,000 training steps, the rewards for all the cases tend to             outdoor conditions through the back-end network. This learning process
+converge. The results indicate that the rewards for RL3 is signiﬁcantly                is a classiﬁcation task within supervised learning. The features include
+higher than the others. This is because RL1&2 only utilised State1, which              the global horizontal solar irradiation, input heat as well as the indoor
+is related to the current status and cannot eﬀectively predict upcoming                and outdoor temperatures.
+weather changes to proactively control the air conditioning.                               In general, acquiring training data for air-conditioning systems re-
+    Subsequently, we examine the performance of the trained models for                 quires extensive warm-up operations, often spanning several months.
+each case using the test data. We tested the aforementioned two cases                  Such a procedure is resource-intensive and time-consuming. In our ap-
+using data from two days in January 2024: cloudy (day 1) and sunny                     proach, we employed GANs for data augmentation, signiﬁcantly curtail-
+(day 2) days.                                                                          ing the duration required for warm-up operations.
+
+                                                                                   7
+L. Sun, Z. Hu, M. Mae et al.                                                                                             Energy & Buildings 323 (2024) 114799
+
+
+
+
+                                                    Fig. 6. Control performance in test environment.
+
+
+    A six-day empirical testing phase was conducted in our rooftop lab-        hibited extreme label imbalance, predominantly consisting of high set
+oratory. On an hourly basis, we randomly selected set temperatures             temperature outcomes (25 °C). This severe imbalance is not conducive
+ranging from 22 to 25 °C. This strategy enabled us to eﬃciently amass          to eﬀective training in supervised learning. Consequently, we employed
+an array of data points across a spectrum of operational conditions.           Generative Adversarial Networks (GANs) to generate synthetic data for
+    We adopted the same 20-in interval as used in the front-end network        set temperatures of 22, 23, and 24 °C, thus achieving a balanced dis-
+for data collection, averaging the heat input of the air conditioner. We       tribution of labels in the new synthetic dataset. Fig. 7 illustrates the
+can achieve zero heat input by turning oﬀ the air conditioning compres-        distribution of attributes in the synthetic dataset compared to the orig-
+sor, which can be realized either by switching oﬀ the air conditioner or       inal dataset. Ultimately, we used this synthetic dataset for training pur-
+by lowering its set temperature. However, in the case of this particular       poses.
+air conditioner, even when the set temperature is lowered and the com-             The comparison of results is presented in Table 6. To highlight the
+pressor stops running, the fan remains operational, leading to increased       superiority of GANs, traditional data augmentation methods such as
+electricity consumption. Therefore, in our approach, we opted to turn          Synthetic Minority Over sampling Technique (SMOTE) and Adaptive
+oﬀ the air conditioning to achieve zero heat input. We also implemented        Synthetic sampling (ADASYN) were also included in the analysis. It
+a ﬁlter to exclude data collected during instances of overheating of the       was observed that using SMOTE and ADASYN did not signiﬁcantly im-
+room or when the set temperature was lower than the current tempera-           prove the accuracy in the test set due to the limited sample size, which
+ture, leading to the compressor being turned oﬀ.                               resulted in insuﬃcient diversity in the data generated by traditional in-
+    Our dataset was collected at 20-minute intervals, totaling 432 data        terpolation methods and increased the risk of overﬁtting to some extent.
+points. However, due to the aforementioned reasons (zero heat input),          However, with the implementation of GANs for data augmentation, the
+only 83 data points remained after ﬁltering. We divided the dataset            accuracy was enhanced to 80%. Additionally, the recall rates for all cat-
+into training and testing sets in a 70:30 ratio. The ﬁltered data ex-          egories showed improvements. Therefore, we conclude that using GANs
+
+                                                                           8
+L. Sun, Z. Hu, M. Mae et al.                                                                                                    Energy & Buildings 323 (2024) 114799
+
+
+
+
+                                                       Fig. 7. Comparison between the distribution of attributes.
+
+
+Table 6                                                                                time measured data (state1) along with weather forecast data (state2)
+Classiﬁcation results from testing on the test dataset.                                as inputs to the front-end network to determine the heat input for the
+  Database            Recall    Recall       Recall       Recall      Average          air-conditioning system. Subsequently, based on state1 and the planned
+                      (22 °C)   (23 °C)      (24 °C)      (25 °C)     Accuracy         heat input, the back-end network ascertains the speciﬁc control actions
+  Original data       1.00      0.30         0.75         1.00        0.68
+                                                                                       for the air-conditioning system (either setpoint or oﬀ). Finally, control
+  SMOTE               1.00      0.30         0.75         1.00        0.68             over the air conditioning is achieved through the Echonet Lite protocol,
+  ADASYN              1.00      0.30         1.00         0.80        0.68             enabling real-time adjustments based on the network’s output.
+  GANs                1.00      0.50         1.00         1.00        0.80
+
+                                                                                       4.2. Empirical results and analysis
+for data augmentation increases the eﬃciency of data utilization and
+provides robust accuracy.                                                                  We conducted a practical performance test of our control model in
+                                                                                       January. The weather conditions during this testing phase are presented
+4. Implementation and veriﬁcation                                                      in Table 7. To evaluate the eﬀectiveness of the control model under sim-
+                                                                                       ilar weather conditions, we selected three distinct cases with varying
+    In this section, we detail the implementation of the control network,              levels of solar radiation, namely, medium, high, and low, and compared
+as reviewed in the previous chapter, onto a Raspberry Pi platform. This                their performances against a baseline scenario where the set tempera-
+network was then deployed in the target building for a practical eval-                 ture remained unchanged.
+uation. Subsequently, we conducted a comparative analysis against a                        The energy consumption comparison results are presented in Table 8,
+traditional baseline, wherein the set temperature remained constant.                   and the detailed comparisons among individual cases are as follows:
+This comparative study was aimed at highlighting the enhancements
+in eﬃciency and performance of our control network when applied to a                   (1) The detailed comparison results for Case A_Medium solar are shown
+real-world setting.                                                                        in Fig. 9. First, we introduce the baseline. From the results of room
+                                                                                           temperature distribution, we observed that when the set temper-
+4.1. Control process of the rooftop laboratory                                             ature remains constant, the room temperature ﬂuctuates between
+                                                                                           24 to 25 °C. At approximately 10 A.M., owing to the inﬂuence of
+    The control process is delineated in Fig. 8. Initially, the trained con-               solar radiation, the room temperature exceeds the set temperature,
+trol model was implemented on a Raspberry Pi platform, utilizing real-                     causing the compressor of the air conditioner to stop running. From
+
+                                                                                   9
+L. Sun, Z. Hu, M. Mae et al.                                                                                                               Energy & Buildings 323 (2024) 114799
+
+
+
+
+                                                                Fig. 8. Control ﬂow in target building.
+
+
+                                Table 7
+                                Meteorological conditions.
+
+                                                   Date        Mode      Average ambient       Total global horizontal solar      Sunshine
+                                                                         temperature [°C]      irradiation [kWh/m2 ]              duration [h]
+
+                                 CaseB_Baseline    2024/1/6    set=22    11                    3.1                                8.9
+                                 CaseA_Baseline    2024/1/7    set=22    9.9                   2.28                               3.2
+                                 CaseC_Baseline    2024/1/21   set=22    8.1                   0.62                               6.5
+
+                                 CaseA_DRL         2024/1/18   RL        9.8                   2.25                               4
+                                 CaseC_DRL         2024/1/20   RL        7                     0.63                               0
+                                 CaseB_DRL         2024/1/23   RL        10.9                  3.24                               7.9
+
+
+
+
+                               Table 8
+                               Result of the implementation.
+
+                                                  Date         Mode     AC heat input       Overheat     Comfort time      EC           Average
+                                                                        [kWh]               [kWh]        ratio             [kWh]        COP
+
+                                CaseA_Baseline    2024/1/7     set=22   4.65                0.79         79.30%            2.21         2.10
+                                CaseB_Baseline    2024/1/6     set=22   3.58                4.17         58.40%            1.71         2.09
+                                CaseC_Baseline    2024/1/21    set=22   10.26               0            100.00%           3.82         2.69
+
+                                CaseA_DRL         2024/1/18    DRL      3.67                0.17         74.65%            1.36         2.70
+                                CaseB_DRL         2024/1/23    DRL      2.73                2.21         63.06%            1            2.73
+                                CaseC_DRL         2024/1/20    DRL      8.81                0            86.10%            3.24         2.72
+
+
+
+
+    approximately 11 A.M. to 2 P.M., the indoor environment experi-                         from Case B were roughly similar to those from Case A. By utilising
+    ences overheating. The compressor of the air-conditioning system                        a control model that can anticipate overheating in advance, the
+    restarts operation at approximately 5 P.M. The percentage of time                       heat input of the air-conditioning system reduced by 0.51 kWh. This
+    within the comfort zone of room temperature over the course of                          approach also signiﬁcantly decreased the overheating by more than
+    the day was 79.3%. Subsequently, when employing the DRL con-                            half, namely, to 2.22 kWh. Furthermore, the intermittent operation
+    trol, we observed that the model could eﬀectively detect overheat-                      of the air-conditioning system increased the COP from 2.1 to 2.9.
+    ing conditions and pre-emptively shut down the air-conditioning                         Owing to these factors, the daily energy consumption reduced from
+    system, reducing the heat input by approximately 1 kWh and de-                          1.71 to 1.05 kWh, achieving energy savings of 39%.
+    creasing overheating by 0.62 kWh. Owing to the substantial heat                     (3) The detailed comparison results for Case C_Low solar are shown in
+    input during air-conditioner startup and the slightly smaller area                      Fig. 11. Owing to the rainy weather on both days of Case C, the so-
+    of the rooftop laboratory, the temperature slightly exceeded the                        lar radiation was minimal, resulting in the continuous operation of
+    upper limit of the comfort zone, reaching 74.7%. Considering the                        the air-conditioning system without any overheating incidents. The
+    daily average COP of the air conditioner, we observed that with                         energy consumption comparison between the two scenarios indi-
+    the adoption of the DRL control, the average COP increased from                         cated a marginal diﬀerence in the COP. This is because the average
+    2.1 to 2.7. Considering the reduction in heat input and aforemen-                       heat input in the baseline scenario (428W) was higher than that
+    tioned improvement in COP, the electricity consumption of the air                       under the DRL control (327W). Considering that the COP of the air
+    conditioner decreased by 38%, reaching 1.36 kWh.                                        conditioner is signiﬁcantly inﬂuenced by the load rate in low-load
+(2) The detailed comparison results for Case B_High solar are shown in                      conditions, the baseline COP was adjusted to match the compliance
+    Fig. 10. A detailed comparison revealed that the conclusions drawn                      rate of the DRL scenario, resulting in a corrected COP of 2.38. The
+
+                                                                                  10
+L. Sun, Z. Hu, M. Mae et al.                                                                                               Energy & Buildings 323 (2024) 114799
+
+
+
+
+                                                              Fig. 9. Case A_Medium solar.
+
+
+
+
+                                                               Fig. 10. Case B_High solar.
+
+
+     comparison revealed that adopting the DRL control enhanced the               model and achieved precise control of the air conditioning by integrat-
+     eﬃciency of the air conditioner by 14.3%.                                    ing weather forecast data with DRL. The results indicated that under
+                                                                                  low-load conditions, by employing a threshold-like operating method,
+5. Conclusion and future work                                                     we can reduce the number of start-stop cycles of the compressor, thus
+                                                                                  improving the COP of the air conditioner in low-load areas. Additionally,
+    In this study, we introduced a DRL-based real-time & prediction full-         by pre-emptively turning oﬀ the air conditioning, overheating could be
+stack control model to enhance energy eﬃciency and reduce consump-                mitigated to achieve energy savings. Ultimately, experimental evidence
+tion of air conditioning systems in high-insulation residential buildings.        demonstrated that utilising this control model leads to a reduction in
+During the training process, we utilized a detailed air conditioning COP          energy consumption by approximately 40%. In terms of the applica-
+
+                                                                             11
+L. Sun, Z. Hu, M. Mae et al.                                                                                                              Energy & Buildings 323 (2024) 114799
+
+
+
+
+                                                                     Fig. 11. Case C_Low solar.
+
+
+tion, we employed a back-end network based on supervised learning                        [2] Luis Pérez-Lombard, José Ortiz, Christine Pout, A review on buildings energy con-
+and data augmentation using GANs, eﬀectively utilising warm-up oper-                         sumption information, Energy Build. 40 (3) (2008) 394–398.
+                                                                                         [3] Axel Berge, Pär Johansson, Literature Review of High Performance Thermal Insula-
+ational data to minimise the warm-up duration.
+                                                                                             tion, 2012.
+    For future research directions, we anticipate that augmenting em-                    [4] Hayato Horie, Eiji Hihara, Study on Annual Performance of Room Air Conditioners
+pirical data collected post-deployment and continuously improving the                        Under Partial Load Condition, 2012.
+back-end network will enable persistent learning and adaptation. Addi-                   [5] Zhe Wang, Tianzhen Hong, Reinforcement learning for building controls: the oppor-
+tionally, our future objectives include enhancing the model’s scalability                    tunities and challenges, Appl. Energy 269 (2020) 115036.
+                                                                                         [6] Samuel R. West, John K. Ward, Josh Wall, Trial results from a model predictive
+and generalizability, focusing on its application across a broad spectrum
+                                                                                             control and optimisation system for commercial building hvac, Energy Build. 72
+of architectural styles and climatic conditions. Furthermore, we aim to                      (2014) 271–279.
+deploy this model in actual residential settings to rigorously evaluate its              [7] Bart Merema, Dirk Saelens, Hilde Breesch, Demonstration of an mpc framework for
+performance and eﬃcacy in real-world scenarios.                                              all-air systems in non-residential buildings, Build. Environ. 217 (2022) 109053.
+                                                                                         [8] Trent Hilliard, Lukas Swan, Zheng Qin, Experimental implementation of whole build-
+                                                                                             ing mpc with zone based thermal comfort adjustments, Build. Environ. 125 (2017)
+CRediT authorship contribution statement
+                                                                                             326–338.
+                                                                                         [9] Abdul Afram, Farrokh Janabi-Shariﬁ, Theory and applications of hvac control sys-
+    Luning Sun: Writing – original draft, Validation, Project admin-                         tems – a review of model predictive control (mpc), Build. Environ. 72 (2014)
+istration, Methodology, Investigation, Formal analysis, Data curation,                       343–355.
+Conceptualization. Zehuan Hu: Methodology, Data curation. Masayuki                      [10] Zhiang Zhang, Adrian Chong, Yuqi Pan, Chenlu Zhang, Khee Poh Lam, Whole build-
+                                                                                             ing energy model for hvac optimal control: a practical framework based on deep
+Mae: Supervision. Taiji Imaizumi: Supervision.
+                                                                                             reinforcement learning, Energy Build. 199 (2019) 472–490.
+                                                                                        [11] Richard S. Sutton, Andrew G. Barto, Reinforcement Learning: An Introduction, MIT
+Declaration of competing interest                                                            Press, 2018.
+                                                                                        [12] Donald Azuatalam, Wee-Lih Lee, Frits de Nijs, Ariel Liebman, Reinforcement learn-
+    The authors declare that they have no known competing ﬁnancial                           ing for whole-building hvac control and demand response, Energy AI 2 (2020)
+                                                                                             100020.
+interests or personal relationships that could have appeared to inﬂuence
+                                                                                        [13] Tianshu Wei, Yanzhi Wang, Qi Zhu, Deep reinforcement learning for building hvac
+the work reported in this paper.                                                             control, in: Proceedings of the 54th Annual Design Automation Conference 2017,
+                                                                                             2017, pp. 1–6.
+Data availability                                                                       [14] Thomas Schreiber, Sören Eschweiler, Marc Baranski, Dirk Müller, Application of two
+                                                                                             promising reinforcement learning algorithms for load shifting in a cooling supply
+                                                                                             system, Energy Build. 229 (2020) 110490.
+    Data will be made available on request.
+                                                                                        [15] Yuan Gao, Shanrui Shi, Shohei Miyata, Yasunori Akashi, Successful application of
+                                                                                             predictive information in deep reinforcement learning control: a case study based
+Acknowledgments                                                                              on an oﬃce building hvac system, Energy 291 (2024) 130344.
+                                                                                        [16] Brent Huchuk, Scott Sanner, William O’Brien, Development and evaluation of data-
+   This work was supported by JSPS KAKENHI Grant Numbers                                     driven controls for residential smart thermostats, Energy Build. 249 (2021) 111201.
+                                                                                        [17] Yujiao Chen, Leslie K. Norford, Holly W. Samuelson, Ali Malkawi, Optimal control
+JP23K26258, JP23H01564.
+                                                                                             of hvac and window systems for natural ventilation through reinforcement learning,
+                                                                                             Energy Build. 169 (2018) 195–205.
+References                                                                              [18] Yuting An, Chun Chen, Energy-eﬃcient control of indoor pm2.5 and thermal comfort
+                                                                                             in a real room using deep reinforcement learning, Energy Build. 295 (2023) 113340.
+ [1] Masanobu Kii, Ryota Isikawa, Yusuke Kometani, Toward a carbon neutral urban        [19] Kuldeep Kurte, Jeﬀrey Munk, Olivera Kotevska, Kadir Amasyali, Robert Smith, Evan
+     transportation system in Japan, IATSS Res. 47 (2) (2023) 171–178.                       McKee, Yan Du, Borui Cui, Teja Kuruganti, Helia Zandi, Evaluating the adaptability
+
+
+                                                                                   12
+L. Sun, Z. Hu, M. Mae et al.                                                                                                                        Energy & Buildings 323 (2024) 114799
+
+
+     of reinforcement learning based hvac control for residential houses, Sustainability         [27] Minjae Shin, Sungsoo Kim, Youngjin Kim, Ahhyun Song, Yeeun Kim, Ha Young Kim,
+     12 (18) (2020).                                                                                  Development of an hvac system control method using weather forecasting data with
+[20] Clement Lork, Wen-Tai Li, Yan Qin, Yuren Zhou, Chau Yuen, Wayes Tushar, Tapan K.                 deep reinforcement learning algorithms, Build. Environ. 248 (2024) 111069.
+     Saha, An uncertainty-aware deep reinforcement learning framework for residential            [28] T. Ueno, T. Miyanaga, W. Urabe, H. Kitahata, Development of heat source character-
+     air conditioning energy management, Appl. Energy 276 (2020) 115426.                              istic model of home user air conditioner—part 1: characteristic model for cooling pe-
+[21] D. Cutler, J. Winkler, N. Kruis, C. Christensen, M. Brendemuehl, Improved Modeling               riod, Report R09017, Central Research Institute of Electric Power Industry (CRIEPI),
+     of Residential Air Conditioners and Heat Pumps for Energy Calculations, 1 2013.                  May 2010, in Japanese.
+[22] Shichao Xu, Yixuan Wang, Yanzhi Wang, Zheng O’Neill, Qi Zhu, One for many: trans-           [29] Volodymyr Mnih, Koray Kavukcuoglu, David Silver, Alex Graves, Ioannis
+     fer learning for building hvac control, in: Proceedings of the 7th ACM International             Antonoglou, Daan Wierstra, Martin Riedmiller, Playing atari with deep reinforce-
+     Conference on Systems for Energy-Eﬃcient Buildings, Cities, and Transportation,                  ment learning, arXiv preprint, arXiv:1312.5602, 2013.
+     2020.                                                                                       [30] Fanyue Qian, Weijun Gao, Yongwen Yang, Dan Yu, Potential analysis of the trans-
+[23] Henrik Madsen, Jan Holst, Estimation of continuous-time models for the heat dy-                  fer learning model in short and medium-term forecasting of building hvac energy
+     namics of a building, Energy Build. 22 (1) (1995) 67–79.                                         consumption, Energy 193 (2020) 116724.
+[24] Yong Li, Juan Castiglione, Rodrigo Astroza, Yuxiang Chen, Real-time thermal dy-             [31] Ke Yan, Chiller fault detection and diagnosis with anomaly detective generative ad-
+     namic analysis of a house using rc models and joint state-parameter estimation,                  versarial network, Build. Environ. 201 (2021) 107982.
+     Build. Environ. 188 (2021) 107184.                                                          [32] Fabio Henrique Kiyoiti dos Santos Tanaka, Claus Aranha, Data Augmentation Using
+[25] Lidi Lu, Jinhua Chen, Tao Su, Xingyu Liu, Yaqi Hu, Qing Luo, Lulin Luo, An rc-                   Gans, 2019.
+     network model in the frequency domain for radiant ﬂoor heating coupled with                 [33] Justin Engelmann, Stefan Lessmann, Conditional Wasserstein gan-based oversam-
+     envelopes, Build. Environ. 225 (2022) 109617.                                                    pling of tabular data for imbalanced learning, Expert Syst. Appl. 174 (2021) 114582.
+[26] Haili Song, C-C. Liu, Jacques Lawarrée, Robert W. Dahlgren, Optimal electricity             [34] Ian Goodfellow, Jean Pouget-Abadie, Mehdi Mirza, Bing Xu, David Warde-Farley,
+     supply bidding by Markov decision process, IEEE Trans. Power Syst. 15 (2) (2000)                 Sherjil Ozair, Aaron Courville, Yoshua Bengio, Generative adversarial nets, Adv.
+     618–624.                                                                                         Neural Inf. Process. Syst. 27 (2014).
+
+
+
+
+                                                                                            13
+

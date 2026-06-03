@@ -1,0 +1,1435 @@
+                                                                            Applied Energy 390 (2025) 125816
+
+
+                                                                        Contents lists available at ScienceDirect
+
+
+                                                                                Applied Energy
+                                                            journal homepage: www.elsevier.com/locate/apen
+
+
+
+
+Year-round operational optimization of HVAC systems using hierarchical
+deep reinforcement learning for enhancing indoor air quality and reducing
+energy consumption
+Chenxin Liao a,∗ , Shohei Miyata a , Ming Qu b , Yasunori Akashi a
+a
+    Department of Architecture, Graduate School of Engineering, The University of Tokyo, Tokyo, Japan
+b
+    Lyles School of Civil Engineering, Purdue University, West Lafayette, IN, USA
+
+
+
+
+HIGH LIGH TS
+
+• Designed a hierarchical deep reinforcement learning (HDRL) control framework to address challenges in training with hybrid action spaces.
+• Developed a simulation platform integrating heating, ventilation and air conditioning (HVAC) system and building energy models for reliable agent training and
+  performance evaluation.
+• Developed a comprehensive multi-objective reward function to balance indoor temperature, air quality, and energy efficiency.
+• Achieved year-round operational performance improvements, broadening the applicability of DRL in HVAC control.
+
+
+
+ARTICLE INFO                                                  ABSTRAC T
+
+Keywords:                                                     Balancing user comfort demands with energy consumption in heating, ventilation, and air conditioning (HVAC)
+Deep reinforcement learning                                   systems is a critical challenge in the field of control optimization. Currently, deep reinforcement learning (DRL)
+HVAC system                                                   algorithms have achieved some success in optimizing HVAC system control. However, training agents with exist-
+Year-round operational optimization                           ing algorithms becomes challenging, when dealing with the hybrid action control problem. This study proposes
+Indoor environment quality
+                                                              an HVAC system optimization control method based on hierarchical deep reinforcement learning (HDRL), which
+Energy efficiency
+                                                              aims to minimize system energy consumption while ensuring indoor comfort and maintaining air quality. The
+                                                              proposed HDRL method employs a two-layer agent architecture, where the bottom agent is responsible for opti-
+                                                              mizing the frequency control of fans and pumps and the top agent flexibly selects the daily operating mode based
+                                                              on outdoor meteorological conditions. We designed a multi-objective reward function based on Gaussian distribu-
+                                                              tion, hyperbolic tangent function, energy consumption normalization for bottom agents, and temperature-based
+                                                              reward function for the top agent to achieve the reliable training of the agents. Experimental results indicated
+                                                              that the HDRL method significantly improves indoor temperature and CO2 concentration control during the year-
+                                                              round operation of the HVAC system. Compared to conventional PI control, the temperature compliance rate is
+                                                              increased by 8.37 %, and the combined temperature and CO2 compliance rate is improved by 7.8 %, while
+                                                              achieving a 3.95 % reduction in energy consumption.
+
+
+
+
+1. Introduction                                                                                     of sick building syndrome (SBS) [2,3]. Heating, ventilation and air con-
+                                                                                                    ditioning (HVAC) systems are essential for maintaining indoor comfort
+1.1. Background
+                                                                                                    but account for nearly 50 % of building energy consumption [4]. Thus,
+   With the rapid development of the socio-economic landscape, hu-                                  optimizing HVAC systems to reduce energy use while maintaining occu-
+man activities have increasingly shifted indoors, where individuals now                             pant comfort has become a major focus for researchers and practitioners
+spend 80 % to 90 % of their time [1]. This shift has raised concerns about                          [5,6].
+indoor thermal comfort and air quality, especially with the emergence
+
+
+    ∗
+        Corresponding author.
+        Email address: ryoushinkin98@g.ecc.u-tokyo.ac.jp (C. Liao).
+
+
+https://doi.org/10.1016/j.apenergy.2025.125816
+Received 20 December 2024; Received in revised form 13 February 2025; Accepted 24 March 2025
+Available online 3 April 2025
+0306-2619/© 2025 Elsevier Ltd. All rights are reserved, including those for text and data mining, AI training, and similar technologies.
+C. Liao, S. Miyata, M. Qu et al.                                                                                                 Applied Energy 390 (2025) 125816
+
+
+   Existing studies have proposed various optimal control strategies to            • Existing methods rarely address HVAC control in complex hybrid
+balance comfort and energy consumption, including rule-based, model-                 action spaces, with most focusing on either discrete or continuous
+based, and model-free approaches [7].                                                action spaces. However, real-world HVAC systems require hybrid
+   Rule-based control, such as Proportional–Integral–Derivative (PID)                control; for example, during working hours, it is necessary to si-
+control, is commonly used in HVAC systems. PID relies on a feedback                  multaneously consider the on/off state of the heat pump (discrete
+loop to adjust control variables (CV) based on the error between the                 values), number of units turned on (discrete values), and pump fre-
+process variable (PV) and the setpoint (SP) [8]. However, fixed rules                quency (continuous values). Failure to address this issue limits the
+of PID often lack flexibility in adapting to dynamic, nonlinear envi-                applicability of DRL in the overall system.
+ronments, and tuning PID gains can be complex and time-consuming,                  • Most studies focus on energy savings or thermal comfort, with fewer
+leading to performance degradation under varying conditions [9].                     considering CO2 concentration control, and even fewer addressing
+Model-based control is considered an effective approach to address these             all three objectives simultaneously. Multi-objective control increases
+challenges, by optimizing control variables using predictive models                  demands on reward function design, underscoring the importance of
+and algorithms [10,11]. Model Predictive Control (MPC), an advanced                  robust reward function development.
+model-based control method, has demonstrated significant potential in              • Many DRL control studies focus on optimizing HVAC performance
+energy savings [12–14]. However, its effectiveness depends on model                  for specific seasons or time periods; however, real-world HVAC sys-
+accuracy and is constrained by computational speed and real-time                     tems, often require stable operation throughout the year. Although
+feasibility [15,16].                                                                 DRL agents can be trained separately for different seasons or require-
+   In recent years, with advances in big data and computing power,                   ments and manually switched, such mode switching is suboptimal.
+Reinforcement Learning (RL) has been widely explored and applied. RL                 Therefore, a DRL control strategy suitable for year-round operation
+agents learn optimal control policies by interacting with the environ-               is required.
+ment, making RL particularly suitable for sequential decision-making
+problems involving environmental uncertainties [17], and therefore, it            1.3. Contribution of this study
+has gained considerable attention in HVAC system control optimization.
+                                                                                      In response to these challenges, a hierarchical RL agent control
+Typical RL algorithms are model-free, and compared to model-based ap-
+                                                                                  framework is proposed to optimize HVAC system year-round operation.
+proaches, RL agents can be efficiently deployed after training, which
+                                                                                  The framework aims to enhance indoor environmental quality while im-
+reduces computational costs in real-time optimization.
+                                                                                  proving energy efficiency. It is designed to flexibly adapt to various
+                                                                                  energy usage scenarios throughout the year-round operation of HVAC
+1.2. Literature review for deep reinforcement learning control                    systems. The main contributions of this study are summarized as follows:
+
+    Traditional RL methods utilize tables to record states and actions,            • A hierarchical deep reinforcement learning (HDRL) method is pro-
+making it challenging for agents to learn effectively when faced with                posed for year-round HVAC system optimization. Utilizing TD3
+complex policies. In real-world HVAC system control, continuous and                  and PPO algorithms, the hierarchical training framework addresses
+high-dimensional states and actions are more common [18]. Compared                   the challenges of hybrid action spaces, which are a common is-
+to RL, Deep Reinforcement Learning (DRL) integrates Deep Neural                      sue in HVAC system automation. This approach represents a key
+Networks (DNNs) with RL algorithms, enabling the learning of effective               advancement for applying DRL to HVAC optimization.
+policies in high-dimensional and complex state spaces [19].                        • A robust reward function is developed that simultaneously considers
+    Thus far, numerous scholars have applied DRL to HVAC system                      indoor temperature control, air quality control, and system energy
+control to balance the trade-off between occupant comfort and energy                 efficiency. To the best of our knowledge, this is the first study for uti-
+consumption. Nguyen et al. [20] employed the Phasic Policy Gradient                  lizing a hyperbolic tangent function-based CO2 concentration control
+(PPG) algorithm to optimize HVAC systems, enhancing energy efficiency                reward function to enable effective air quality control by the agent.
+while maintaining indoor temperature comfort. Gao et al. [21] innova-              • The proposed algorithm is applicable for year-round HVAC system
+tively introduced predictive information into DRL algorithms, proposed               operation, a wide range of time frames and diverse operating modes,
+an optimization approach combining the Gated Recurrent Unit (GRU)                    providing strong reference value for practical applications.
+and Soft Actor-Critic (SAC), and validated its effectiveness in optimizing
+                                                                                      The remainder of this paper is organized as follows: Section 2
+HVAC operational strategies on the BOPTEST platform. Zhang et al. [18]
+                                                                                  provides a detailed introduction to the basic concepts of the DRL algo-
+proposed a DRL framework for building energy system control, integrat-
+                                                                                  rithms involved and the proposed HDRL framework. Section 3 describes
+ing the asynchronous Advantage Actor-Critic (A3C) algorithm to control
+                                                                                  the modeling process of the HVAC system environment in this study.
+a hydronic radiant heating system, which reduced heating demand by
+                                                                                  Section 4 presents the details of the case study. Section 5 discusses the
+16.7 % during winter deployment. However, this study did not address
+                                                                                  results of the case study. Finally, Section 6 concludes the paper and
+air quality control, which is a limitation that is also present in [22–25].
+                                                                                  provides future perspectives.
+Cui and Xue [26] proposed a preference-informed TD3 algorithm, which
+comprehensively considers comfort, air quality, and system efficiency.            2. Methodology
+An and Chen [27] used the Deep Q-learning (DQN) algorithm to control
+air conditioning, air purifiers, and window operation, demonstrating the          2.1. Basic definitions and methods of reinforcement learning (RL)
+potential of DRL in air quality control. Valladares et al. [28] utilized a
+                                                                                      The RL agents learn environment features through interaction, which
+Double Q-learning algorithm to optimize air conditioning and ventila-
+                                                                                  adjusts their behavior based on rewards to maximize cumulative re-
+tion control in classrooms, improving both comfort and air quality, with
+                                                                                  turns. Typically, RL control problems are modeled as a Markov Decision
+validation conducted in real environments. However, the air condition-
+                                                                                  Process (MDP), described by a quintuple (𝑆, 𝐴, 𝑃 , 𝑅, 𝛾). For the HVAC
+ing systems involved were relatively simple. Although these studies have
+                                                                                  system control problem, the MDP components are:
+achieved progress in air quality control, further research is needed to ad-
+dress complex HVAC systems and long-term operational effects. Table 1              • State space 𝑆: System states observable by the agent, 𝑆 =
+summarizes the application studies of DRL in HVAC control.                           {𝑠1 , 𝑠2 , … , 𝑠𝑛 }. For HVAC control, these states include indoor envi-
+    Through comprehensive review and discussion, we identified that                  ronmental parameters (e.g., temperature, humidity, and air quality),
+despite DRL methods having made significant achievements in the ap-                  equipment states (e.g., air conditioning mode, and air flow rate),
+plication of HVAC control optimization, several critical challenges still            and outdoor conditions (e.g., temperature, humidity, and solar
+exist:                                                                               radiation).
+
+                                                                              2
+C. Liao, S. Miyata, M. Qu et al.                                                                                                                     Applied Energy 390 (2025) 125816
+
+
+                       Table 1
+                       Summary of DRL control in HVAC system.
+                         Ref.      Control variables       Action space type   Control objectives          Algorithm             Validation period
+
+                         [20]      Indoor temperature      Continuous          Indoor temperature,         PPG                   Not specified
+                                   setpoint                                    energy consumption
+                         [21]      Supply air tem-         Continuous          Comfort, system             SAC                   Summer and winter; 1 week
+                                   perature setpoint,                          operating cost
+                                   damper position
+                         [18]      Supply water            Discrete            Comfort, energy             A3C                   Winter; 3 months
+                                   temperature set-                            consumption
+                                   point, HVAC status
+                                   (on/off)
+                         [22]      Damper position,        Continuous          Comfort, energy             DDPG                  Summer; 3 months
+                                   window opening, fan                         consumption
+                                   speed
+                         [23]      Supply water            Discrete            Indoor temperature,         DDQN                  Winter; 3 months
+                                   temperature setpoint                        energy consumption
+                         [24]      Indoor temperature      Continuous          Indoor temperature,         SAC, TD3, TRPO, PPO   All year
+                                   setpoint, air flow                          energy consumption
+                                   rate
+                         [25]      Supply air tempera-     Discrete            Indoor temperature,         DQN                   Summer; 2 months
+                                   ture setpoint, supply                       energy consumption
+                                   water temperature
+                                   setpoint
+                         [29]      HVAC output power       Discrete            Indoor temperature,         DQN                   Winter; 2 days
+                                                                               energy consumption
+                         [30]      Indoor temperature      Discrete            Indoor temperature,         DQN                   Not specified
+                                   setpoint                                    energy consumption
+                         [31]      HVAC output power       Continuous          Comfort, system             DDPG, DDQN, SAC       Summer and winter; 2 days
+                                                                               operating cost
+                         [32]      Indoor temperature      Discrete            Comfort, energy             BDQ                   Summer; 2 weeks
+                                   setpoint, fan mode                          consumption
+                         [33]      Supply water            Discrete            Comfort, energy             Q-learning            Summer; 2 months
+                                   temperature setpoint                        consumption
+                         [34]      Air flow rate change    Discrete            Airflow, CO2 con-           SAC                   1 day
+                                                                               centration, energy
+                                                                               consumption
+                         [35]      VAV status (on/off)     Discrete            Indoor temperature,         DQN                   All year
+                                                                               energy consumption
+                         [36]      Window status           Discrete            Indoor temperature,         DQN                   1 week
+                                   (on/off), HVAC                              energy consumption
+                                   status (on/off),
+                                   temperature setpoint
+                         [37]      Cooling tower fan       Discrete            COP                         Q-learning            Summer; 3 months
+                                   frequency, pump
+                                   frequency
+                         [26]      Air flow rate change    Continuous          Indoor temperature,         TD3                   Summer; 1 month
+                                   and fresh air ratio                         CO2 concentration,
+                                   change                                      energy consumption
+                         [27]      Window status           Discrete            Indoor temperature,         DQN                   Several days
+                                   (on/off), HVAC                              indoor PM2.5 con-
+                                   status (on/off),                            centration, energy
+                                   air purifier status                         consumption
+                                   (on/off)
+                         [28]      Indoor temperature      Discrete            PMV, CO2 con-               Double Q-learning     Summer; 6 months
+                                   setpoint, fan status                        centration, energy
+                                   (on/off)                                    consumption
+
+
+
+
+  • Action space 𝐴: Actions available to the agent in each state, 𝐴 =                               emphasizes immediate control performance, while a larger 𝛾 focuses
+    {𝑎1 , 𝑎2 , … , 𝑎𝑛 }. For HVAC systems, the actions include adjusting                            on future impacts.
+    temperature setpoints, regulating frequency, and controlling on/off
+                                                                                                 The goal of the agent is to learn a policy 𝜋(𝑎|𝑠) that maximizes the
+    status.
+                                                                                              expected cumulative reward 𝑅𝑡 defined as:
+  • State transition probability 𝑃 : Transition probability 𝑝(𝑠′ |𝑠, 𝑎) de-
+    notes the likelihood of moving to state 𝑠′ after action 𝑎 in state 𝑠.
+                                                                                                     ∑
+                                                                                                     ∞
+    In HVAC control, this probability is often unknown, which makes                           𝑅𝑡 =         𝛾 𝑘 𝑟𝑡+𝑘 .                                                            (1)
+    model-free RL necessary for estimating transitions using historical                              𝑘=0
+    data.
+  • Reward function 𝑅: Immediate reward 𝑟 = 𝑅(𝑠, 𝑎) represents the                                  The MDP provides the standard framework for RL.
+    reward for action 𝑎 in state 𝑠. For HVAC systems, the reward func-
+                                                                                              2.2. Deep reinforcement learning
+    tion typically reflects energy cost, air quality, and thermal comfort,
+    evaluating the actions of the agent.                                                         DRL algorithms can be broadly categorized into three main types:
+  • Discount factor 𝛾: This factor quantifies the importance of future re-                    value-based methods, policy-based methods, and Actor-Critic (AC)
+    wards, which ranges from 0 to 1. For HVAC systems, a smaller 𝛾                            methods.
+
+
+                                                                                          3
+C. Liao, S. Miyata, M. Qu et al.                                                                                                                                       Applied Energy 390 (2025) 125816
+
+
+
+                                                                                                     Environment information
+                                                                                    1 day                                                                        HVAC system & Room
+                                                                                                           Outdoor conditions              Operational
+                                                                            Top-lever states              Occupancy schedules             data collection
+                                   Year-round operational
+       Environment                  HDRL agent controller
+                                                                               1 minute                     Indoor information                                                                   ROOM
+
+
+                                                                       Bottom-lever states
+                                                                                                            System information
+
+
+
+                                           Top agent                                           Actions of top agent
+
+
+                                                      Objective                                               Summer                Top-level control signal               Selected
+       Top agent layer                                                                                                                                                   bottom agent
+                                            Minimize daily indoor thermal                                                               (operational mode)
+                                            discomfort                                              Winter
+                                                                                                Transistion season
+
+
+
+
+                                                           Bottom agents
+                                                                                                               Actions of bottom agent
+                                                                     Objective
+   Bottom agent layer                                                                                                  Fan frequency                        Bottom-level control signal
+                                                          1: Maintain indoor air temperature
+                                                          2: Maintain indoor air fresh                                                                      (fan and pump frequency)
+                                                          3: Minimize energy consumption                               Pump frequency
+
+
+
+
+                                                          Fig. 1. HDRL control framework for optimizing HVAC system.
+
+
+
+                                                                   Environment information
+                                                                                                                             HVAC system & Room
+                                                  Store samples        Outdoor conditions                Input data
+                                                                                                                                                                  Bottom-level
+                                                                      Occupancy schedules
+                                                                                                                                                                  control signal
+                                                                                                                                                                                        Controller
+             Simulation platform                                                                                                                             (fan and pump frequency)
+                                                                           Indoor information                                                       ROOM
+      for top & bottom agents training                                                                   Output data
+
+                                                                        System information
+
+
+
+     Training layer of bottom agent (TD3)
+                                                           Store samples                                   Critic network            Actor network
+                                                                                                             SDG update                DPG update
+
+
+                                                                                       mini-batch        Critic 1      Critic 2           Actor
+                                                                    Bottom-level
+                                                                    replay buffer
+                                                                                                          Target       Target            Target
+                                                                                                            C1           C2                A
+
+    Training layer of top agent (PPO)
+
+            : Bottom agent -                                                         Critic network                 Actor network
+                                                                                       SDG update                      SDG update
+            environment interaction
+            : Top agent -                                                                                                                    Top-level
+                                                                                      Critic                               Actor
+            environment interaction                             MINI-BATCH                                                                 control signal    Well-trained                 Selected
+                                             Top-level replay
+            : DRL model updates                   buffer                                                                                 (operational mode) bottom agents               bottom agent
+
+            : Data flow during the
+            training process
+
+
+                                                  Fig. 2. Training process of the HDRL algorithm for HVAC system control.
+
+
+
+2.2.1. Actor-Critic method                                                                               Temporal Difference (TD) error, providing critical feedback for updating
+    The Actor-Critic (AC) method combines the advantages of value-                                       the Actor’s policy through policy gradients.
+based and policy-based approaches, where a Critic network evaluates                                         The policy gradient for the Actor is defined as:
+the action-value function 𝑄(𝑠, 𝑎), and an Actor network selects ac-
+tions 𝑎 to maximize cumulative reward 𝑅𝑡 . The Critic minimizes the                                      ∇𝜽  (𝜽) = E[∇𝜽 log 𝜋𝜽 (𝑎𝑡 |𝑠𝑡 ; 𝜽) ⋅ 𝛿],                                                      (2)
+
+
+                                                                                                     4
+C. Liao, S. Miyata, M. Qu et al.                                                                                                                                        Applied Energy 390 (2025) 125816
+
+
+
+                                                      Boundary conditions
+                                                       Input: Outdoor air temperature/ humidity, solar
+                                                       radiation, internal heat gain schedule
+
+                                                                                                                             Current
+                                                       Control process                                                   simulation result
+                                                      Determination of setpoints                                            Energy model
+
+                                                       Input: Boundary conditions, previous time step                      Energy consumption calculation
+                                                       status (e.g. temperature, CO2 concentration)
+                                                       Output: control signal                                              Input: pump/fan frequency, working fluid flow
+                                                                                                                           rate
+                                                                                                                           Output: energy consumption
+
+
+                                                      System components control                                            5R2C thermal model
+                             Time step: 1min.
+
+
+
+
+                                                       Input: control signal (e.g. PID setpoint)                           Indoor temperature calculation
+                                                       Output: pump/fan frequency, valve/damper
+                                                       opening                                                             Input: supply airflow rate/temperature,
+                                                                                                                           boundary conditions
+                                                                                                                           Output: indoor temperature
+
+                                                                                                                           CO2 model
+                                                 Flow balance calculation
+                                                                                                                           Indoor CO2 concentration calculation
+                                                 Input: pump/fan frequency, valve/damper opening
+                                                 Output: working fluid flow rate of each pipe/duct                         Input: supply airflow rate, occupance
+                                                                                                                           schedule, CO2 concentration at previous time
+                                                                                                                           step
+                                                                                                                           Output: current indoor CO2 concentration
+                                                 Coil heat exchange calculation
+                                                 Input: equipment inlet working fluid temperature and rate
+                                                 Output: equipment outlet working fluid temperature
+
+
+
+
+                                                                                 Fig. 3. Flowchart of the simulation program.
+
+
+
+                                                                                                                                 Table 2
+                                                                                                                                 Summary of parameters for the 5R2C model.
+                                                            Cair
+                                                                                                                                    Parameter [Unit]                 Value
+       Tsup                 Hve
+                                                       Tair                                                                         Window area [m ] 2
+                                                                                                                                                                     35.2
+                                                                                      ΦHC
+                                                                                                                                    Wall area [m2 ]                  336.8
+                                                                                                                                    Floor area [m2 ]                 160.0
+                                                                                                                                    Room Volume [m3 ]                940.0
+                                                His                                                                                 u walls [W∕(m2 K)]               1.015
+                                                                                                                                    u windows [W∕(m2 K)]             6.0
+                            Hw                                                                                                      Room capacitance [J∕K]           12,800,000 [42]
+                                                       Ts
+                                                                                      Φsol+Φint
+
+        Te
+                                                Hms
+                                                                                                                 2.2.2. Twin Delayed Deep Deterministic Policy Gradient (TD3)
+                            Hem
+                                                                                                                     TD3 [38] is an enhanced version of the Deep Deterministic Policy
+                                                       Tm                                                        Gradient (DDPG) algorithm [39], designed to address the overestima-
+                                                                                                                 tion bias in value function approximation, which is a common challenge
+                                                              Cm                                                 in the AC methods. TD3 incorporates several key modifications to en-
+                                                                                                                 hance learning stability, including the use of twin Critic networks,
+                                                                                                                 delayed updates for the Actor, and target policy smoothing. These
+  Fig. 4. RC thermal network (five-resistance, two-capacitor model (5R2C)).                                      features make TD3 well-suited for tasks involving continuous action
+                                                                                                                 spaces, such as controlling the fan and pump frequencies in the HVAC
+                                                                                                                 system.
+where 𝛿 represents the TD error guiding updates. The Actor network is
+updated via gradient ascent, while Critic network minimizes 𝛿 through                                            2.2.3. Proximal Policy Optimization (PPO)
+gradient descent.                                                                                                    PPO [40] is a policy gradient method that provides a balance be-
+    In this study, we focus on two specific AC methods: Twin                                                     tween stability and computational efficiency. PPO utilizes a clipped
+Delayed Deep Deterministic Policy Gradient (TD3) and Proximal Policy                                             surrogate objective function to limit the magnitude of policy updates,
+Optimization (PPO). TD3 is employed for continuous control, while PPO                                            thereby preventing the policy from changing too drastically during each
+is responsible for discrete control. These algorithms are selected because                                       iteration, which helps manage the policy changes effectively. In addi-
+of their strengths in addressing different types of action spaces and main-                                      tion, sample efficiency and ease of implementation of the PPO further
+taining stable learning. Further details on AC network updates, TD3, and                                         make it a preferred choice for discrete decision making in our proposed
+PPO algorithms are presented in Appendix A.                                                                      control framework.
+
+                                                                                                             5
+C. Liao, S. Miyata, M. Qu et al.                                                                                                            Applied Energy 390 (2025) 125816
+
+
+                                                                                             Pump        Valve
+
+                                                                                To ASHP
+
+
+                                                      OAU                            AHU
+                            Outdoor Air                     OA Fan                                  SA Fan
+                                          OA Damper                                                                       SA Damper
+
+
+
+
+                                                                                             RA Damper                                   Room
+
+
+
+
+                                          EA Damper                                                                       RA Damper
+                                                            EA Fan                                  RA Fan
+                                                                       THX1                                      THX2
+
+
+                                                                 Fig. 5. Conceptual diagram of the system.
+
+
+
+
+                            Fig. 6. Outdoor air temperature.                                             Fig. 7. Occupancy schedule in large lecture theater.
+
+
+
+                                                                                          training simultaneously trains high- and low-level agents, thereby cap-
+2.3. Hierarchical deep reinforcement learning proposed in this study
+                                                                                          turing dynamic dependencies but increasing complexity and slowing
+   HDRL is a DRL method designed to decompose complex tasks                               convergence.
+through a hierarchical structure, which enables high-level and low-level
+policies to collaborate. The key components of HDRL are as follows:                       2.4. Proposed method for HVAC system control
+
+  • Hierarchical policies: High-level policies focus on global decisions,                     In classical AC algorithms, the Actor network learns either the prob-
+    such as subtask selection, which often operate on discrete action                     ability distribution of discrete actions or the distribution parameters
+    spaces at lower frequencies (e.g., every 𝑁 steps). Low-level policies                 of continuous actions to optimize policies. However, when faced with
+    execute detailed actions to implement high-level decisions, which                     hybrid action spaces, the dimensional and definitional differences be-
+    operate on continuous action spaces at each step. This distinc-                       tween discrete and continuous actions make it difficult for the Actor
+    tion in objectives and temporal granularity ensures effective task                    network to propagate gradients effectively. This often results in unsta-
+    decomposition.                                                                        ble gradient updates or optimization failures, thereby limiting classical
+  • Hierarchical rewards: The rewards are distributed based on the hi-                    AC algorithms to generating either purely discrete or purely continuous
+    erarchical structure. High-level rewards are sparse, targeting global                 action strategies. In the context of HVAC system control, the year-round
+    objectives and long-term planning, while low-level rewards are                        optimization requires both minute-level fine-grained equipment control
+    dense, thereby focusing on local execution quality.                                   (e.g., fans and pumps) and longer-term mode selection (e.g., cooling,
+                                                                                          heating, ventilation). This hybrid task demands an algorithm that can
+   HDRL can be implemented via independent or joint training.                             handle both discrete and continuous action spaces, which poses sig-
+Independent training sequentially trains low-level policies for subtasks                  nificant challenges for existing algorithms. HDRL has the potential to
+and then high-level policies for invoking them, which offers simplicity                   address this limitation by decoupling action strategies with different
+and modularity but potentially less flexible policy collaboration. Joint                  characteristics and independently optimizing high-level and low-level
+
+
+
+
+                                                                                     6
+C. Liao, S. Miyata, M. Qu et al.                                                                                                       Applied Energy 390 (2025) 125816
+
+
+Table 3
+Summary of state variables for the bottom and top agents.
+  Agent type        State variable [unit]                             𝑥min   𝑥max
+
+                    Outdoor temperature [◦ C]                         −10    40
+                    Outdoor relative humidity [–]                     0      100
+                    Operation time (0 or 1) [–]                       0      1
+                    Occupancy [–]                                     0      110
+                    Hour [–]                                          0      23
+                    Internal heat gain [W]                            0      8000
+                    Indoor temperature [◦ C]                          0      50
+                    Heat mass temperature [◦ C]                       0      50
+                    Indoor relative humidity [–]                      0      100
+  Bottom agent      Indoor CO2 concentration [ppm]                    300    5000
+                    AHU inlet air temperature [◦ C]                   0      50
+                    AHU outlet air temperature [◦ C]                  0      50
+                    AHU inlet water temperature [◦ C]                 0      50
+                    AHU outlet water temperature [◦ C]                0      50
+                    Air mass flow in AHU [kg/s]                       0      2
+                    Water mass flow in AHU [kg/s]                     0      1.5
+                    AHU power [kW]                                    0      5
+                    OAU power [kW]                                    0      4
+                    ASHP power [kW]                                   0      15
+                    Maximum outdoor temperature (current day) [◦ C]   −10    40
+                    Minimum outdoor temperature (current day) [◦ C]   −10    40
+                                                                                            Fig. 9. Structure of indoor CO2 concentration control reward function.
+                    Average outdoor temperature (current day) [◦ C]   −10    40
+  Top agent
+                    Month [–]                                         1      12
+                    Day [–]                                           1      31         adjusts fan and pump frequencies every minute based on outdoor, in-
+                    Day number from start of year [–]                 1      365        door, and system parameters. This structure ensures indoor comfort
+                                                                                        and air quality while minimizing energy consumption, with the bottom
+                                                                                        agent handling continuous control and the top agent managing discrete
+                                                                                        control.
+                                                                                            Fig. 2 illustrates the training process of the HDRL agent. First,
+                                                                                        the three bottom agents are trained using TD3 to optimize pump and
+                                                                                        fan frequencies. Once trained, the bottom agents become part of the
+                                                                                        environment for the top agent, which is then trained using PPO to
+                                                                                        select optimal modes. This hierarchical training results in agents that
+                                                                                        can ensure frequency regulation and mode selection.
+
+                                                                                        3. Simulation platform development
+
+                                                                                            A robust building energy system model is required as the RL environ-
+                                                                                        ment to achieve the stable training of the agent and evaluate its control
+                                                                                        strategies. This model simulates indoor parameters and energy consump-
+                                                                                        tion responses to control changes. This section provides an overview of
+                                                                                        the model development.
+
+                                                                                        3.1. Overview of the simulation platform
+
+                                                                                            We developed a Python-based HVAC system simulation program
+                                                                                        with the following three key features: (1) The program can flexibly in-
+        Fig. 8. Structure of indoor temperature control reward function.                tegrate various types of HVAC equipment and key components, thereby
+                                                                                        providing an evaluation platform that closely resembles real operating
+                                                                                        conditions. (2) The program captures the transient states of system com-
+policies using dedicated networks, making it well-suited for hybrid                     ponents, which ensures that physical state changes correspond to control
+action spaces.                                                                          states, thereby facilitating the assessment of the impact of different con-
+    Building upon this potential, we propose an independently trained                   trol strategies on system operation. (3) The program features an open
+HDRL framework tailored to the hierarchical nature of HVAC system                       control interface, which allows different control logics (e.g., PID, MPC,
+control. Low-level agents specialize in fine-tuned mode-specific con-                   DRL) to be imported as required to control system components. For
+trol, thereby reducing exploration costs by focusing on local scenarios.                a comprehensive derivation of the simulation platform, please see our
+High-level agents operate on fixed low-level policies, which optimize                   previous work [10,41].
+mode selection by capturing dynamic environmental changes. This ap-                         The computational flow is shown in Fig. 3. The program calculates
+proach simplifies training, reduces coupling complexity, and enables                    control setpoints, flow rates, temperatures, and power consumption at
+modular system deployment and maintenance, as policies can be up-                       adjustable time intervals. In this study, the time interval is configured
+dated independently.                                                                    to be 1 min.
+    Fig. 1 illustrates the proposed two-level HDRL framework. The top
+                                                                                        3.2. Energy consumption model
+agent selects the daily operating mode based on outdoor conditions,
+thereby maintaining it throughout the day for optimal thermal com-                         The energy consumption includes four components: the Air Source
+fort. The bottom agent, activated after mode selection, dynamically                     Heat Pump (ASHP), pumps, fan of Outdoor Air Unit (OAU), and Air
+
+
+
+
+                                                                                    7
+C. Liao, S. Miyata, M. Qu et al.                                                                                                                     Applied Energy 390 (2025) 125816
+
+
+                            Table 4
+                            Summary of differences between the four methods.
+                              Method           Fan and pump control (bottom level)    Operation mode selection (top level)   Descriptions
+
+                              Method 1         PI control                             Operation schedule based control       Baseline
+                              Method 2         PI control                             Outdoor temperature based control      PI control with mode selection
+                              Method 3         DRL agent control                      Operation schedule based control       DRL control
+                              Method 4         DRL agent control                      DRL agent control                      the proposed HDRL control
+
+
+
+
+                  Table 5                                                                         3.3. Indoor CO2 concentration model for IAQ evaluation
+                  Hyperparameters in TD3 and PPO.
+                                                                                                     Indoor CO2 concentration is a common indicator to evaluate in-
+                     Hyperparameters              TD3              PPO
+                                                                                                  door air quality, modeled using the mass conservation equation. CO 2
+                     Learning rate                0.001            0.001                          concentration variation without air leakage is expressed as:
+                     Discount factor              0.99             0.99
+                     Batch size                   100              64                                     𝑑𝑐in    (          )
+                     Training steps               2,160,000        300,000                        𝑉room        = 𝑄 𝑐out − 𝑐in + 𝐺CO2 ,                                           (6)
+                     Clipping parameter           –                0.2
+                                                                                                           𝑑𝑡
+                     Soft update coefficient      0.05             –
+                     Policy delay in TD3          2                –                              where 𝑉room represents the room volume (m3 ), 𝑄 represents the supply
+                                                                                                  air flow rate, and 𝑐in , 𝑐out represent the CO2 concentrations before and
+                                                                                                  after a certain section, respectively (ppm). In this study, the outdoor CO 2
+Handling Unit (AHU). Energy consumed by the ASHP is calculated from                               concentration is assumed to be constant at 350 ppm. 𝐺CO2 represents
+the water temperature difference Δ𝑇𝑤 and flow rate 𝑄𝑤 (Eq. 3) as:                                 CO2 generation inside the room, which is calculated as:
+            𝐶𝑤 𝜌𝑤 𝑄𝑤 Δ𝑇𝑤
+𝐸ASHP =                  ,                                                              (3)       𝐺CO2 = 𝑁𝑡 ⋅ 𝑞 ⋅ 106 ,                                                          (7)
+             𝐶𝑂𝑃ASHP
+
+    where, 𝐶𝑤 represents the specific heat capacity of water at constant                          where 𝑁𝑡 represents the number of occupants and 𝑞 represents the CO2
+pressure, and COPASHP represents the Coefficient of Performance (COP)                             emission rate per person (assumed to be 30 L/h). When the ventilation
+of the ASHP, which is assumed to be 3.15 based on design specifications                           system achieves a steady state, the differential equation is rewritten as
+caused by the lack of experimental data. Pump and fan power consump-                              a finite difference equation (Eq. 8):
+tion and total system energy consumption are respectively calculated                                   [              ]
+                                                                                                                        Δ𝑇
+using:                                                                                                            𝑡−1
+                                                                                                  𝑐 𝑡 = 𝑄𝑐 𝑡−1 + 𝐺CO          + 𝑐 𝑡−1 ,                                          (8)
+                                                                                                                     2 𝑉
+                                                                                                                         room
+               𝑄 ⋅ Δ𝑃𝑠
+𝐸fan,pump =            ,                                                                (4)       where 𝑡 represents the current time step, 𝑡 − 1 represents the previous
+                  𝜂
+                                                                                                  time step, and Δ𝑇 represents the time interval. This model describes the
+                                                                                                  dynamic discrete CO2 concentration, used to evaluate indoor air quality
+𝐸system = 𝐸ASHP + 𝐸pump + 𝐸fan,oau + 𝐸fan,ahu .                                         (5)       control effectiveness.
+
+
+
+
+                                                                     Fig. 10. Reward curve during the training process.
+
+                                                                                              8
+C. Liao, S. Miyata, M. Qu et al.                                                                                                         Applied Energy 390 (2025) 125816
+
+
+                     Table 6
+                     Control achievement comparison for temperature, CO2 , and joint control for different methods.
+                        Method     Temperature control                    CO2 control                            Joint control
+                                   Absolute time (min)   Time ratio (%)   Absolute time (min)   Time ratio (%)   Absolute time (min)   Time ratio (%)
+
+                        Method 1   143,512               83.63            156,107               90.97            131,488               76.62
+                        Method 2   148,513               86.55            153,274               89.32            133,025               77.52
+                        Method 3   149,210               86.95            156,100               90.97            135,641               79.04
+                        Method 4   155,530               90.64            155,700               90.73            141,750               82.60
+
+
+
+
+                                   (a) Daily operation mode selection chosen by Methods 1-4 throughout the year
+
+
+
+
+                             (b) Daily temperature violation rates for Methods 1-4 throughout the year, with darker colors
+                             indicating higher violation rates.
+
+                                     Fig. 11. Calendar heatmap of operation mode selection and indoor temperature violation rate.
+
+
+
+3.4. RC model for building energy demand and indoor air temperature                      capturing key physical dynamics. The EN ISO 13790 standard [42] com-
+calculations                                                                             prehensively describes a simple hourly method using a five-resistance,
+                                                                                         one-capacitance (5R1C) network model. Jayathissa et al. [43] devel-
+    The resistance-capacitance (RC) model is a widely used gray-box
+                                                                                         oped a Python-based 5R1C building simulator following this standard,
+model to simulate thermal dynamics in buildings. Based on the electri-
+                                                                                         which was suitable for single-zone buildings and demonstrated good
+cal analogy to thermal physics, it provides fast load calculations while
+                                                                                         performance in experiments.
+
+                                                                                     9
+C. Liao, S. Miyata, M. Qu et al.                                                                                                   Applied Energy 390 (2025) 125816
+
+
+                                                                                    and validation. The occupancy schedule was based on the EnergyPlus
+                                                                                    large lecture theater schedule (Fig. 7). Maximum lighting and equipment
+                                                                                    power was set at 10 W/m2 , with a heat gain of 60 W per occupant.
+                                                                                    The CO2 emission rate per person was 30 L/h. Using this schedule, we
+                                                                                    calculated the indoor heat load and total CO2 production.
+
+                                                                                    4.3. Design of state space
+
+                                                                                        The observation space of the agent could theoretically be very large,
+                                                                                    allowing comprehensive understanding of the environment. However, a
+                                                                                    larger state space complicates learning, and it is difficult to fully capture
+                                                                                    operational data for all HVAC components. Considering these factors,
+                                                                                    the state observations for the bottom and top agents are summarized
+                                                                                    in Table 3. Furthermore, data acquisition feasibility is considered. The
+                                                                                    bottom agent has 19 observation items, whereas the top agent has six ob-
+                                                                                    servation items, thereby covering indoor parameters, outdoor weather,
+                                                                                    HVAC operational data, and time information.
+                                                                                        It is important to note that different state observations vary in units
+                                                                                    and scales. We applied Min-Max normalization to scale all values be-
+                                                                                    tween 0 and 1 to ensure proper weighting during training and improve
+                         Fig. 12. System energy consumption.                        efficiency and stability:
+                                                                                            𝑥 − 𝑥min
+                                                                                    𝑥′ =               ,                                                       (9)
+                                                                                           𝑥max − 𝑥min
+                                                                                    where 𝑥min and 𝑥max represent the lower and upper bounds of each state
+                                                                                    variable.
+
+                                                                                    4.4. Design of the action space
+
+                                                                                        The bottom agent controls the inverter frequencies of the system’s
+                                                                                    fans and pumps. The action space is three-dimensional, and it consists
+                                                                                    of continuous values for the frequency ratios of the AHU fan, OAU fan,
+                                                                                    and pump (ranging from 0 to 1).
+                                                                                        The top agent selects the optimal daily operating mode, with three
+                                                                                    discrete values: Mode 1 (summer), Mode 2 (winter), and Mode 3 (tran-
+                                                                                    sition). Then, the bottom agent executes specific inverter controls for
+                                                                                    the selected mode. The hybrid nature of the action space makes training
+                                                                                    challenging for traditional DRL algorithms: this is the primary reason to
+                                                                                    adopt a hierarchical approach for training the agents.
+
+                                                                                    4.5. Design of the reward function
+
+                                                                                        The reward function defines the objectives of DRL. We designed three
+Fig. 13. Distribution of average daily energy consumption by control method.        sub-reward functions, which are combined using weighted parameters
+                                                                                    to enable the bottom agent to consider indoor temperature, air qual-
+                                                                                    ity, and energy consumption. The reward for the top agent is based on
+    We enhanced this model to a 5R2C version to improve accuracy                    the average indoor temperature of each day, which guides the mode
+for smaller time steps, adding an extra thermal capacitor (Fig. 4). The             selection.
+details of the calculation are provided in Appendix B. The validation
+                                                                                    4.5.1. Reward based on indoor temperature control
+of 5R2C model following the SHASE guidelines of the test procedure
+                                                                                        We assume that the HVAC system maintains indoor temperatures
+for the evaluation of building energy simulation tools is presented in
+                                                                                    of 22 in winter and 26 ◦ C in summer, with the temperature deviation
+Appendix C.
+                                                                                    𝑒𝑟𝑟𝑜𝑟 calculated for each time step. The comfort range for temperature
+                                                                                    deviation is ±2 ◦ C. A Gaussian distribution (Eq. 10) with a mean of 0
+4. Case study
+                                                                                    (indicating
+                                                                                       √        zero target temperature deviation) and a standard deviation
+4.1. Distribution of the building and energy system                                 of 2 is used for defining the temperature control reward (Eq. 11).
+                                                                                        As shown in Fig. 8, the reward ranges from −1.8 to 1. The reward
+    We select a lecture theater at a university in Tokyo, Japan, with
+                                                                                    increases as the temperature approaches the target, which encour-
+a seating capacity of 110 people, as the case study for this research.
+                                                                                    ages exploration during optimization. Furthermore, restricting the value
+Relevant building parameters are summarized in Table 2. An indepen-
+                                                                                    range of the reward function facilitates gradient descent calculation dur-
+dent air conditioning system regulates the environment of the lecture
+                                                                                    ing network updates. The feasibility of this type of reward function has
+theater, with the system layout shown in Fig. 5. The primary side com-
+                                                                                    been validated in previous studies [21,44,45].
+prises an Air Source Heat Pump (ASHP) water loop, while the secondary
+                                                                                                      (            )
+side includes a full-air system equipped with a total heat recovery unit.                     1           (𝑥 − 𝜇)2
+                                                                                    𝑓 (𝑥) = √ 𝑒𝑥𝑝 −                  .                                    (10)
+                                                                                            𝜎 2𝜋            2𝜎 2
+4.2. Test conditions
+                                                                                                      (               )
+   We used the typical meteorological year data from Chiyoda, Tokyo                              1       (𝑒𝑟𝑟𝑜𝑟 − 0)2
+                                                                                    𝑅𝑡𝑒𝑚𝑝 = 10 √ √ 𝑒𝑥𝑝 −                − 1.8.                               (11)
+(2007–2012) (Fig. 6) as the input for outdoor conditions during training                                     2⋅2
+                                                                                                2 2𝜋
+                                                                               10
+C. Liao, S. Miyata, M. Qu et al.                                                                                                       Applied Energy 390 (2025) 125816
+
+
+
+
+                              Fig. 14. Changes in indoor temperature and CO2 concentration and system operation in typical cooling scenario.
+
+
+
+4.5.2. Reward based on CO2 concentration control                                         Min-Max normalization is applied to ensure 𝑅energy has the same magni-
+   We set the target CO2 concentration at 900 ppm (slightly below                        tude as 𝑅temp and 𝑅CO2 , which aids in the balanced exploration.
+1000 ppm) to ensure good air quality. A positive reward is given when
+CO2 is below 900 ppm, with the reward increasing as CO2 decreases;                       𝑅energy = −(𝐸̂ ASHPs + 𝐸̂ AHU + 𝐸̂ OAU ).                                (13)
+however, it gradually levels off to reflect a trade-off between fresh air
+and increased fan energy consumption. When CO2 exceeds 900 ppm,                              Three weights 𝑤1 , 𝑤2 , and 𝑤3 adjust the contribution of comfort,
+a penalty is applied, which is capped to maintain stable training. The                   air quality, and energy consumption to the bottom reward (Eq. 14).
+reward function is designed using a hyperbolic tangent function (Eq.                     The weights 𝑤1 , 𝑤2 , and 𝑤3 sum to 1, where a larger weight reflects a
+12, Fig. 9) to meet these requirements because it allows smooth reward                   greater emphasis on that specific objective. 𝑅temp , 𝑅CO2 , and 𝑅energy are
+scaling and is effective for stable learning.                                            normalized to the consistent range and magnitude, and therefore, these
+                                                                                         weights can be adjusted between 0 and 1, thereby ensuring flexibility
+          {                                                                              and robustness in reward function design.
+           − tanh(0.01 ⋅ (𝑐CO2 − 900)),       𝑖𝑓 𝑐CO2 ≤ 1100
+𝑅CO2 =                                                                       (12)
+             −10                              otherwise                                  𝑅bottom = 𝑤1 𝑅temp + 𝑤2 𝑅CO2 + 𝑤3 𝑅energy .                              (14)
+
+                                                                                         4.5.4. Reward for operation mode selection
+4.5.3. Reward for reducing energy consumption                                               The top agent selects the optimal HVAC mode for each day using
+   The energy reward is defined as the negative value of total con-                      Eq. (15). Since the objective of the top agent is simpler with a low-
+sumption to minimize energy consumption while maintaining comfort                        dimensional discrete action space, a straightforward reward function is
+(Eq. 13). Based on the simulation results of traditional control methods,                used to reduce training costs without sacrificing quality.
+
+
+                                                                                    11
+C. Liao, S. Miyata, M. Qu et al.                                                                                                              Applied Energy 390 (2025) 125816
+
+
+
+
+                               Fig. 15. Changes in indoor temperature and CO2 concentration and system operation in typical heating scenario.
+
+
+
+    The reward is determined based on the indoor temperature perfor-                             effectiveness of the HDRL method, four HVAC control strategies were
+mance for the selected mode. In heating and cooling modes, rewards                               compared:
+increase as the temperature gets closer to the ideal value. In the transi-
+tion mode, maintaining the temperature between 20 and 26 ◦ C earns the
+full reward, encouraging energy-saving operation under mild conditions.                           • Method 1 (PI control method): The rule-based PI controller is used
+A significant penalty is applied for inappropriate mode selection to guide                          as a baseline and operates based on design specifications. The PI con-
+the agent effectively.                                                                              troller adjusts fan and pump frequencies at each time step. The OAU
+                                                                                                    fan is controlled to keep indoor CO2 levels below 900 ppm, whereas
+                            ⎧1 − 0.6 ⋅ |𝑡               if 𝑀𝑜𝑑𝑒 = 1and 24 ≤ 𝑡room ≤ 28,
+                                          room − 26|,                                               the AHU fan frequency is adjusted to maintain indoor temperatures
+                            ⎪
+                            ⎪−5,                        otherwise (Mode = 1)                        at 26 ◦ C in summer and 22 ◦ C in winter. The pump frequency is
+                 𝑇operation ⎪
+          1        ∑ ⎪1 − 0.6 ⋅ |𝑡room − 22|,           if Mode = 2and 20 ≤ 𝑡room ≤ 24,             adjusted based on the supply air temperature. During the transition
+       𝑇operation 𝑡=1 ⎨
+𝑅top =                                                                                              season, full fresh air operation is used by closing the AHU water valve
+                            ⎪−5,                        otherwise (Mode = 2)
+                            ⎪                                                                       to cool the room using outdoor air. PI gains are tuned through simu-
+                            ⎪1,                         if Mode = 3and 20 ≤ 𝑡room ≤ 26,
+                                                                                                    lation for optimal control. The system does not automatically select
+                            ⎪−2,                        otherwise (Mode = 3)
+                            ⎩                                                                       the optimal mode; instead, manual adjustments follow the operation
+                                                                                     (15)           schedule from Japanese energy-saving guidelines.
+                                                                                                  • Method 2 (PI control with mode selection): The method built on
+                                                                                                    Method 1, still using PI controllers to adjust fan and pump fre-
+4.6. Numerical experiment setting
+                                                                                                    quencies, with identical control targets. Unlike Method 1, Method
+    All simulations in this study were conducted on a per-minute ba-                                2 introduces an automatic mode selection scheme based on the daily
+sis, using one year of training and testing data. To evaluate the                                   maximum outdoor temperature. The cooling mode is activated if the
+
+                                                                                            12
+C. Liao, S. Miyata, M. Qu et al.                                                                                               Applied Energy 390 (2025) 125816
+
+
+    temperature is above or equal to 24 ◦ C, the heating mode is acti-            and make better decisions based on environmental observations. Method
+    vated when the temperature is below 22 ◦ C, and the transition mode           4 achieves the best temperature control, with 155,530 min of com-
+    is activated for temperatures in between.                                     pliance and a rate of 90.64 %, significantly outperforming the other
+  • Method 3 (DRL control): In this method, three trained agents re-              methods. This demonstrates that the top agent of Method 4 further
+    place the PI controllers from Method 1 to control the fan and pump            enhances temperature control by selecting optimal modes based on out-
+    frequencies for each mode. The agents provide control signals based           door conditions, building on the improved performance of the bottom
+    on observations of the HVAC system, indoor, and outdoor environ-              agents.
+    ments. To align with Method 4, these agents are referred to as bottom             Fig. 11 presents a calendar heatmap of mode selection and tempera-
+    agents: a summer agent, winter agent, and transition agent. Similar           ture violation rates over the year. Methods 1 and 3 follow a fixed mode
+    to Method 1, the daily operating mode is determined using a fixed             selection schedule, and although Method 3 performs better during cool-
+    schedule.                                                                     ing and heating periods (lighter colors), both methods show numerous
+  • Method 4 (HDRL control): The complete control approach proposed               temperature violations during the transition seasons, thereby emphasiz-
+    in this study uses two hierarchical agents trained with the HDRL              ing the importance of mode selection. Method 2, which uses preset rules
+    framework. The bottom agents, similar to those in Method 3, adjust            for mode selection, performs better in transition seasons than that in
+    fan and pump frequencies. In addition, a top agent selects the optimal        Methods 1 and 3; however, it struggles with mismatches between mode
+    operating mode for each day. HDRL control automatically deter-                and actual weather conditions. This results in more severe violations on
+    mines the appropriate mode based on daily outdoor meteorological              certain days in February and December compared to that of Methods 1
+    data, which makes it an upgraded version of Method 3.                         and 3. Method 4 uses the top agent to intelligently select modes based
+                                                                                  on state changes, achieving better performance, particularly during the
+  Table 4 summarizes the differences between the four control                     transition seasons. The adaptive mode selection of the top agent, cou-
+methods.                                                                          pled with the effective control of the bottom agent, makes Method 4 the
+                                                                                  best performer in temperature control across the year.
+4.7. Training processes                                                               The CO2 control results in Table 6 reveal that, Methods 1 and 3
+    We used the OpenAI Gym framework [46] to create a custom RL en-               achieve the same CO2 compliance rate of 90.97 %, which is the highest
+vironment, which encapsulates the HVAC control system and the 5R2C                among all methods. Methods 2 and 4 have slightly lower compliance
+building thermal model (detailed in Section 3). Agent training was im-            rates at 89.32 % and 90.73 %, respectively. This slight decrease can
+plemented using the TD3 and PPO algorithms from the open-source                   be attributed to the flexible mode selection in Methods 2 and 4, which
+library Stable Baselines3 [47] on PyTorch and accelerated with an RTX             assign cooling or heating modes instead of the more CO2 -efficient transi-
+3090 GPU. Table 5 summarizes the hyperparameter settings.                         tion mode on certain days, thereby prioritizing temperature control over
+    During training, we monitored the performance improvement of the              CO2 levels. However, these differences are minor, and overall, the CO2
+agent and cumulative reward convergence. Fig. 10 shows training curves            control performance across the four methods is considerably similar.
+for both bottom and top agents. The bottom agents were trained for 1500               For combined temperature and CO2 control, Table 6 shows an in-
+episodes of 1440 time steps each (minutes), with random initial times to          creasing trend in joint compliance time for Methods 1 to 4. Method
+improve generalization. The top agent was trained for 10,000 episodes             1 has a joint compliance rate of 76.62 %, with Method 2 slightly
+of 30 time steps each (days). The cumulative reward of the top agent              improving i to 77.52 %. Introducing RL agents in Methods 3 and 4 sig-
+stabilized after 30,000 time steps, whereas the bottom agents peaked              nificantly enhances joint control performance, with Method 3 reaching
+around 750,000 time steps, with fluctuations near convergence there-              79.04 % and Method 4 further increasing to 82.60 %. These results in-
+after. Overall, the top agent converged faster because it made discrete           dicate that well-trained agents provide better control signals, enabling
+daily decisions, while the bottom agents optimized complex minute-                a more comprehensive balance of temperature and CO2 control. These
+level actions. The training curves align with design expectations and             results validate the goal of balancing both factors through reward func-
+typical DRL training behavior.                                                    tion design, and highlight the superior performance of Method 4 as a
+                                                                                  hierarchical agent control approach for complex tasks.
+5. Results and discussion
+
+   We compared the four control methods introduced in Section 4.6                 5.2. Energy consumption
+over a one-year testing period. The analysis focused on indoor temper-
+                                                                                      Fig. 12 shows the annual energy consumption of the HVAC sys-
+ature control, CO2 concentration, and energy consumption across the
+                                                                                  tem across different methods. Method 1, which serves as the baseline,
+annual operating cycle to evaluate the performance of each method.
+                                                                                  has the highest total energy consumption at 8887.24 kWh. Method 2
+                                                                                  slightly reduces energy consumption by employing flexible mode se-
+5.1. Indoor temperature and CO2 concentration control
+                                                                                  lection. Method 3, which uses a fixed schedule for mode selection,
+    For indoor temperature control, comfort ranges are defined as                 significantly reduces energy consumption by about 4.75 %, demonstrat-
+24–28 ◦ C in summer, 20–24 ◦ C in winter, and 20–26 ◦ C during                    ing that well-trained agents can generate more efficient fan and pump
+transitional seasons, with the time spent within these ranges termed              operation strategies. Method 4 consumes 8536.34 kWh , which is slightly
+temperature compliance time. For CO2 control, a 1000 ppm thresh-                  higher than Method 3 but still saves approximately 3.95 % compared
+old defines acceptable air quality, with air quality compliance time              to Method 1. The increased consumption of Method 4 is attributed to
+referring to periods below this level. Joint control time denotes the             its flexible mode selection, which increased the number of cooling and
+duration meeting both temperature and air quality criteria simultane-             heating days. This led to improved control of both temperature and
+ously. Table 6 lists control time differences for indoor temperature and          CO2 (as summarized in Section 5.1) at the cost of slightly increased
+CO2 concentration over the entire year of operation for the four control          energy use.
+methods.                                                                              Fig. 13 highlights the energy consumption patterns across different
+    For temperature control, Method 1 (PI control) performs the worst,            methods from the perspective of average daily consumption. Method
+which achieves a compliance time of 143,512 min and a compliance rate             1 shows high average daily energy use and frequent high-consumption
+of 83.63 %. Method 2 shows slight improvement, which indicates that               days. Although Method 2 improves comfort through rule-based mode
+rule-based mode selection better aligns with seasonal changes. Method             selection, it exhibits a similar frequency of high-consumption days as
+3 further improves with a compliance rate of 86.95 %, suggesting that             Method 1, reflecting the limited energy-saving potential of PI control.
+the trained bottom agents effectively interpret the temperature reward            In contrast, Methods 3 and 4, which utilize DRL agents, achieve lower
+
+                                                                             13
+C. Liao, S. Miyata, M. Qu et al.                                                                                                        Applied Energy 390 (2025) 125816
+
+
+
+
+                                          (a) Indoor air temperature distribution during summer and winter operation.
+
+
+
+
+                                             (b) Indoor CO2 concentration distribution during year-round operation.
+
+                                   Fig. 16. Distribution of indoor air temperature and CO2 concentration during the operation period.
+
+
+
+
+                                                                                   14
+C. Liao, S. Miyata, M. Qu et al.                                                                                               Applied Energy 390 (2025) 125816
+
+
+                                                                                  DRL control consumes 252.7 kWh, thereby saving 1.5 % energy with
+                                                                                  better performance.
+                                                                                      Similar conclusions can be drawn from winter results. During win-
+                                                                                  ter, the DRL agents optimize control actions based on comprehensive
+                                                                                  rewards, minimizing fresh air intake to reduce external load while main-
+                                                                                  taining CO2 below 1000 ppm. At the initial load stage, agents start the
+                                                                                  pump earlier to heat the room quickly, and during periods with high in-
+                                                                                  ternal heat generation, they shut down the pump promptly (e.g., January
+                                                                                  3, 4, and 7) to prevent overheating and energy waste. The agents learn
+                                                                                  the work schedule and room thermal inertia, which is difficult for PI con-
+                                                                                  trol to achieve. During this winter week, PI control consumes 265.0 kWh,
+                                                                                  whereas DRL control uses 238.2 kWh, thereby achieving an energy
+                                                                                  saving of about 10.1 %.
+                                                                                      Overall, the DRL agents make decisions by comprehensively ob-
+                                                                                  serving the environment and balancing reward objectives. Well-trained
+                                                                                  agents determine optimal fan and pump frequency combinations for
+                                                                                  achieving better energy efficiency while maintaining comfort and air
+                                                                                  quality. This highlights the significant advantages of DRL agents in
+                                                                                  flexibility and adaptability to changing conditions.
+
+Fig. 17. Control efficiency improvement and energy savings compared to            5.4. Summary of control performance
+Method 1.
+                                                                                      Method 1 represents typical PI control for regulating pump and fan
+                                                                                  frequencies in the HVAC system. Method 2 enhances Method 1 with
+                                                                                  flexible daily mode selection. Methods 3 and 4 introduce RL: Method 3
+average daily consumption and a more concentrated distribution, in-               replaces PI controllers with DRL agents, which follow a fixed schedule
+dicating superior multi-objective performance by effectively balancing            for mode selection, whereas Method 4 uses a two-layer DRL agent for
+comfort and energy efficiency. The total annual cooling and heating days          flexible mode selection. This subsection summarizes the performance
+are 211 (Method 1), 221 (Method 2), 211 (Method 3), and 224 (Method               of these four methods in temperature control, CO2 control, and energy
+4). While Method 4 shows slightly higher cumulative consumption than              consumption.
+Method 3, it compensates with 13 additional active days and improved
+comfort compliance, making it the most balanced and effective control              • Indoor temperature control: Fig. 16 shows that all four methods
+strategy.                                                                            maintain the indoor temperature within the comfortable range for
+                                                                                     most of the working hours throughout the year (24–28 ◦ C in summer
+5.3. Detail visualization analysis                                                   and 20–24 ◦ C in winter). Methods 3 and 4 exhibit smaller temper-
+                                                                                     ature deviations, because of the precise control by the DRL agents.
+    We selected typical cooling and heating scenarios to illustrate the
+                                                                                     Method 4, in particular, has the smallest deviation, which indicates
+variations in control strategies during actual operations, demonstrating
+                                                                                     that the top agent selects appropriate modes, thereby avoiding tem-
+the control effectiveness of the proposed control method.
+                                                                                     perature mismatches. The maximum temperatures in Methods 3 and
+    Figs. 14 and 15 show detailed variations in indoor temperature,
+                                                                                     4 occasionally exceed 28 ◦ C because agents reduce HVAC output dur-
+CO2 concentration, and system operation under cooling and heating
+                                                                                     ing unoccupied midday periods with low CO2 and high outdoor loads
+scenarios for both the bottom DRL control and the PI control method.
+                                                                                     to save energy, thereby leading to slight overheating. However, such
+The dashed lines indicate the comfortable temperature range: 24–28 ◦ C
+                                                                                     cases are rare throughout the year.
+in summer and 20–24 ◦ C in winter, and the CO2 concentration limit
+                                                                                   • In terms of CO2 control (Fig. 16), Methods 3 and 4 show higher
+of 1000 ppm during work hours. The results confirm that, while PI
+                                                                                     maximum indoor CO2 concentrations due to concessions made by
+method maintains relatively stable temperature control, the DRL agents
+                                                                                     the agents to prioritize temperature regulation or energy savings.
+demonstrate more adaptive actions in response to complex outdoor tem-
+                                                                                     However, the average CO2 concentration across all four methods is
+perature changes and indoor occupancy, with a stronger focus on energy
+                                                                                     similar, which indicates that air quality requirements are still met.
+efficiency.
+                                                                                     Overall, Method 4 achieves a better balance between temperature
+    Under typical PI control, control targets of the components are fixed.
+                                                                                     and CO2 control.
+From August 10 to 12, the pump operates at a high frequency to maintain
+                                                                                   • Fig. 17 compares the control performance and energy savings of
+a supply air temperature of 16 ◦ C, which leads to high energy consump-
+                                                                                     each method, using Method 1 as the baseline. Method 2, with logi-
+tion. Since the indoor temperature stays around 26 ◦ C, the AHU fan
+                                                                                     cal mode selection, and Method 3, using agents to regulate pump and
+frequency remains stable, thereby leading to low airflow. In contrast,
+                                                                                     fan frequencies, both show moderate control improvements. Method
+DRL agents adjust pump frequency based on outdoor temperature and
+                                                                                     4, with hierarchical agents, achieves the highest combined control
+occupancy, which increases airflow to maintain both temperature and
+                                                                                     improvement at 7.8 %. Although Method 3 achieves the best en-
+CO2 levels. On August 9, PI control maintains the pump frequency low
+                                                                                     ergy savings, the extended cooling and heating periods of Method 4
+in the morning because of low outdoor temperatures. When external
+                                                                                     slightly reduce the energy-saving effect. However, Method 4 provides
+load and occupancy increase, the pump frequency fails to adjust in time,
+                                                                                     a more balanced and satisfactory performance in both temperature
+thereby causing overheating. Although the fan is nearly fully open, the
+                                                                                     and CO2 control.
+pump remains underutilized because the indoor temperature has not ex-
+ceeded 27 ◦ C, the condition required for changing the pump setpoint,
+                                                                                  6. Conclusions, limitations and future work
+thereby causing insufficient cooling. However, DRL agents adapt airflow
+and pump frequency promptly to meet rising loads, preventing overheat-               We proposed an HDRL agent-based control method for HVAC systems
+ing. During this summer week, PI control consumes 255.4 kWh, while                that comprehensively considers indoor temperature, CO2 concentration,
+
+
+
+
+                                                                             15
+C. Liao, S. Miyata, M. Qu et al.                                                                                                  Applied Energy 390 (2025) 125816
+
+
+and energy consumption. The approach employs bottom agents for                       dealing with hybrid action spaces, requiring further investigation to
+optimizing fan and pump control, while the top agent optimizes mode se-              fully address these issues.
+lection. A Python-based HVAC system model and a 5R2C thermal model                 • Because of a lack of measured data, the year-round optimization
+were developed for performing minute-level simulation control, thereby               results of this study are simulation based. Although comprehen-
+forming the basis for the hierarchical reinforcement learning-based op-              sive simulation models were developed to ensure that the agents
+timization method. We trained both single-layer and hierarchical agents              were trained and validated in environments resembling real-world
+and evaluated the proposed scheme by designing four control methods,                 systems, strategies derived from simulations often underperform in
+which compare their performance over a full year of operation. The main              practical deployments, as highlighted by [50,51]. Enhancing the ro-
+conclusions are as follows:                                                          bustness of sim-to-real transfer remains a critical challenge. Potential
+                                                                                     solutions include integrating domain-adaptive transfer learning [52]
+  • To ensure reliable and stable agent training, we designed a
+                                                                                     into DRL and retraining the agent after deployment to better adapt
+    Gaussian distribution-based reward for temperature control, hyper-
+                                                                                     to real-world conditions [53].
+    bolic tangent-based reward for CO2 control, and normalized energy
+    consumption reward for the bottom agents to ensure reliable and sta-
+                                                                                 CRediT authorship contribution statement
+    ble agent training. For the top agent, a temperature-based mode se-
+    lection reward was designed. Simulation results indicated that these            Chenxin Liao: Writing – original draft, visualization, software, and
+    reward functions effectively facilitated HVAC multi-objective opti-          methodology. Shohei Miyata: Writing – review & editing, supervision,
+    mization. The three adjustable weight parameters enabled users to            and funding acquisition. Ming Qu: Writing – review & editing and su-
+    customize the balance between different control objectives, thereby          pervision. Yasunori Akashi: Writing – review & editing, supervision,
+    enhancing both the flexibility and applicability of the reward func-         and funding acquisition.
+    tions.
+  • The TD3 and PPO algorithms were used for training agents at differ-          Declaration of competing interest
+    ent levels, resulting in an HDRL-based HVAC optimization method.
+                                                                                     The authors declare that they have no known competing financial
+    The two layers of agents managed the variable frequency control of
+                                                                                 interests or personal relationships that could have appeared to influence
+    fans and pumps and mode selection, respectively. This hierarchical
+                                                                                 the work reported in this paper.
+    approach overcame the challenges faced by a single agent in learn-
+    ing within a hybrid action space, thereby making the application of
+                                                                                 Acknowledgment
+    DRL algorithms more feasible for practical HVAC control.
+  • We designed four different control methods and verified the ef-                  This study was conducted as part of the “Smart Building System
+    fectiveness of the HDRL method through comparative analysis.                 Research Initiative”, and we would like to thank all individuals involved
+    The annual simulation results indicate that the HDRL method re-              in this study.
+    sponds more flexibly to changes in indoor occupancy and outdoor
+    weather, effectively maintaining indoor temperature within the com-          Appendix A. Detailed methodologies of the AC methods
+    fort range, controlling air quality, and minimizing energy consump-
+                                                                                    The AC method involves simultaneous updates to the Critic and
+    tion. Compared to classical PI control, the HDRL method increased
+                                                                                 Actor networks using the TD error. The Critic and Actor networks are
+    the temperature compliance rate by 8.37 % and the temperature-CO2
+                                                                                 represented by:
+    joint compliance rate by 7.80 %, while saving 3.95 % of energy, with
+    a CO2 compliance rate maintained at the baseline level.
+                                                                                 𝑄𝜋 (𝑠, 𝑎; 𝝓) = E[𝑅𝑡 |𝑠𝑡 = 𝑠, 𝑎𝑡 = 𝑎; 𝝓],                                  (A.1)
+   Despite the advantages of the proposed control method, there are
+several limitations that should be addressed in future research:
+                                                                                 𝜋(𝑎|𝑠; 𝜽) = 𝑝(𝑎𝑡 = 𝑎|𝑠𝑡 = 𝑠; 𝜽).                                          (A.2)
+  • Training of the DRL agents and validating their deployment de-
+    pend on environmental observations. In this study, we assumed that
+                                                                                 where 𝝓 and 𝜽 represent the parameters of the Critic and Actor networks,
+    meteorological data, HVAC system operation data, and indoor envi-
+                                                                                 respectively. The Critic minimizes the Temporal Difference (TD) error 𝛿:
+    ronmental data could be fully obtained, enabling the agents to learn
+    the latent patterns of environmental changes and make optimal deci-
+                                                                                 𝛿 = 𝑟𝑡 + 𝛾𝑄(𝑠𝑡+1 , 𝑎𝑡+1 ; 𝝓) − 𝑄(𝑠𝑡 , 𝑎𝑡 ; 𝝓),                            (A.3)
+    sions. This highlights the importance of Internet of Things (IoT) and
+    intelligent sensors.
+                                                                                 and its loss function is defined as:
+  • The design of reward functions is critical for control performance
+    but remains a complex and time-consuming task. This study did not
+    fully explore reward tuning because of time constraints. Generative          (𝝓) = E[𝛿 2 ].                                                           (A.4)
+    Adversarial Imitation Learning (GAIL) presents a promising alterna-
+    tive by automatically deriving reward signals from expert demonstra-            The Actor aims to maximize the expected cumulative reward, repre-
+    tions. Instead of relying on explicitly defined rewards, GAIL learns         sented by:
+    policies directly from state-action distributions, leading to faster
+    convergence, higher data efficiency, and improved multi-objective             (𝜽) = E𝑠∼𝑑 𝜋 ,𝑎∼𝜋𝜽 [𝑄𝜋 (𝑠, 𝑎; 𝝓)],                                      (A.5)
+    optimization, as recommended by Liu et al. [48].
+  • Although HDRL effectively addresses the hybrid action space prob-               The Critic and Actor are updated via gradient descent and ascent,
+    lem in HVAC control, the training process of the framework requires          respectively:
+    sequential training of bottom and top agents, which results in high
+    computational overhead. Future research can explore multi-agent              𝝓 ← 𝝓 − 𝛼∇𝝓 (𝝓),         𝜽 ← 𝜽 + 𝛽∇𝜽  (𝜽),                              (A.6)
+    deep reinforcement learning (MADRL) as an ideal solution to accel-
+    erate convergence through parallel computation [49]. However, it is          where 𝛼 and 𝛽 represent the learning rates for the Critic and Actor
+    important to note that MADRL still faces significant challenges when         networks, respectively.
+
+
+
+
+                                                                            16
+C. Liao, S. Miyata, M. Qu et al.                                                                                                                           Applied Energy 390 (2025) 125816
+
+
+A.1. TD3 algorithm details                                                                  vectors. For the 5R2C network, Eq. (B.1) can be converted into the
+                                                                                            specific form:
+    The TD3 algorithm maintains two Critic networks 𝑄(𝑠, 𝑎; 𝝓𝟏 ) and
+𝑄(𝑠, 𝑎; 𝝓𝟐 ), as well as an Actor network 𝜇(𝑠; 𝜽). The Critic networks
+estimate the action-value function, while the Actor determines the op-                      ⎡𝐻𝑒𝑚 + 𝐻𝑚𝑠               −𝐻𝑚𝑠                           0     ⎤ ⎡ 𝑇𝑚 ⎤
+                                                                                            ⎢ −𝐻                 𝐻𝑚𝑠 + 𝐻𝑤 + 𝐻𝑖𝑠                   −𝐻𝑖𝑠 ⎥ ⎢ 𝑇𝑠 ⎥
+timal action for a given state. The objective of the Critic networks is to                  ⎢      𝑚𝑠
+                                                                                                                                                          ⎥⎢      ⎥
+minimize the Bellman error, which is defined as follows:                                    ⎣    0                    −𝐻𝑖𝑠                      𝐻𝑖𝑠 + 𝐻𝑣𝑒 ⎦ ⎣𝑇𝑎𝑖𝑟 ⎦
+                     [(                )2 ]
+(𝝓𝒊 ) = E(𝑠,𝑎,𝑟,𝑠′ ) 𝑄(𝑠, 𝑎; 𝝓𝒊 ) − 𝑦      , for 𝑖 = 1, 2,         (A.7)                       ⎡     Φ𝑚 − Φ𝑐 + 𝐻𝑒𝑚 𝑇𝑒       ⎤
+                                                                                               =⎢       Φ𝑠𝑡 + 𝐻𝑤 𝑇𝑒          ⎥,                                                      (B.2)
+                                                                                                ⎢                            ⎥
+where the target value 𝑦 is computed as:                                                        ⎣Φ𝑖𝑎 + Φ𝐻𝐶 + 𝐻𝑣𝑒 𝑇𝑠𝑢𝑝 − Φ𝑎𝑖𝑟 ⎦
+
+𝑦 = 𝑟 + 𝛾 min 𝑄(𝑠′ , 𝑎′ ; 𝝓′𝒊 ).                                               (A.8)
+           𝑖=1,2                                                                            where 𝑇𝑚 , 𝑇𝑠 , 𝑇𝑎𝑖𝑟 , 𝑇𝑒 , and 𝑇𝑠𝑢𝑝 represent the temperature of the thermal
+                                                                                            mass, temperature of the internal surfaces of the room, temperature of
+    Here, 𝑎′ = 𝜇(𝑠′ ; 𝜽′ ) + 𝜖, and 𝜖 ∼ clip( (0, 𝜎), −𝑐, 𝑐). 𝝓′𝒊 and 𝜽′ repre-
+                                                                                            the room air, external air temperature, and temperature of the ventila-
+sent the parameters of the target Critic and Actor networks, respectively,
+                                                                                            tion air, which is assumed to be equal to the external air temperature,
+and 𝛾 represent the discount factor. The addition of noise 𝜖 to the
+                                                                                            respectively. Further, 𝐻𝑣𝑒 , 𝐻𝑖𝑠 , 𝐻𝑤 , 𝐻𝑒𝑚 , and 𝐻𝑚𝑠 represent the ven-
+target action introduces target policy smoothing, which helps reduce
+                                                                                            tilation conductance which can be set to 0.0001 W/K by default when
+overestimation bias.
+                                                                                            the room is ventilated solely through mechanical ventilation, conduc-
+    The Actor network is updated by maximizing the expected value as
+                                                                                            tance from the air node to the internal surfaces, conductance through
+estimated by one of the Critics:
+                                                                                            the glass surfaces to the exterior, conductance from opaque surfaces to
+ (𝜽) = E𝑠 [𝑄(𝑠, 𝜇(𝑠; 𝜽); 𝝓𝟏 )].                                               (A.9)        the exterior, and conductance from the internal surfaces to the ther-
+                                                                                            mal mass, respectively. The conductance parameters can be calculated
+   To improve stability, TD3 delays the update of the Actor network.                        using the formulas in Eqs. (B.3)–(B.6), considering the thermal trans-
+Specifically, the Actor is updated less frequently than the Critic, typically               mittance of the wall 𝑈𝑤𝑎𝑙𝑙 , window 𝑈𝑤𝑖𝑛 , and the surface areas of the
+every two or more iterations. In addition, target networks are updated                      wall, window, floor, and internal surfaces 𝐴𝑤𝑎𝑙𝑙 , 𝐴𝑤𝑖𝑛 , 𝐴𝑓 𝑙𝑜𝑜𝑟 , and 𝐴𝑖𝑛 .
+using a soft update mechanism:                                                              Φ𝐻 𝐶 represents the heating or cooling power of the HVAC system.
+                                                                                            Φ𝑖𝑎 , Φ𝑠𝑡 , and Φ𝑚 represent the equivalent heat flows acting on the
+𝝓′𝒊 ← 𝜏𝝓 + (1 − 𝜏)𝝓′𝒊 ,          𝜽′ ← 𝜏𝜽 + (1 − 𝜏)𝜽′ ,                       (A.10)         three temperature nodes 𝑇𝑎𝑖𝑟 , 𝑇𝑠 , 𝑇𝑚 caused by solar heat gain Φ𝑠𝑜𝑙
+where 𝜏 represents a small positive constant (e.g., 𝜏 = 0.005) that                         and internal heat gain Φ𝑖𝑛𝑡 , respectively. The internal heat flow rates
+controls the rate of updates.                                                               caused by solar and internal heat gains are distributed according to
+                                                                                            Eqs. (B.7)–(B.9).
+A.2. PPO algorithm details
+                                                                                            𝐻𝑒𝑚 = 𝑈𝑤𝑎𝑙𝑙 ⋅ 𝐴𝑤𝑎𝑙𝑙 ,                                                                    (B.3)
+    The core idea of PPO is optimizing a surrogate objective that restricts
+policy updates to a certain range, which can be achieved in two ways:
+                                                                                            𝐻𝑤 = 𝑈𝑤𝑖𝑛 ⋅ 𝐴𝑤𝑖𝑛 ,                                                                       (B.4)
+PPO-Clip and PPO-Penalty. In PPO-Clip, the objective function uses a
+clipping mechanism:
+                                                                                            𝐻𝑚𝑠 = 9.1 ⋅ 2.5 ⋅ 𝐴𝑓 𝑙𝑜𝑜𝑟 ,                                                              (B.5)
+              [    (                                          )]
+CLIP (𝜽) = E𝑡 min 𝑟𝑡 (𝜽)𝐴̂ 𝑡 , clip(𝑟𝑡 (𝜽), 1 − 𝜖, 1 + 𝜖)𝐴̂ 𝑡 ,    (A.11)
+                                                                                            𝐻𝑚𝑠 = 3.45 ⋅ 𝐴𝑖𝑛 ,                                                                       (B.6)
+                      𝜋(𝑎 |𝑠 ;𝜽)
+where 𝑟𝑡 (𝜽) = 𝜋(𝑎 |𝑠𝑡 ;𝜽𝑡              represents the probability ratio between the
+                        𝑡   𝑡   old )
+new and old policies, 𝐴̂𝑡 represents the advantage function, and 𝜖 is a                     𝜙𝑖𝑎 = 0.5 ⋅ 𝜙𝑖𝑛𝑡 ,                                                                       (B.7)
+hyperparameter that controls the clipping range (typically 𝜖 ∈ [0.1, 0.3]).
+The clipping function ensures that the probability ratio 𝑟𝑡 (𝜽) remains                             2.5𝐴𝑓 𝑙𝑜𝑜𝑟 (                  )
+within the range [1 − 𝜖, 1 + 𝜖], which limits the magnitude of policy                       𝜙𝑚 =                    0.5𝜙𝑖𝑛𝑡 + 𝜙𝑠𝑜𝑙 ,                                                 (B.8)
+                                                                                                        𝐴𝑖𝑛
+updates and ensuring learning stability.
+    In PPO-Penalty, a penalty term is added to the objective function to                            (                                  )
+                                                                                                             2.5𝐴𝑓 𝑙𝑜𝑜𝑟        𝐻𝑤          (                 )
+explicitly constrain the KL divergence between the new and old policies.                    𝜙𝑠𝑡 =       1−                −                    0.5𝜙𝑖𝑛𝑡 + 𝜙𝑠𝑜𝑙 .                      (B.9)
+                                                                                                                 𝐴𝑡           9.1𝐴𝑖𝑛
+In this study, we use the pre-defined PPO algorithm provided by the
+Stable Baselines 3 library to train the agent, where the PPO-Clip variant
+                                                                                            In addition, Φ𝑐 and Φair represent the heat power flowing through
+is adopted. Owing to space limitations, the other variant of PPO, namely
+                                                                                            the thermal mass heat capacity 𝐶𝑚 and the air heat capacity 𝐶air ,
+PPO-Penalty, is not discussed in detail.
+                                                                                            respectively, given by:
+Appendix B. Calculation procedure of the 5R2C model
+                                                                                                         𝑑𝑇𝑚
+    The 5R2C model can be formulated using the node potential method                         𝜙𝑐 = 𝐶𝑚         ,                                                                      (B.10)
+                                                                                                          𝑑𝑡
+for deriving the node temperature equations, similar to Kirchhoff’s laws
+in electrical circuits. Assuming the sum of heat passing through each                                     𝑑𝑇𝑎𝑖𝑟
+independent node is zero, the equations can be expressed in the matrix                      𝜙𝑎𝑖𝑟 = 𝐶𝑎𝑖𝑟         .                                                                   (B.11)
+                                                                                                           𝑑𝑡
+form as:
+
+𝐻 ⋅ 𝑇 = 𝐼,                                                                     (B.1)           The Eqs. (B.10) and (B.11) can be discretized using the Crank-
+                                                                                            Nicolson method with a given time step Δ𝑡 as Eq. (B.12). The average
+where 𝐻 represents the thermal conductance matrix, 𝑇 represents the                         values of the node temperatures 𝑇𝑎𝑖𝑟 and 𝑇𝑠 over the time step can be
+node temperature vectors, and Φ represents the heat current source                          calculated using Eq. B.13:
+
+
+
+
+                                                                                       17
+C. Liao, S. Miyata, M. Qu et al.                                                                                                                                                                                 Applied Energy 390 (2025) 125816
+
+
+                                                𝑇𝑖𝑡 − 𝑇𝑖𝑡−1                                                                                                           80
+𝜙𝑖 = 𝐶𝑖                                                               ,                                              (B.12)                                                                                                         ESP
+                                                         Δ𝑡
+                                                                                                                                                                      70                                                            BLAST
+
+
+
+
+                                                                                                                                    Maximum room temperature [ ]
+                                                                                                                                                                                                                                    DOE2
+                                              𝑇𝑖𝑡 + 𝑇𝑖𝑡−1
+𝑇𝑖 =                                                          .                                                      (B.13)                                           60                                                            SRES/SUN
+                                                     2
+                                                                                                                                                                                                                                    S3PAS
+                                                                                                                                                                      50                                                            TASE
+   In Eqs. (B.12) and (B.13), 𝐶𝑖 represents 𝐶𝑚 or 𝐶𝑎𝑖𝑟 , and 𝑇𝑖 represents                                                                                                                                                          TRNSYS
+𝑇𝑚 or 𝑇𝑎𝑖𝑟 .                                                                                                                                                          40
+                                                                                                                                                                                                                                    EnergyPlus
+   Using these equations, the indoor temperature 𝑇𝑎𝑖𝑟 can be solved                                                                                                                                                                 NewHASP
+                                                                                                                                                                      30
+numerically.                                                                                                                                                                                                                        BEST
+                                                                                                                                                                      20                                                            OFFICE
+Appendix C. Validation of the 5R2C model                                                                                                                                                                                            Popolo
+                                                                                                                                                                      10                                                            xNETS
+   The 5R2C thermal model is evaluated using SHASE guidelines [54]                                                                                                                                                                  5R2C
+based on ANSI/ASHRAE standard [55]. A single-zone building located                                                                                                     0
+                                                                                                                                                                                    600FF                     650FF
+in Denver, USA, served as the test building, as shown in Fig. C.18 The
+specific test cases 600FF (without nighttime ventilation) and 650FF                                                                                                           (a) Maximum natural room temperatures.
+
+                                                                                                                                                                       0
+                                                                                                                                                                                                                                    ESP
+                                                                                                                                                                                                                                    BLAST
+
+
+
+
+                                                                                                                                      Minimaun room temperature [ ]
+                                                                                                                                                                                                                                    DOE2
+                                                                                                                                                                      -5
+                                                                                                                                                                                                                                    SRES/SUN
+                                                                                                                                                                                                                                    S3PAS
+
+                                                                                                                                                              -10                                                                   TASE
+                                                                                                                                                                                                                                    TRNSYS
+                                                                                                                                                                                                                                    EnergyPlus
+                                                                                                                                                              -15                                                                   NewHASP
+                                                                                                                                                                                                                                    BEST
+                                                                                                                                                                                                                                    OFFICE
+                                                                                                                                                              -20                                                                   Popolo
+                                                                                                                                                                                                                                    xNETS
+                                                                      Fig. C.18. Geometry of the test building.
+                                                                                                                                                                                                                                    5R2C
+                                                                                                                                                              -25
+                                                                                                                                                                                    600FF                     650FF
+                                         40
+                                                                                                                  ESP
+                                                                                                                                                                              (b) Minimum natural room temperatures.
+   Room temperature on 1/4 (600FF) [ ]
+
+
+
+
+                                                                                                                  BLAST
+                                         30
+                                                                                                                  DOE2.1D                                             30
+                                                                                                                                                                                                                                   ESP
+                                                                                                                  SRES/SUN
+                                         20                                                                                                                                                                                        BLAST
+                                                                                                                  SERIRES
+                                                                                                                                                                      25                                                           DOE2
+                                                                                                                                      Average room temperature [ ]
+
+
+
+
+                                                                                                                  S3PAS
+                                         10                                                                                                                                                                                        SRES/SUN
+                                                                                                                  TASE
+                                                                                                                                                                      20                                                           SERIRES
+                                                                                                                  TRNSYS
+                                          0                                                                                                                                                                                        S3PAS
+                                                                                                                  EnergyPlus
+                                                 1                5          9        13       17       21                                                                                                                         TASE
+                                                                                                                  NewHASP
+                                                                                                                                                                      15
+                                         -10                                                                      BEST                                                                                                             TRNSYS
+                                                                                                                  OFFICE                                                                                                           EnergyPlus
+                                         -20                                                                      Popolo                                              10                                                           NewHASP
+                                                                                                                  xNETS                                                                                                            BEST
+                                         -30                                                                      5R2C                                                                                                             OFFICE
+                                                                                                                                                                       5
+                                                                                 (a) Case 600FF.                                                                                                                                   Popolo
+                                                                                                                                                                                                                                   xNETS
+                                                                                                                                                                       0
+                                         60                                                                                                                                                                                        5R2C
+                                                                                                                  ESP                                                               600FF                     650FF
+ Room temperature on 7/27 (650FF) [ ]
+
+
+
+
+                                                                                                                  BLAST
+                                         50                                                                       DOE2.1D
+                                                                                                                                                                               (c) Average natural room temperatures.
+                                                                                                                  SRES/SUN
+                                                                                                                  SERIRES                                             Fig. C.20. Natural room temperature variations among different models.
+                                         40
+                                                                                                                  S3PAS
+                                                                                                                  TASE
+                                         30                                                                       TRNSYS
+                                                                                                                  EnergyPlus
+                                                                                                                  NewHASP           (with nighttime ventilation from 18:00 to 7:00) are used to simulate
+                                         20
+                                                                                                                  BEST              natural indoor temperature. Fig. C.20 compares natural indoor tem-
+                                                                                                                  OFFICE            perature variations among different models, while Fig. C.19 compares
+                                         10                                                                       Popolo
+                                                                                                                                    annual maximum, minimum, and average temperatures. The results
+                                                                                                                  xNETS
+                                                                                                                                    of our model exhibit high consistency with those of other models,
+                                          0                                                                       5R2C
+                                                1                 5          9        13       17       21                          demonstrating its reliability in representing building thermal dynamics.
+
+                                                                                 (b) Case 650FF.
+                                                                                                                                    Data availability
+Fig. C.19. Annual maximum, minimum, and average natural room temperatures
+among different models.                                                                                                                                               Data will be made available on request.
+
+                                                                                                                               18
+C. Liao, S. Miyata, M. Qu et al.                                                                                                                          Applied Energy 390 (2025) 125816
+
+
+References                                                                                        [29] Sun L, Hu Z, Mae M, Imaizumi T. Individual room air-conditioning control in
+                                                                                                       high-insulation residential building during winter: a deep reinforcement learning-
+ [1] Klepeis NE, Nelson WC, Ott WR, Robinson JP, Tsang AM, Switzer P, et al. The                       based control model for reducing energy consumption. Energy Build 2024;323:
+     National Human Activity Pattern Survey (NHAPS): a resource for assessing exposure                 114799.
+     to environmental pollutants. J Expo Sci Environ Epidemiol 2001;11(3):231–52.                 [30] Jiang Z, Risbeck MJ, Ramamurti V, Murugesan S, Amores J, Zhang C, et al. Building
+ [2] Fisk WJ. Health and productivity gains from better indoor environments and                        HAVC control with reinforcement learning for reduction of energy cost and demand
+     their relationship with building energy efficiency. Annu Rev Energy Environ                       charge. Energy Build 2021;239:110833.
+     2000;25(1):537–66.                                                                           [31] Wang D, Zheng W, Wang Z, Wang Y, Pang X, Wang W. Comparison of reinforcement
+ [3] Singh A, Syal M, Grady SC, Korkmaz S. Effects of green buildings on employee health               learning and model predictive control for building energy system optimization. Appl
+     and productivity. Am J Publ Health 2010;100(9):1665–68.                                           Therm Eng 2023;228:120430.
+ [4] Pérez-Lombard L, Ortiz J, Pout C. A review on buildings energy consumption                   [32] Lei Y, Zhan S, Ono E, Peng Y, Zhang Z, Hasama T, et al. A practical deep reinforce-
+     information. Energy Build 2008;40(3):394–98.                                                      ment learning framework for multivariate occupant-centric control in buildings.
+ [5] Nam K, Heo S, Li Q, Loy-Benitez J, Kim M, Park D, et al. A proactive energy-efficient             Appl Energy 2022;324:119742.
+     optimal ventilation system using artificial intelligent techniques under outdoor air         [33] Qiu S, Li Z, Fan D, He R, Dai X, Li Z. Chilled water temperature resetting
+     quality conditions. Appl Energy 2020;266:114893.                                                  using model-free reinforcement learning: engineering application. Energy Build
+ [6] Kong M, Dong B, Zhang R, O’Neill Z. HVAC energy savings, thermal comfort and air                  2022;255:111694.
+     quality for occupant-centric control through a side-by-side experimental study. Appl         [34] Cui C, Liu Y. A hierarchical hvac optimal control method for reducing energy con-
+     Energy 2022;306:117987.                                                                           sumption and improving indoor air quality incorporating soft actor-critic and hybrid
+ [7] Wang S, Ma Z. Supervisory and optimal control of building HVAC systems: a review.                 search optimization. Energy Convers Manag 2024;302:118118.
+     HVAC&R Res 2008;14(1):3–32.                                                                  [35] Wang H, Chen X, Vital N, Duffy E, Razi A. Energy optimization for hvac systems
+ [8] Geng G, Geary G. On performance and tuning of PID controllers in HVAC systems.                    in multi-vav open offices: a deep reinforcement learning approach. Appl Energy
+     In: Proceedings of IEEE international conference on control and applications. IEEE;               2024;356:122354.
+     1993. p. 819–24.                                                                             [36] Liu X, Gou Z. Occupant-centric HAVC and window control: a reinforcement learning
+ [9] Attaran SM, Yusof R, Selamat H. A novel optimization algorithm based on epsilon                   model for enhancing indoor thermal comfort and energy efficiency. Build Environ
+     constraint-RBF neural network for tuning PID controller in decoupled HVAC system.                 2024;250:111197.
+     Appl Therm Eng 2016;99:613–24.                                                               [37] Qiu S, Li Z, Li Z, Li J, Long S, Li X. Model-free control method based on reinforce-
+[10] Shi S, Miyata S, Akashi Y, Momota M, Sawachi T, Gao Y. Model-based optimal control                ment learning for building cooling water systems: validation by measured data-based
+     strategy for multizone VAV air-conditioning systems for neutralizing room pressure                simulation. Energy Build 2020;218:110055.
+     and minimizing fan energy consumption. Build Environ 2024;256:111464.                        [38] Fujimoto S, Hoof H, Meger D. Addressing function approximation error in actor-
+[11] Shi S, Miyata S, Akashi Y. Event-driven model-based optimal demand-controlled                     critic methods. In: International conference on machine learning. PMLR; 2018. p.
+     ventilation for multizone VAV systems: enhancing energy efficiency and indoor                     1587–96.
+     environmental quality. Appl Energy 2025;377:124683.                                          [39] Lillicrap T. Continuous control with deep reinforcement learning. arXiv preprint
+[12] Gao Y, Matsunami Y, Miyata S, Akashi Y. Model predictive control of a building                    1509.02971; 2015.
+     renewable energy system based on a long short-term hybrid model. Sustain Cities              [40] Schulman J, Wolski F, Dhariwal P, Radford A, Klimov O. Proximal policy optimiza-
+     Soc 2023;89:104317.                                                                               tion algorithms. arXiv preprint 1707.06347; 2017.
+[13] Gao Y, Miyata S, Akashi Y. Energy saving and indoor temperature control for                  [41] Miyata S, Shi S, Akashi Y, Sawachi T. Phyvac: a Python module for highly flexible
+     an office building using tube-based robust model predictive control. Appl Energy                  hvac system simulation, and fault dataset generation as an application example. In:
+     2023;341:121106.                                                                                  Building simulation 2023, vol. 18. IBPSA; 2023. p. 916–23.
+[14] Hu Z, Gao Y, Sun L, Mae M, Imaizumi T. Improved robust model predictive con-                 [42] Iso E, et al. Energy performance of buildings—calculation of energy use for space
+     trol for residential building air conditioning and photovoltaic power generation                  heating and cooling. Geneva, Switzerland: ISO; 2008. p. 13790.
+     with battery energy storage system under weather forecast uncertainty. Appl Energy           [43] Jayathissa P, Luzzatto M, Schmidli J, Hofer J, Nagy Z, Schlueter A. Optimising
+     2024;371:123652.                                                                                  building net energy demand with dynamic bipv shading. Appl Energy 2017;202:
+[15] Killian M, Kozek M. Ten Questions concerning model predictive control for energy                  726–35.
+     efficient buildings. Build Environ 2016;105:403–12.                                          [44] Gao Y, Matsunami Y, Miyata S, Akashi Y. Operational optimization for off-grid re-
+[16] Afram A, Janabi-Sharifi F. Theory and applications of HVAC control systems–a                      newable building energy system using deep reinforcement learning. Appl Energy
+     review of model predictive control (MPC). Build Environ 2014;72:343–55.                           2022;325:119783.
+[17] Xu D, Cui Y, Ye J, Cha SW, Li A, Zheng C. A soft actor-critic-based energy manage-           [45] Gao Y, Matsunami Y, Miyata S, Akashi Y. Multi-agent reinforcement learning deal-
+     ment strategy for electric vehicles with hybrid energy storage systems. J Power Sour              ing with hybrid action spaces: a case study for off-grid oriented renewable building
+     2022;524:231099.                                                                                  energy system. Appl Energy 2022;326:120021.
+[18] Zhang Z, Chong A, Pan Y, Zhang C, Lam KP. Whole building energy model for                    [46] Brockman G, Cheung V, Pettersson L, Schneider J, Schulman J, Tang J, et al. OpenAI
+     HVAC optimal control: a practical framework based on deep reinforcement learning.                 Gym. arxiv 2016. arXiv preprint arXiv:1606.01540; 2020.
+     Energy Build 2019;199:472–90.                                                                [47] Raffin A, Hill A, Gleave A, Kanervisto A, Ernestus M, Dormann N. Stable-
+[19] Mnih V, Kavukcuoglu K, Silver D, Rusu AA, Veness J, Bellemare MG, et al. Human-                   baselines3: reliable reinforcement learning implementations. J Mach Learn Res
+     level control through deep reinforcement learning. Nature 2015;518(7540):529–33.                  2021;22(268):1–8.
+[20] Nguyen AT, Pham DH, Oo BL, Santamouris M, Ahn Y, Lim BT. Modelling building                  [48] Liu M, Guo M, Fu Y, O’Neill Z, Gao Y. Expert-guided imitation learning for energy
+     HVAC control strategies using a deep reinforcement learning approach. Energy Build                management: evaluating gail’s performance in building control applications. Appl
+     2024;310:114065.                                                                                  Energy 2024;372:123753.
+[21] Gao Y, Shi S, Miyata S, Akashi Y. Successful application of predictive information in        [49] Xue W, Jia N, Zhao M. Multi-agent deep reinforcement learning based hvac control
+     deep reinforcement learning control: a case study based on an office building HAVC                for multi-zone buildings considering zone-energy-allocation optimization. Energy
+     system. Energy 2024;291:130344.                                                                   Build 2025;329:115241.
+[22] Zou Z, Yu X, Ergan S. Towards optimal control of air handling units using deep rein-         [50] Ju H, Juan R, Gomez R, Nakamura K, Li G. Transferring policy of deep re-
+     forcement learning and recurrent neural network. Build Environ 2020;168:106535.                   inforcement learning from simulation to reality for robotics. Nat Mach Intell
+[23] Brandi S, Piscitelli MS, Martellacci M, Capozzoli A. Deep reinforcement learning to               2022;4(12):1077–87.
+     optimise indoor temperature control and heating energy consumption in buildings.             [51] Al Sayed K, Boodi A, Broujeny RS, Beddiar K. Reinforcement learning for HVAC
+     Energy Build 2020;224:110225.                                                                     control in intelligent buildings: a technical and conceptual review. J Build Eng
+[24] Biemann M, Scheller F, Liu X, Huang L. Experimental evaluation of model-free                      2024;110085.
+     reinforcement learning algorithms for continuous HVAC control. Appl Energy                   [52] Gao Y, Hu Z, Shi S, Chen W-A, Liu M. Adversarial discriminative domain adaptation
+     2021;298:117164.                                                                                  for solar radiation prediction: a cross-regional study for zero-label transfer learning
+[25] Fang X, Gong G, Li G, Chun L, Peng P, Li W, et al. Deep reinforcement learning opti-              in Japan. Appl Energy 2024;359:122685.
+     mal control strategy for temperature setpoint real-time reset in multi-zone building         [53] Naug A, Quiñones-Grueiro M, Biswas G. Continual adaptation in deep reinforce-
+     HVAC system. Appl Therm Eng 2022;212:118552.                                                      ment learning-based control applied to non-stationary building environments. In:
+[26] Cui C, Xue J. Energy and comfort aware operation of multi-zone HVAC                               Proceedings of the 1st international workshop on reinforcement learning for energy
+     system through preference-inspired deep reinforcement learning. Energy                            management in buildings and cities; 2020. p. 24–28.
+     2024;292:130505.                                                                             [54] SHASE. Guideline of test procedure for the evaluation of building energy simulation
+[27] An Y, Chen C. Energy-efficient control of indoor PM2.5 and thermal comfort in a                   tool, SHASE-G 0023-2022 [in Japanese]. The Society of Heating, Air-Conditioning,
+     real room using deep reinforcement learning. Energy Build 2023;295:113340.                        and Sanitary Engineers of Japan; 2022.
+[28] Valladares W, Galindo M, Gutiérrez J, Wu W-C, Liao K-K, Liao J-C, et al. Energy              [55] Knebel D, Kolling S, McDowell T. Standard method of test for the evaluation
+     optimization associated with thermal comfort and indoor air control via a deep                    of building energy analysis computer programs. Atlanta, GA, USA: ASHRAE;
+     reinforcement learning algorithm. Build Environ 2019;155:105–17.                                  2017.
+
+
+
+
+                                                                                             19
+

@@ -1,0 +1,852 @@
+                                                                             Energy 291 (2024) 130344
+
+
+                                                                    Contents lists available at ScienceDirect
+
+
+                                                                                     Energy
+                                                          journal homepage: www.elsevier.com/locate/energy
+
+
+
+
+Successful application of predictive information in deep reinforcement
+learning control: A case study based on an office building HVAC system
+Yuan Gao a ,∗, Shanrui Shi b , Shohei Miyata b , Yasunori Akashi b
+a
+    The Center for Energy Systems Design (CESD), International Institute for Carbon-Neutral Energy Research (WPI-I2CNER), Kyushu University, Japan
+b
+    Department of Architecture, Graduate School of Engineering, The University of Tokyo, Japan
+
+
+
+ARTICLE                 INFO                               ABSTRACT
+
+Keywords:                                                  Reinforcement Learning (RL), a promising algorithm for the operational control of Heating, Ventilation, and
+Recurrent neural network                                   Air Conditioning (HVAC) systems, has garnered considerable attention and applications. However, traditional
+Deep reinforcement learning                                RL algorithms typically do not incorporate predictive information for future scenarios, and only a limited
+Time-series prediction
+                                                           number of studies have examined the enhancement and impact of predictive information on RL algorithms.
+HVAC system
+                                                           To address the issue of coupling RL and predictive information in HVAC system operation optimization, we
+                                                           employed an open-source framework to examine the impact of various predictive information strategies on RL
+                                                           outcomes. We propose a joint gated recurrent unit (GRU)-RL algorithm to handle situations where a time-series
+                                                           exists in state space. The results from four classic test cases demonstrate that the proposed GRU-RL method
+                                                           can reduce operating costs by approximately 14.5% and increase comfort performance by 88.4% in indoor
+                                                           comfort control and cost-management tasks. Moreover, the GRU-RL method outperformed the conventional
+                                                           DRL method and was merely augmented with prediction information. In indoor temperature regulation, the
+                                                           GRU-RL algorithm improves control efficacy by 14.2% compared to models without predictive information
+                                                           and offers an approximately 5% improvement over traditional network models. Finally, all models were made
+                                                           open source for easy replication and further research.
+
+
+
+1. Introduction                                                                                to grid signals for load shifting to enhance grid stability and secu-
+                                                                                               rity [7]. In contrast to the need for advanced control strategies, the
+1.1. Background                                                                                most conventional approach for HVAC system control is rule-based
+                                                                                               feedback control. This method relies on predetermined schedules to set
+    Most individuals spend approximately 80%–90% of their lives                                parameters such as temperature setpoints and utilizes setpoint tracking
+within buildings [1]. At the same time, buildings are responsible for                          algorithms such as proportional–integral–derivative (PID) to regulate
+approximately one-third of global energy consumption and a quarter                             the system. Although rule-based control (RBC) is simple and effective
+of CO2 emissions [2,3]. Notably, in building facilities, Heating, Ven-                         in maintaining a comfortable range to achieve occupant comfort, it
+tilation, and Air Conditioning (HVAC) systems are substantial energy                           has limitations in considering exogenous factors and predictive infor-
+consumers, accounting for 38% of the overall energy usage, which is                            mation, such as occupancy, electricity price, weather conditions, and
+equivalent to 12% of the final energy consumption [2,4]. As global                             demand response signals [8,9]. Consequently, RBC has proven to be
+warming continues to be a growing concern, the energy needs of HVAC                            a suboptimal approach [10]. Moreover, tuning the gains of PID con-
+systems are predicted to rise even more [5,6].                                                 trollers can be cumbersome, and the control performance may degrade
+    Well-designed and efficient HVAC system controls play a crucial                            or lead to system oscillation or sluggishness when the operational con-
+role in providing occupants with a healthy and comfortable indoor                              ditions deviate significantly from those during controller tuning [11,
+environment while effectively managing energy consumption and car-                             12]. Considerable research attention has shifted towards developing
+bon emissions. However, the complexity of HVAC system control has                              optimal control strategies, particularly those based on machine learning
+increased significantly in recent years. Modern HVAC systems must                              (ML) methods owing to the need to enhance the HVAC system control
+accommodate various factors, such as integrating on-site renewable                             performance. The advent of big data, powerful computing capabilities,
+energy sources, incorporating energy storage solutions, and responding                         and advancements in algorithms have enabled the exploration and
+
+
+     ∗ Corresponding author.
+       E-mail address: yuangao1120@gmail.com (Y. Gao).
+
+https://doi.org/10.1016/j.energy.2024.130344
+Received 4 October 2023; Received in revised form 20 November 2023; Accepted 13 January 2024
+Available online 15 January 2024
+0360-5442/© 2024 Elsevier Ltd. All rights reserved.
+Y. Gao et al.                                                                                                                                    Energy 291 (2024) 130344
+
+Table 1
+Summary of studies applying DRL in building HVAC system control.
+ Ref.     Target system            Control action                             Optimization objective                       Algorithm               Training environment
+ [18]     Boiler heating system    Supply water temperature setpoint          Energy consumption; indoor air temperature   DQN                     EnergyPlus
+ [19]     Chiller plant            Chilled water temperature                  Energy consumption; thermal comfort          DQN                     EnergyPlus
+ [31]     Heat pump                Heat pump signal                           Operation cost; thermal comfort              DDQN; DDPG; SAC         BOPTEST
+ [20]     Radiant heating system   Supply water temperature setpoint          Energy consumption; thermal comfort          A3C                     EnergyPlus
+ [21]     Air conditioning units   Zone temperature; ventilation fan          Energy consumption; air quality;             DQN                     EnergyPlus
+ [22]     Heating system           Thermostat                                 Energy consumption; thermal comfort          DQN                     MATLAB
+ [23]     VAV system               Temperature set; fan mass flow             Energy consumption; indoor air temperature   SAC; TD3; PPO; TRPO     EnergyPlus
+ [24]     Smart HVAC               Power usage; air volume                    Energy cost; indoor air quality              DDQN-PRE                Measured data
+ [25]     VAV                      Air temperature; supply water setpoint     Energy consumption; indoor air quality       DQN                     EnergyPlus
+ [26]     Building energy system   Operating ratio                            Off-grid operation                           DDPG;TD3                Measured data
+ [27]     Thermal storage          Operation of the cold-water storage tank   Cost                                         SAC                     EnergyPlus
+
+
+
+implementation of ML-based control approaches for building HVAC                          modeling, machine translation, and speech recognition. Their defining
+systems [13].                                                                            feature lies in their recurrent connections, which enable them to main-
+                                                                                         tain a hidden state that carries information from previous time steps,
+1.2. Reinforcement learning for HVAC system control                                      thereby influencing the current step. This characteristic makes RNNs
+                                                                                         suitable for processing sequential data such as natural language and
+    Reinforcement Learning (RL), a prominent category of machine                         time-series sequences. Considering that data related to buildings inher-
+learning alongside unsupervised and supervised learning, stands apart                    ently involve time-series data and that building performance is affected
+because of its unique learning paradigm based on dynamic data ac-                        by short-term and long-term variations, such as occupancy and seasonal
+quired during the learning process [14]. The primary objective of RL is                  changes, intrinsic temporal dependencies are prevalent [32]. As a
+to learn the optimal actions that lead to a predefined goal. Through re-                 modified version of RNN, Long Short-Term Memory (LSTM) addresses
+wards, this reinforcement guides the agent to honor its decision-making                  the vanishing gradient problem and long-term dependency issues asso-
+abilities and achieve the desired objective [10,15].                                     ciated with traditional RNNs [33]. Instead of using a recurrent layer,
+    Deep Reinforcement Learning (DRL) shares the foundational prin-                      the LSTM recurrent unit processes information by employing various
+ciples of classical RL; however, it distinguishes itself by employing                    gates (forget and input gates) to control the information that should
+complex deep neural networks (DNNs) as RL agents instead of simple                       be remembered, forgotten, or updated in the cell state. Subsequently,
+tabular settings or linear functions. Leveraging DNNs endows the RL                      it produces a new hidden state that passes through the output gate for
+agent with a higher representational capability, enabling adaptation                     use in the subsequent time step. Given this perspective, LSTM has found
+to intricate control problems and facilitating the resolution of real-                   widespread application in the field of building information prediction,
+world complexities that demand a large number of states and actions to                   including control performance, energy consumption, thermal comfort,
+properly represent the control problem [16]. DRL is a highly suitable                    and air quality [34–37].
+approach for HVAC system control since building HVAC systems is non-                         For successful integration with a DRL controller, the predictive
+linear, time-varying, and uncertain complex [17]. Many studies have                      model must be capable of offering continuous feedback for control
+applied DRL techniques to various aspects of HVAC system control,                        operations, which makes the RNN model (specifically, LSTM) a suitable
+including the primary subsystem [18,19], secondary subsystem [20–                        candidate [29]. Despite its potential to improve control performance,
+23], entire HVAC system [24,25], and associated energy management                        the application of integrating predictive information into optimal HVAC
+system [26–28]. An overview of studies applying DRL to HVAC system                       control using DRL remains limited in current literature. Zou et al. [38]
+control is presented in Table 1. These advanced control strategies have                  utilized LSTM in combination with a DDPG agent to control air han-
+shown remarkable potential for HVAC system control, significantly                        dling units (AHU), achieving 27%–30% energy savings while ensuring
+improving indoor comfort conditions while simultaneously reducing                        thermal comfort. LSTM models utilize historical Building Automation
+energy consumption. However, the DRL process involves testing and                        System (BAS) data, approximate HVAC operations, consider the current
+evaluating new strategies through trial and error and subsequently                       state and action as inputs, and provide the next state and reward as
+using these evaluations to refine its control policy. This experimental                  outputs. Pinto et al. [39] employed an LSTM coupled with an SAC agent
+approach poses challenges for the implementation of DRL controllers                      to optimize heat pumps, chilled water, and domestic hot water storage
+in real-world buildings. To address this limitation, an effective method                 across four buildings. Their approach effectively reduced electricity
+involves pretraining the DRL controller offline by utilizing a surrogate                 consumption costs by 23%. Blad et al. [40] addressed the issue of
+virtual environment [27]. Many studies have developed customized                         poor behavior during the early training of an RL algorithm by coupling
+HVAC system models based on simulation platforms such as Ener-                           LSTM with a Q-learning-based multi-agent algorithm for the online
+gyPlus and MATLAB, enabling the DRL controller to interact within                        fine-tuning of HVAC systems. As a result, they successfully reduced
+these virtual environments [10]. Nevertheless, accurately modeling                       heating costs by 19.4% compared to traditional control policies. Zhuang
+the full spectrum of real-world environmental features is challenging,                   et al. [29] proposed a set of 16 LSTM-based model architectures that
+potentially leading to poor generalizability of the controller when ap-                  incorporated different combinations of convolutional neural networks
+plied to actual buildings [29,30]. Furthermore, the influence of future                  (CNN), bidirectional processing, and attention mechanisms (AM) to
+information, such as weather conditions, significantly influences the                    identify the best-performing model setups. The findings indicate that
+performance of HVAC system control, particularly regarding precooling                    the attention mechanism notably enhances the prediction performance
+and preheating operations [10]. To address this issue, an increasingly                   in both recursive and independent prediction scenarios. These optimal
+promising approach involves integrating predictive information into a                    models were then integrated with an SAC RL agent to analyze sensor
+DRL controller.                                                                          metadata and optimize HVAC operations, resulting in significant energy
+                                                                                         savings of 17.4% and a remarkable 16.9% improvement in thermal
+1.3. Predictive model integrated with RL for HVAC system control                         comfort within the surrogate environment. Table 2 summarizes the
+                                                                                         current studies that integrate predictive models with RL for HVAC
+   Recurrent Neural Networks (RNNs) are a type of Artificial Neural                      control. However, further research is required to explore and harness
+Network (ANN) specifically designed to address tasks like language                       the potential of integrated controllers in this domain.
+
+                                                                                     2
+Y. Gao et al.                                                                                                                                Energy 291 (2024) 130344
+
+                                  Table 2
+                                  Summary of studies integrated predictive model with DRL.
+                                   Ref.     Target system      Optimization objective                  Algorithm     Predictive model
+                                   [38]     AHU                Energy consumption; thermal comfort     DDPG          LSTM
+                                   [39]     Energy storage     Energy consumption; thermal comfort     SAC           LSTM
+                                   [40]     Heat pump          Energy cost; indoor air quality         Q-learning    LSTM
+                                   [29]     AHU                Energy consumption; PMV values          SAC           LSTM
+
+
+
+1.4. Objective of this research                                                         Docker containers complemented by boundary conditions and exter-
+                                                                                        nal disturbances such as a year’s worth of weather data. The appli-
+    This study aims to address the limitations of current predictive mod-               cation programming interface (API) allows an external controller to
+els integrated with reinforcement learning for HVAC system control.                     access observed and forecasted data, modify control signals, choose
+Through a comprehensive review and discussion, the authors identified                   test scenarios, establish simulation environments, and proceed with the
+the following limitations of the existing approaches:                                   simulation. BOPTEST provides a standardized set of key performance
+                                                                                        indicators (KPIs) for objective performance assessments, incorporating
+    • Lack of Reproducibility and Comparison: Many studies use cus-                     factors such as energy consumption, thermal discomfort, operational
+      tomized virtual simulation models as the training environment                     expenses, indoor air quality discomfort, emissions, and proportion of
+      for DRL controllers. This approach hinders the reproducibility                    computing time.
+      and testing of developed algorithms, making it challenging to
+      compare different control algorithms for specific applications.                   2.2. Basic definitions and methods of RL
+      Additionally, the use of simulation platforms like EnergyPlus
+      and MATLAB, which do not fully model the dynamics of HVAC                             Before discussing the algorithms, we first established a foundational
+      systems and sometimes use idealized controllers [41], may limit                   understanding of reinforcement learning and its fundamental parame-
+      the generalizability of the developed algorithms to real buildings.               ters. An in-depth explanation is provided in Ref. [43]; here we provide
+    • Table 2 summarizes the studies combining Reinforcement Learn-                     a concise overview to ensure the coherence of the article.
+                                                                                            RL engages in a process of learning via trial and error, directing
+      ing (RL) and forecasting information in HVAC systems. Most
+                                                                                        behavior based on rewards achieved from environmental interactions,
+      of these studies incorporate networks such as LSTM for future
+                                                                                        aiming to maximize cumulative rewards. Each RL challenge can be
+      predictions and then feed the predictive data into RL. The num-
+                                                                                        represented using a Markov Decision Process (MDP) [44]. The Markov
+      ber of studies is relatively small, indicating that the research is
+                                                                                        Decision Process (MDP), characterized by quintuples (𝑆, 𝐴, 𝑃 , 𝑅, 𝛾),
+      not yet comprehensive. The discussion has not yet touched on
+                                                                                        is employed for scheduling optimization within a building renewable
+      how to correctly utilize forecasted data in scenarios where such
+                                                                                        energy system.
+      information already exists. This situation is quite prevalent in
+      optimizing HVAC systems, for instance, using weather forecasts                         • 𝑆: Reinforcement learning agents utilize accessible information,
+      for anticipated outdoor conditions.                                                      encompassing current, historical, and predictive data, to inform
+                                                                                               their decisions. For instance, in managing a building’s HVAC sys-
+    Considering these limitations, this study focuses on exploring the                         tem temperature, an RL agent bases its decisions on factors such
+effective application of predictive data in reinforcement learning. We                         as indoor and outdoor temperatures, solar radiation intensity, and
+compare traditional networks and RNN in terms of their ability to                              future temperature forecasts.
+handle predictive information from observational data. Simultaneously,                       • 𝐴: Actions reflect the variety of decisions an agent makes in
+we explored the potential impact of this predictive information on                             response to diverse environments; for instance, factors like airflow
+the optimization of the HVAC system operation. The presented work                              and air temperature.
+encompasses the development of an open-source test platform and                              • 𝑃 : State transition probability depicts the state’s distribution at
+algorithms using the BOPTEST platform [42] and Modelica-based mod-                             the subsequent time step given a certain action in a particular
+els, focusing on the dynamic behavior of HVAC systems to enhance                               state. If the RL algorithm learns an explicit state transition proba-
+reproducibility. It also explores the integration of RL and predictive                         bility, it is considered model-based. Its counterpart is referred to
+information in optimizing HVAC operations, evaluating the efficacy                             as model-free RL [26].
+of different approaches in handling predictive data. The proposed                            • 𝑅: The reward function establishes the computation of the im-
+combination of RNN and RL demonstrates superior performance over                               mediate reward achievable for a specific state–action pair. This
+conventional neural network approaches in both tasks, establishing a                           reward calculation could be a defined value or a mathemati-
+valuable reference for future research in this field.                                          cal expectation. The reward magnitude directs the optimization
+                                                                                               course.
+2. Methods                                                                                   • 𝛾: In RL problems, due to feedback delays, the current step’s
+                                                                                               action might require several steps to take effect. Therefore, the
+2.1. Emulator environment                                                                      agent should not merely select the action yielding the highest
+                                                                                               immediate reward but should anticipate the outcomes of future
+                                                                                               steps. The discount factor, 𝛾, enables RL to equilibrate short- and
+    To fully verify the effect of the proposed reinforcement learning
+                                                                                               long-term objectives. By discounting future rewards, we can as-
+algorithm, we used a building optimization testing (BOPTEST) frame-
+                                                                                               certain the value of the agent’s present actions, which equates to
+work as a benchmark [42]. BOPTEST is an open-source standardized
+                                                                                               the cumulative future rewards and signifies the true optimization
+building simulator that includes several types of buildings and HVAC
+                                                                                               target of RL.
+systems. The open-source framework improved the transparency of the
+testing algorithm, and the reproducibility of the framework was very                        The foregoing delineates the core elements and enhancement ob-
+strong.                                                                                 jectives of RL. Conventional RL approaches typically employ tables to
+    A conceptual diagram of BOPTEST is illustrated in Fig. 1. All                       manage finite actions and states. This strategy is effective for simplified
+BOPTEST’s building models are developed using Modelica and ex-                          states and offers a fast convergence. However, in real-world scenar-
+ported as Functional Model Units (FMUs). These are bundled into                         ios, these discrete states and actions are often reduced. The exterior
+
+                                                                                    3
+Y. Gao et al.                                                                                                                       Energy 291 (2024) 130344
+
+
+
+
+                                                      Fig. 1. Conceptual framework of BOPTEST [42].
+
+
+temperature of a building is an example of a typical continuous-state           subtracting the present action-value function, we obtain the updated
+value. DRL and RL share the same theoretical underpinnings. This                gradient of the Q network.
+unique distinction lies in DRL’s utilization of a DNN instead of a                  We present an update to the actor network in Eq. (2), follow-
+conventional table to approximate cumulative rewards, offering more             ing [48]. The computation formula only involves gradients with respect
+effective management of continuous vector spaces. This study primarily          to the actor network parameters. This approach enables the actor net-
+focuses on research involving DRL.                                              work to produce continuous actions and discover actions that optimize
+                                                                                the Q network’s output.
+2.3. DRL algorithms                                                                           (        )|              ( )                 |
+                                                                                ∇𝜃𝜇 𝜇 = ∇𝑎 𝑄 𝑠, 𝑎 ∣ 𝜃 𝑄 | 𝑠 = 𝑠𝑡, 𝑎 = 𝜇 𝑠𝑡 ∇𝜃𝜇 𝜇 (𝑠 ∣ 𝜃 𝜇 )| 𝑠 = 𝑠𝑡 (2)
+                                                                                                        |                                  |
+    Deep reinforcement learning agents require deep neural networks
+                                                                                2.3.2. Selected algorithms
+for function approximation to handle expansive state spaces. The deep
+                                                                                    DDPG leverages the principles of AC and DQN to construct actor
+Q network (DQN) algorithm made significant strides in 2016, out-
+                                                                                networks by introducing a reinforcement learning algorithm capable
+performing humans in the Atari games [16]. Nevertheless, the DQN’s
+                                                                                of handling continuous action spaces. However, the update process of
+inability to effectively manage the RL problem in a continuous action
+                                                                                the DDPG algorithm has many problems with unstable training, and it
+space presents a considerable limitation to its further progression and
+                                                                                is easy to enter a local optimal solution prematurely. As an improved
+widespread application. The Deep deterministic policy gradient (DDPG)
+                                                                                model of DDPG, Soft Actor–Critic (SAC) uses the maximum entropy
+algorithm, which employs an actor–critic (AC) strategy and a determin-
+                                                                                model to fully improve the exploration efficiency of the model so that
+istic policy gradient (DPG), refines the DQN algorithm for application
+                                                                                the model will not fall into the local optimal solution in the later stage
+in continuous action spaces [45].
+                                                                                of training [49]. This study examines the performance of this algorithm,
+                                                                                which follows an actor–critic paradigm, namely, SAC. SAC employs
+2.3.1. Actor–critic method
+                                                                                entropy regularization to address the inefficiency encountered during
+    In a DQN, the algorithm lacks a distinct actor; instead, it opts
+                                                                                the later stages of DDPG training. The entropy regularization’s goal is
+for action selection via a greedy strategy. However, this approach
+                                                                                to maximize randomness in the strategy to avoid stagnation at local
+falls short of continuous action spaces, rendering the DQN algorithm
+                                                                                optima while simultaneously optimizing the expected returns.
+inapplicable to such contexts.
+                                                                                    We selected SAC based on the following considerations:
+    Compared with the DQN, the Actor–Critic (AC) approach enables
+reinforcement learning in a continuous action space via a standalone               • Our HVAC control problem features a continuous action space.
+actor network [46,47]. The AC model comprises two networks: an actor                 SAC algorithms are inherently adept at managing both continuous
+network 𝜇 (parameterized by 𝜃 𝜇 ) and a critic network 𝑄 (parameterized              state and action spaces.
+by 𝜃 𝑄 ). The network configurations of the actor and the critic may               • SAC performs well in previous work on building energy manage-
+differ depending on the algorithm used. Critic network 𝑄 is tasked with              ment. Brandi et al. employed an SAC agent to control a heating
+evaluating the current action and computing the action-value function.               system, resulting in 2%–6% energy conservation and up to a
+The actor network is updated based on the feedback from the critic                   65% increase in thermal comfort [50]. Wang and colleagues also
+network, and it uses the input state vector to derive the current action.            evaluated the performance of SAC and DDPG within the BOPTEST
+This action is computed by maximizing the value of the critic network.               framework [31].
+    In the Actor–Critic (AC) framework, the Q network update approach              • In this study, the authors focus on the impact of introducing
+employs the Bellman equation, as shown in Eq. (1).                                   predictive data on RL algorithms and how to better process
+                 (       (          )     )   (              )                       predictive information. Then the introduction of prediction infor-
+𝛥𝑄𝑡 = 𝑟𝑡 + 𝛾 ∙ 𝑄 𝑠𝑡+1 , 𝜇 𝑠𝑡+1 ∣ 𝜃 𝜇 ∣ 𝜃 𝑄 − 𝑄 𝑠𝑡 , 𝑎𝑡 ∣ 𝜃 𝑄          (1)
+                                                                                     mation should take effect for all RL algorithms. Therefore, the
+    In Eq. (1), the sum of the current immediate reward 𝑟𝑡 and the                   authors also selected SAC to verify the validity of the predicted
+discounted future action-value function serves as our update target. By              data.
+
+                                                                            4
+Y. Gao et al.                                                                                                                         Energy 291 (2024) 130344
+
+
+
+
+                                                   Fig. 2. Training procedures of Soft Actor–Critic (SAC).
+
+
+   Fig. 2 presents a flow diagram of the SAC algorithm, which is a                The symbols 𝑟𝑡 , 𝑧𝑡 , and 𝑛𝑡 denote reset, update, and new gates, re-
+variant of the Actor–critic algorithm family. SAC distinguishes itself            spectively. These computational methods bear a resemblance to the
+by incorporating the concept of entropy to enhance policy exploration.            LSTM. For a more comprehensive explanation of the computations and
+This approach helps in avoiding local optima, as indicated by the red             principles underlying the GRU, readers can refer to the official PyTorch
+text in the diagram.                                                              documentation [53].
+
+2.4. How to combine predictive information with RL algorithms?                    3. Experiment setting
+
+    This study focused on investigating how incorporating prediction
+                                                                                  3.1. Building envelope and HVAC system
+information can enhance and optimize reinforcement learning algo-
+rithms. From an algorithmic perspective, the incorporation of predic-
+                                                                                      The study employs ‘BESTEST air’ as a test subject, which refers to a
+tive data should primarily consider alterations to the state vector,
+                                                                                  singular room situated in proximity to Denver, CO, USA, occupying a
+meaning that predictive information is integrated directly into the
+state vector itself. In the context of HVAC systems, future information,          floor area of 48 m2 . The room configuration included four exterior walls
+which is frequently presented as time-series data such as outdoor air             facing the principal directions along with a flat rooftop. A pair of 6 m2
+temperature and solar radiation fluctuations over the next 24 h, is               windows was embedded in the southern wall. The room was primarily
+often vital. Hence, employing an RNN to process predictive data using             utilized as a two-person office, marked by a light load density.
+the DRL algorithm is intuitive. Some researchers considered combining                 The thermal management system of the office consisted of an ideal-
+DDPG and RNN networks [51]. Therefore, we discuss the influence of                ized four-pipe fan coil unit (FCU) that handled both heating and cooling
+the combination of the DRL algorithm and RNN on the final operation               tasks. This unit included a fan, cooling coil, heating coil, and filter.
+control effect for HVAC system operation control.                                 It operates by drawing room air into the unit, propelling it over the
+    Fig. 3 shows how we introduce prediction information and use                  coils, filtering it, and redistributing the conditioned air into the room.
+RNN to process the prediction information. Given that SAC utilizes AC             A variable-speed drive powered the fan motor. The cooling coil used
+frameworks with distinct actor and critic networks, we incorporated an            chilled water from the chiller, whereas the heating coil used hot water
+RNN layer at their base. This enabled the processing of sequential data           from the gas boiler. The central plant was not included in the model.
+for prediction information.                                                       We manage the HVAC system by modulating the supply air temperature
+    In essence, we integrated forecast data and current observations to           within a range of 12 ◦ C to 40 ◦ C and standardizing the air mass flow
+form a multivariate time-series, which we subsequently processed using            rate in proportion to the designated design flow rate, which ranges from
+the RNN network. For Actor and Critic networks, we simply regard the              0 to 1. Further details on the case studies can be found on the reference
+RNN network as a feature extractor, hoping to obtain more information             webpage [54].
+from the features of the time-series to help in decision-making.
+    In this study, we employed a Gated Recurrent Unit (GRU) layer to              3.2. Design of state space and ablation study for prediction observations
+process the observations for the RL algorithm. In essence, the computa-
+tions involved in the GRU are parallel to those in LSTM [52]; however,
+                                                                                      The emulator model offers an abundance of outputs. The selection
+the GRU streamlines the gating mechanism, thereby simplifying the
+                                                                                  of the state space is critical for the performance of the RL controller.
+calculation process. The GRU performs subsequent functions for each
+                                                                                  The state variable should encapsulate both present and projected states,
+component of the input series (Eq. (3)):
+        (                              )                                          providing information pertinent to the agent’s decision-making process.
+𝑟𝑡 = 𝜎 𝑊𝑖𝑟 𝑥𝑡 + 𝑏𝑖𝑟 + 𝑊ℎ𝑟 ℎ(𝑡−1) + 𝑏ℎ𝑟                                            In addition, acknowledging the possibility that detailed measurements,
+        (                               )
+𝑧𝑡 = 𝜎 𝑊𝑖𝑧 𝑥𝑡 + 𝑏𝑖𝑧 + 𝑊ℎ𝑧 ℎ(𝑡−1) + 𝑏ℎ𝑧                                            such as those provided by BOPTEST, might not be available in practical
+          (                   (                ))                    (3)          engineering applications, we selected our observations not only consid-
+𝑛𝑡 = tanh 𝑊𝑖𝑛 𝑥𝑡 + 𝑏𝑖𝑛 + 𝑟𝑡 ∗ 𝑊ℎ𝑛 ℎ(𝑡−1) + 𝑏ℎ𝑛
+      (      )                                                                    ering their potential influence on indoor temperature control but also
+ℎ𝑡 = 1 − 𝑧𝑡 ∗ 𝑛𝑡 + 𝑧𝑡 ∗ ℎ(𝑡−1)                                                    favoring more commonly available measurements. After several trials,
+   The term 𝑥𝑡 denotes the value at different time steps in the state             we identified the state space by incorporating the eight variables listed
+vector, such as outdoor temperature prediction at time 𝑡. ℎ(𝑡−1) rep-             in Table 3. The rationale for choosing these specific state variables is
+resents the hidden layer state computed at the previous time step.                outlined below:
+
+                                                                              5
+Y. Gao et al.                                                                                                                                 Energy 291 (2024) 130344
+
+
+
+
+                                                 Fig. 3. Combination of Recurrent Neural Network and Reinforcement Learning.
+
+
+Table 3                                                                                   3.3. Design of state space and ablation study for prediction observations
+State variable description and associated the minimum and maximum value.
+ State variable [Unit]                         Min. Value   Max. Value   Has
+                                                                         prediction
+                                                                                              We have clarified the reasons for choosing these observations. Most
+                                                                                          of these data points yielded forecasts for future events. For exam-
+ Location of the state in episode [1]          0            167          No
+ Zone air temperature [K]                      280          310          No               ple, outdoor temperature predictions can be obtained from weather
+ Direct normal radiation [𝑤∕𝑚2 ]               0            982.62       Yes              forecasts, while future electricity prices can be obtained directly and
+ Global horizontal solar irradiation [𝑤∕𝑚2 ]   0            1027.25      Yes              accurately. We posit that predictive information can positively con-
+ Outside relative humidity [1]                 0            1            Yes
+                                                                                          tribute to RL optimization and propose an effective method for handling
+ Outside drybulb temperature [K]               248          310          Yes
+ Wet bulb temperature [K]                      248          294          Yes              such predictive information. It is important to note that this study
+ Sky cover [1]                                 0            1            Yes              directly employs the predictive API provided within the BOPTEST
+ Power price [$]                               0.0444       0.13814      Yes              framework, without developing any independent predictive models or
+ Lower bounds of the comfort range [K]         280          310          Yes
+                                                                                          algorithms. We designed three distinct methods for processing predic-
+ Upper bounds of the comfort range [K]         280          310          Yes
+                                                                                          tive information to verify the efficacy of GRU. Other configurations of
+                                                                                          the RL algorithm, along with the random seed, remained consistent
+                                                                                          to ensure the validity and reproducibility of the ablation studies. The
+    • The states of ‘Location in the Episode’ and ‘Zone Air Temperature’                  three processing methods and their corresponding observational space
+      are based on the relevant features of the current timestep in                       dimensions are as follows:
+      the HVAC system’s reinforcement learning. It is necessary to
+      know the location of the current timestep within the episode to                         • M.1 (baseline): M.1 will employ the most traditional reinforce-
+      accelerate convergence. Meanwhile, indoor temperature is one of                           ment learning algorithm and state space configuration, namely
+      the control targets. However, predictions cannot be made due to                           choosing the actual measurements of the current time step as ob-
+      the uncertainty of future actions.                                                        servations without incorporating any forecast information about
+    • Outdoor temperature, humidity, and solar radiation parameters                             the future. The performance of the remaining models incorporat-
+      can impact the heating and cooling load of HVAC systems, so                               ing predictive information will be compared with M.1, serving to
+      we have incorporated these parameters into the state vector. Pre-                         validate the enhancement effect of predictive information on RL
+      dictions for these variables can usually be sourced from weather                          algorithms. From Table 3, it can be observed that the state space
+      forecasts; hence, we utilize these forecasted state vector values in                      dimension for M.1 is 11, indicating that all 11 variables only take
+      our corresponding models.                                                                 the value at the current time step.
+    • The changes in electricity costs in this study adopt a dynamic                          • M.2 (prediction by flatten): Starting from M.2, we incorporate
+      mechanism where the cost of system power purchasing varies                                predictive information into the state space. However, despite
+      at different times of the day. The authors anticipate that the RL                         introducing predictive information in M.2, we will not alter the
+      agent can learn the optimal strategy in the context of dynamically                        Actor and Critic network structures. Instead, we flatten all the in-
+      changing electricity prices. Detailed information regarding the                           formation into a column vector and feed it into the reinforcement
+      variations in electricity prices can be found on the related case                         learning process for training. In Table 3, we have a total of 9
+      web page.                                                                                 states containing future predictive information. We incorporate
+    • The comfort temperature range significantly influences the sat-                           the current and future predictive states of these 9 variables into
+      isfaction of office users and is an essential aspect of this study.                       the state space. The two variables without predictive information
+      Moreover, the variations in the comfort temperature range can                             are included with their current information only. For instance,
+      also provide information about the current occupancy status of                            when the predictive timestep is 23, the dimension of the state
+      the room, which can be obtained through RL algorithms. More-                              vector is 9 ∗ 24 + 2 = 218.
+      over, the authors wish to emphasize that BOPTEST maintains a                            • M.3 (prediction by GRU): M.3 employs the same predictive infor-
+      set temperature for office comfort, specifically between 21 to 24                         mation as M.2; however, it utilizes GRU networks in the Actor and
+      degrees Celsius during occupancy, and 15 to 30 degrees Celsius                            Critic to process states. Fig. 4 illustrates the method M.3 employs
+      when unoccupied, regardless of the season.                                                to process the state space.
+
+                                                                                      6
+Y. Gao et al.                                                                                                                        Energy 291 (2024) 130344
+
+
+
+
+                                                    Fig. 4. Observation spaces generation methods for M.3.
+
+
+       Due to the sequential nature of GRU inputs at each time step,              dynamic electricity prices. Here, we used the Dynamic Electricity Price.
+       we designed the network to remember the current indoor tem-                BOPTEST automatically calculates the operation costs according to
+       perature at every step of computing predictive information. This           the electricity price corresponding to user selection. A mathematical
+       approach emphasizes the significance of the current tempera-               representation of the objective function is given in Eq. (4):
+       ture, preventing it from being overlooked by the network due
+                                                                                  𝐽𝑘 = 𝜔 ⋅ 𝐶 + 𝛿                                                         (4)
+       to its small dimensional representation. Additionally, the input
+       at each step allows the network to consider the relationship                   Here, 𝐶 represents the operational cost, and 𝛿 signifies the thermal
+       between future time steps and the current step, enhancing its abil-        discomfort. 𝜔 serves as a weight parameter, providing a balanced trade-
+       ity to make more informed decisions based on a comprehensive               off between operational cost and thermal discomfort; this is another
+       understanding of temporal dynamics.                                        crucial hyperparameter that requires further tuning. The operational
+       To comply with the input requirements of the GRU network, we               cost and thermal discomfort values can be sourced from the BOPTEST’s
+       duplicate the two values with no predictions across all forecasted         APIs. Considering our aim to optimize the cumulative reward, we can
+       time steps. For instance, when the predictive timestep is 23, the          define the immediate reward at a specific time as follows (Eq. (5)):
+       dimension of the state vector is 11 ∗ 24 = 264.                                     (         )
+                                                                                  𝑟𝑘+1 = − 𝐽𝑘+1 − 𝐽𝑘                                                   (5)
+
+                                                                                      With this computational methodology, the maximum value of the
+3.4. Design of action space
+                                                                                  reward was zero. A pivotal decision in designing the reward function
+                                                                                  is to determine the value of the weight 𝜔, which aims to balance the
+    The indoor temperature and operational costs were regulated using             tradeoff between operational cost and thermal comfort. A higher value
+air-conditioning control signals. In this scenario, the decision variables        of 𝜔 indicates a preference for reduced operational costs over comfort.
+were the supply air temperature and airflow signals, which aim to                 Theoretically, 𝜔 should be selected according to the preferences of the
+maintain the building within a comfortable range. The range of the                building occupants. However, a survey on how to choose 𝜔 is beyond
+airflow signal spans [0,1], which is a variable normalized in advance             the scope of this study because the aim is to compare the impact of
+within the BOPTEST framework. The range of the supply air temper-                 predictive information on RL algorithms. Moreover, the selection of
+ature was [288.15, 313.15], as measured in Kelvin. In summary, the                weights should consider the absolute numerical differences between the
+action space encompasses two dimensions, both of which constitute a               two objectives. We assigned a value of 16 to the weight parameter,
+continuous action space.                                                          which can be adjusted for other applications.
+
+3.5. Design of reward function                                                    3.5.2. Reward based on thermostatic control
+                                                                                      In Section 3.5.1, we develop a reward function using BOPTEST’s
+   The design of the reward function establishes the optimization                 inherent API to fulfill the requirements of both indoor thermal comfort
+direction and goals of the RL algorithms. To better evaluate the role of          and operating cost reduction. However, the presence of two crite-
+predictive information in RL, we devised two distinct reward functions            ria in the optimization objective is disadvantageous when comparing
+and optimization objectives.                                                      the degrees of enhancement of the predictive information, and the
+                                                                                  GRU contributes to the RL algorithm. This is because of the potential
+3.5.1. Reward based on user comfort and running costs                             improvement in one criterion, whereas the other worsens. In this
+    Our objective was to minimize thermal discomfort and operational              study, the authors compared another control method for HVAC systems,
+costs as much as possible. Consequently, the reward function was                  specifically, thermostat control. The objective of this system was to
+structured as a weighted sum of these two goals. Thermal discomfort               maintain the indoor temperature at a fixed value. Here, we disregard
+signifies the total deviation of a region’s operative temperature from            the operational cost of the system and focus solely on a single objective
+the established comfort zone over a specified time period, expressed in           to facilitate a comparison of the ultimate effects of diverse predictive
+K h. Operational cost represents the expenditure incurred under a given           information on RL. Here, we establish a reward function for constant
+pricing scenario within a specific timeframe, measured in terms of mon-           temperature control by creating a Gaussian distribution. The viabil-
+etary units ($∕m2 ). Moreover, within the BOPTEST framework, three                ity of this reward function was confirmed in prior studies using RL
+distinct pricing models are identified: constant, dynamic, and highly             algorithms [26,46].
+
+                                                                              7
+Y. Gao et al.                                                                                                                                   Energy 291 (2024) 130344
+
+                                                                                       Table 4
+                                                                                       The hyperparameters of three SAC agents.
+                                                                                        Hyperparameter            SAC for M.1         SAC for M.2        SAC for M.3
+                                                                                        Learning rate             0.0002              0.0002             0.0002
+                                                                                        Discount factor           0.99                0.99               0.99
+                                                                                        Soft update               0.005               0.005              0.005
+                                                                                        Memory size               50 000              50 000             50 000
+                                                                                        Minibatch sampling size   64                  64                 64
+                                                                                        Training steps            168000              168000             168000
+                                                                                        Network architecture      Linear: 400 * 300   Linear 400 * 300   GRU: 1 layer;
+                                                                                                                                                         32 hidden size
+
+
+
+
+                                                                                             control. This fortnight is strategically positioned around the day
+                                                                                             featuring the highest 15-minute system heating load annually.
+                                                                                           • Typical Heat Day: The evaluation period constitutes a two-week
+                                                                                             test, preceded by a one-week warm-up phase employing baseline
+                                                                                             control. The two-week interval is anchored around the day fea-
+                                                                                             turing the maximum quarter-hourly system heating load, which is
+                                                                                             nearest yet lower than the median of all annual highest quarter-
+                                                                                             hourly heating loads.
+                Fig. 5. Structure of thermostatic control reward function.
+                                                                                           • Peak Cool Day: This study entails a testing period of two weeks,
+                                                                                             which includes a one-week preliminary phase using baseline con-
+                                                                                             trol. The two-week duration is strategically aligned to encom-
+    First, we compute the temperature disparity for the present time                         pass the day of the highest quarterly-hour system cooling load
+interval by deriving the optimization strategy for each stage. Here, we                      throughout the year.
+make the assumption that the HVAC system aims to maintain the indoor                       • Typical Cool Day: This experiment encompasses a two-week test-
+temperature at 22 degrees Celsius.                                                           ing interval preceded by a one-week acclimation phase, imple-
+    Upon completion of the calculations, we were guided by the prop-                         menting baseline control. The two-week span is aligned with the
+erties of the Gaussian distribution (Eq. (6)), have set the mean of
+                                                                                             day that features the maximum 15-minute system cooling load
+the Gaussian distribution to 295.15 and the standard deviation to 2
+                                                                                             closest, but not exceeding, the median of all daily 15-minute peak
+for the purposes of this study. Following this, we scaled the Gaussian
+                                                                                             cooling loads throughout the year.
+distribution to a certain extent, resulting in a maximum value of 1, a
+minimum value of −0.6, and both positive and negative values. The                          All algorithms were implemented using PyTorch and accelerated
+scaling technique is expressed in Eq. (7).                                             using an RTX 4090 graphics card. The environmental code was written
+    We obtained the reward function shown in Fig. 5 by leveraging the                  using the OpenAI Gym framework [55], and the Soft Actor–Critic
+probability density function of the Gaussian distribution. For ease of                 (SAC) algorithm was trained and tested using the Stable Baselines 3
+display, Celsius is used to plot in this context.                                      open-source library [56]. To ensure a fair comparison, we fixed the
+            1  −
+                 (𝑥−𝜇)   2                                                             random seed in all the training and testing processes, ensuring that our
+𝑓 (𝑥) =    √ 𝑒 2𝜎 2                                                          (6)       experiments could be consistently replicated on any machine.
+          𝜎 2𝜋                                                                             The final hyperparameters for the SAC are summarized in Table 4,
+                       (𝑥−𝜇)  2
+                  1  −                                                                 which were determined through manual experimentation. We also at-
+𝑓 (𝑥) = 8 ∗      √ 𝑒 2𝜎 2 − 0.6                                              (7)
+                𝜎 2𝜋                                                                   tempted to use Optuna, a Python library, for automatic hyperparameter
+where 𝑥 is the zone air temperature from BOPTEST and 𝜋 indicates the                   optimization [57]. However, the lack of parallel computational support
+control target of our optimization, 293.15 K for instance.                             in BOPTEST-Gym results in excessively long adjustment times. Thus,
+    This Gaussian distribution transforms the computed error value into                we could not successfully implement it for our task, nor could we
+a continuous reward value, ranging from −0.6 to 1, an interval ideal                   find an optimal global configuration for the hyperparameters. However,
+for gradient descent. Moreover, the optimization target can be conve-                  because our study compares the effects of different prediction informa-
+niently altered by adjusting the mean of the Gaussian distribution. For                tion usages on RL, maintaining consistency in the hyperparameters is
+instance, setting the mean to 23 degrees Celsius indicates our aim to                  sufficient.
+control the room temperature at 23 degrees Celsius.                                        The learning rate (0.0002) was chosen based on multiple experi-
+                                                                                       ments and experiences. In addition to the learning rate, the hyperpa-
+3.6. Experimental setting                                                              rameter settings are fundamentally based on the stable-baseline library
+                                                                                       as they optimize the hyperparameters, endowing them with improved
+    The target building dataset incorporates hourly data measurements.                 generalization.
+The model was trained using data from an entire year. During the
+training process, to maximize the use of data, each episode randomly                   4. Results and discussion
+selects an initial time step from the training set and then employs
+a fixed one-week warm-up to reset the environment and capture the                          In reinforcement learning problems, we typically focus on improv-
+initial state. Optimization was performed on an hourly basis over                      ing and evolving the agent’s performance during training. Unlike in
+one week for each episode. The optimization time step for the entire                   supervised learning, we are less concerned with variations in the loss
+process was set to one hour. We utilized four standard testing scenarios               function. Figs. 6 and 7 depict the changes in cumulative rewards for
+provided in BOPTEST to evaluate model performance. Descriptions of                     different agents throughout their training.
+these scenarios are as follows:                                                            All models were trained for 1000 episodes in the BOPTEST environ-
+                                                                                       ment. Given that each episode consisted of 168 time steps (correspond-
+    • Peak Heat Day: The testing period comprises a two-week assess-                   ing to 168 h per week), the total number of time steps for all episodes
+      ment that incorporates a one-week warm-up phase using baseline                   was 168,000. After a certain training period, all sessions converged
+
+                                                                                   8
+Y. Gao et al.                                                                                                                                            Energy 291 (2024) 130344
+
+
+
+
+                                        Fig. 6. Evolution of average return per episode of three SAC agents in cost and thermal comfort.
+
+
+
+
+                                          Fig. 7. Evolution of average return per episode of three SAC agents in thermostatic control.
+
+
+Table 5                                                                                    Table 6
+Performance results of different controllers during the heating periods under the          Performance results of different controllers during the cooling periods under the
+dynamic pricing scenario.                                                                  dynamic pricing scenario.
+                                Peak heat                   Typical heat                                                     Peak cool                   Typical cool
+                                M.1        M.2     M.3      M.1      M.2      M.3                                            M.1         M.2     M.3     M.1     M.2      M.3
+ Operational cost ($∕𝑚2 )       0.045      0.038   0.036    0.049    0.044    0.039         Operational cost ($∕𝑚2 )         0.099       0.094   0.092   0.063   0.055    0.052
+ Indoor thermal comfort index   0.253      0       0        0        0.061    0.033         Indoor thermal comfort index     0.029       0.005   0.080   1.758   0.122    0.204
+
+
+
+
+to a relatively stable form. The training curves were consistent with                      5 percentage point improvement over conventional networks. In terms
+those of general RL algorithms. Notably, regardless of the task reward                     of indoor thermal comfort, both M.2 and M.3 utilized predictive infor-
+function, M.1 converged at the fastest rate, whereas M.3 converged                         mation and successfully maintained the indoor temperature within the
+at the slowest. This slowdown was expected because a GRU neural                            comfort range for 168 h. When the experimental case shifts to a typical
+network was used in M.3. The GRU network processes sequences based                         heat scenario, the M.2 model, which solely uses predictive information,
+on temporal variations, which precludes the possibility of rapid, par-                     can reduce the operational costs by 10.2%. The M.3 model, which uses
+allel computations on a large scale. Additionally, the network requires                    a GRU network, can decrease expenses by 20.4%, which is the best
+sequential processing of the state vectors to capture the characteristics                  performance among the three models; this confirmed the effectiveness
+of time-series changes as effectively as possible. From the perspective                    of employing a GRU network for processing predictive data. In terms of
+of the final converging results, it appears that the convergence speed                     indoor thermal comfort, Model 1 (M.1) exhibited the best performance.
+has not been significantly impacted.                                                       Model 3 (M.3), with the integration of a GRU network, exhibited a
+                                                                                           comfort level improvement of 46% over Model 2 (M.2). Given that our
+4.1. Statistic experiments in four testing episodes                                        reward function primarily emphasizes operating cost considerations,
+                                                                                           these results are reasonable and expected.
+4.1.1. Reward based on user comfort and running costs                                          The cooling cycle presented in Table 6 corroborates the conclusions
+    The overall performance indicators of the four test episodes are                       of previous studies. M.3 consistently achieved the best performance in
+listed in Tables 5 and 6. The Operational Cost and the Indoor Thermal                      terms of operational costs. In peak cooling scenarios, M.3 saves 7%
+Comfort Index were calculated within the BOPTEST framework. The                            of the operational costs compared to M.1; in typical cooling scenarios,
+Indoor Thermal Comfort Index indicates the extent to which the system                      the savings increase to 17.5%. In terms of indoor temperature control,
+violates the upper and lower bounds of comfort during operation.                           M.3 performed the worst during all cooling periods. This showed an
+Higher values indicate poorer performance in terms of thermal comfort.                     88.4% improvement over Model M.1, which did not utilize predictive
+    The results in Table 5 suggest that the reinforcement learning model                   information. However, given that we assigned a 16-fold weight to the
+employing predictive information outperformed Model M.1, which did                         operational costs of the reward function, this performance is reason-
+not utilize a predictive approach, in both heating cycles. When tests                      able. This demonstrates the efficacy of the GRU model in handling
+were conducted during the peak heat period, the M.2 device, with                           predictive information for reinforcement learning and current tasks.
+added predictive information, reduced operational costs by 15.6%. The                          In this context, we observe that during peak cooling periods, Model
+M.3 model, which employs a GRU network for handling predictive                             M.3 does not maintain optimal indoor thermal comfort, underperform-
+information, is capable of reducing operational costs by 20%, marking a                    ing compared to Models M.1 and M.2, and particularly against M.1.
+
+                                                                                       9
+Y. Gao et al.                                                                                                                                     Energy 291 (2024) 130344
+
+
+
+
+                                          Fig. 8. Comparison of overall operational results based on thermal comfort and running costs.
+
+
+         Table 7                                                                            the four scenarios. Furthermore, a typical heat scenario is worth not-
+         Performance results of different controllers under the dynamic pricing
+                                                                                            ing. The performance of M.2 and M.1 remained consistent, suggesting
+         scenario and thermostatic control.
+                                                                                            that the mere addition of predictive information did not enhance the
+                            Average temperature difference per episode [◦ C]
+                                                                                            model’s performance in this case. However, the performance of M. 3
+                            M.1                  M.2                   M.3
+                                                                                            improved by approximately 24.9% when using the GRU network; this
+          Peak heat         0.369                0.322                 0.283                substantiates the necessity of employing the GRU network. Experiments
+          Typical heat      0.309                0.309                 0.232
+                                                                                            focusing on a single optimization objective and reward function have
+          Peak cool         0.414                0.287                 0.231
+          Typical cool      0.390                0.243                 0.238                validated the effectiveness of the GRU-RL approach. This further il-
+                                                                                            lustrates that the suboptimal results observed in previous experiments
+                                                                                            were due to an imbalance in the setting of the reward function.
+
+This disparity is likely attributable to the configuration of the reward                    4.2. Detail visualization analysis
+function. In experiments balancing operational costs and thermal com-
+fort, we assigned a 16-fold greater weight to the reward for operational                        In addition to statistical data, the authors aimed to illustrate specific
+cost efficiency. Since reinforcement learning aims to maximize the                          strategies and temperature variations in practical operations, thereby
+overall reward, this naturally led to a greater focus on operational costs.                 enabling readers better understand the control effects of RL under
+The rationale behind this 16-fold weighting was primarily to achieve                        different tasks. Given the length constraints, the authors opted for an
+a numerical balance. Within the BOPTEST framework, the absolute                             in-depth analysis of typical heating and cooling scenarios in terms of
+numerical value of operational costs is lower than that of the thermal                      user comfort and running costs. As the authors will make the model’s
+comfort index. Consequently, it became necessary to appropriately bal-                      training outcomes and testing environments open-source, interested
+ance the rewards for these two objectives. This equilibrium in reward                       readers can download them to test various scenarios independently.
+allocation posed no issues in the initial stages of training. However, as                       Figs. 9 and 10 respectively depict the detailed temperature vari-
+training progressed, the calculated numerical value of indoor thermal                       ations controlled by different intelligent agent controllers in typical
+comfort tended to decrease. This decline resulted in the DRL algorithm                      heating and cooling scenarios. The dashed lines in the figures represent
+increasingly favoring the operational cost objective in the later stages                    the range of indoor comfort bounds throughout the cycle. The range of
+of training, thereby leading to the observed outcomes.                                      comfortable temperature limits is narrower, between 21 and 24 degrees
+    Finally, we computed the sum of the performance metrics for dif-                        Celsius when there is human activity indoors. In contrast, without such
+ferent models across the four scenarios and plotted the results in bar                      activity, the range widens, stretching from 15 to 30 degrees Celsius.
+graphs for ease of overall comparison (Fig. 8).                                                 From the operational control results, the models utilizing predictive
+                                                                                            information saved more energy than Model M.1 during periods when
+4.1.2. Reward based on thermostatic control                                                 the building was unoccupied. For instance, at time step 125 in Fig. 9,
+    The overall performance indicators of the four test episodes are                        the indoor temperatures of Models M.2 and M.3 were lower than those
+listed in Table 7. At this point, the optimization objective of RL is a                     of Model M.1. During this time, the building is unoccupied, and air con-
+univariate function. At this point, RL focuses solely on maintaining                        ditioning can be turned off while maintaining the indoor temperatures
+a constant room temperature without introducing other optimization                          within the comfort zone. In certain instances, M.3 outperformed M.2,
+objectives that could distract from RL’s performance. The term ‘‘Av-                        as demonstrated by the 50th time step in Fig. 9, where M.3 displays a
+erage Temperature Difference’’ denotes the average magnitude of the                         lower temperature, thus resulting in more energy savings.
+absolute difference between the indoor temperature and the target                               Analogous conclusions were drawn for the typical cooling scenarios.
+temperature of 22 degrees Celsius across all time steps in an episode.                      For instance, at Step 25 in Fig. 10, both M.3 and M.2 have learned sim-
+    The performances of models M.2 and M.3 surpass that of model M.1,                       ilar pre-cooling controls. However, M.3 applied a gentler pre-cooling
+which lacks predictive data; this is consistent with our understanding                      approach, avoiding excessive temperature reduction, thereby reducing
+of the benefits of incorporating predictive data, particularly for deli-                    operational costs. Models M. 2 and M. 3, which incorporate predictive
+cate tasks such as temperature regulation. Likewise, M.3 consistently                       information, learned to perform pre-cooling operations similar to those
+outperformed M.2 across all scenarios, demonstrating the enhanced                           that the M.1 model failed to grasp in typical cool situations. This finding
+predictive capability of the GRU networks. In the peak cooling scenario,                    underscores the importance of using predictive data. The slightly supe-
+the thermal control index of M.3 improved by approximately 44.2%                            rior performance of M.3 reflects the effectiveness of the GRU network
+compared to M.1. This is the most significant improvement among                             in processing the observations.
+
+                                                                                       10
+Y. Gao et al.                                                                                                                         Energy 291 (2024) 130344
+
+
+
+
+                                                     Fig. 9. Zone air temperature changing in typical heat.
+
+
+
+
+                                                    Fig. 10. Zone air temperature changing in typical cool.
+
+
+    Finally, the authors emphasized the impact of incorporating predic-                  GRU-RL model demonstrated superior performance in all four
+tive information. During heating cycles, this information can be used to                 scenarios, validating the efficacy of incorporating the GRU model.
+appropriately turn off the air conditioning during building downtime                   • Through detailed analysis of two scenarios, we found that the
+and preheat ahead of use, effectively saving energy (as the operational                  introduction of predictive information enables the model to learn
+costs during non-peak times are lower). The cooling process also allows                  pre-cooling and pre-heating actions, thereby controlling both in-
+suitable precooling operations to be learned. Moreover, M.3 proved                       door comfort and operating costs. The model will appropriately
+to be more reasonable than M.2 during precooling and preheating,                         turn off the air conditioning during unoccupied periods and initi-
+resulting in significant cost savings. This further improvement was due
+                                                                                         ate pre-cooling and pre-heating in advance. The GRU-RL model’s
+to the advantages of the GRU network over pure prediction.
+                                                                                         operations are smoother during this pre-cooling and pre-heating
+5. Conclusion, limitation, and future work                                               process, further reducing operating expenses.
+                                                                                       • To tackle the challenge of reproducibility in our research, we have
+    RL shows significant potential for addressing the crucial demand                     developed a test platform grounded in the BOPTEST open-source
+for reducing the energy use and carbon footprint of HVAC systems                         framework. Additionally, we have ensured that all algorithms
+while ensuring indoor comfort. The authors developed an RL algorithm                     employed in our study are open-source, thereby facilitating inde-
+that uses GRU networks to handle predictive data based on the open-                      pendent replication and validation of our findings by the broader
+source framework BOPTEST to better address the issue of incorporating                    research community. Our integration of the BOPTEST framework
+predictive information into RL algorithms. The experimental objectives                   with reinforcement learning algorithms is also readily accessible,
+included the joint control of indoor thermal comfort and operational                     providing a valuable reference and tool for future researchers in
+costs, as well as the maintenance of indoor temperature stability.                       this domain.
+The proposed method was compared with models that did not use
+predictive information and those that processed predictive information                 However, because of the lack of parallel computing support in
+with regular networks. Optimization tests were conducted under four                BOPTEST, we were unable to select optimal hyperparameters. Further-
+built-in heating and cooling scenarios of BOPTEST, with the following              more, a detailed discussion of the setting of the reward function weights
+key findings:                                                                      is precluded owing to computational time constraints. Future research
+                                                                                   will apply this algorithm to more complex scenarios, develop fixed and
+    • The proposed GRU-RL combined model achieves the best overall
+      operational costs and thermal comfort index across four scenar-              efficient algorithms for the design of reward functions, and replace
+      ios when the operational objectives are indoor thermal comfort               the GRU model with other models to enhance the interpretability
+      and cost-efficiency. The overall operational cost was reduced by             of RL. Moreover, in the experiments balancing operational costs and
+      14.5% compared to the model that did not utilize predictive                  indoor thermal comfort, we demonstrated that the design of the reward
+      information, while the indoor thermal comfort performance im-                function in reinforcement learning significantly affects the optimization
+      proved by 88.4%. While the performance of the GRU-RL model                   results. Therefore, a crucial future research direction will be how
+      may be inferior to models using standard networks in terms of                to effectively and automatically design adaptive reward functions for
+      indoor comfort, this result is justifiable considering the reduction         multi-objective optimization.
+      in operational costs and the significant computational weightage
+      of operational costs in the reward function.
+                                                                                   CRediT authorship contribution statement
+    • In the context of indoor temperature control tasks, we solely
+      utilize a single optimization objective to better compare the ef-
+      fects of incorporating predictive information and the use of GRU                Yuan Gao: Conceptualization, Data curation, Formal analysis, Fund-
+      models. Compared to models that do not utilize predictive infor-             ing acquisition, Investigation, Methodology, Resources, Software, Vali-
+      mation, the GRU-RL model enhances the performance of thermo-                 dation, Visualization, Writing – original draft. Shanrui Shi: Validation,
+      static control by approximately 14.2%. Furthermore, it outper-               Visualization, Writing – original draft, Writing – review & editing.
+      forms models that use ordinary networks to incorporate predic-               Shohei Miyata: Funding acquisition, Project administration. Yasunori
+      tive information, showing an improvement of around 5%. The                   Akashi: Funding acquisition, Project administration.
+
+                                                                              11
+Y. Gao et al.                                                                                                                                              Energy 291 (2024) 130344
+
+
+Declaration of competing interest                                                             [21] Valladares W, Galindo M, Gutiérrez J, Wu W-C, Liao K-K, Liao J-C, et al. Energy
+                                                                                                   optimization associated with thermal comfort and indoor air control via a deep
+                                                                                                   reinforcement learning algorithm. Build Environ 2019;155:105–17.
+    The authors declare that they have no known competing finan-
+                                                                                              [22] Gupta A, Badr Y, Negahban A, Qiu RG. Energy-efficient heating control for smart
+cial interests or personal relationships that could have appeared to                               buildings with deep reinforcement learning. J Build Eng 2021;34:101739.
+influence the work reported in this paper.                                                    [23] Biemann M, Scheller F, Liu X, Huang L. Experimental evaluation of model-free
+                                                                                                   reinforcement learning algorithms for continuous HVAC control. Appl Energy
+                                                                                                   2021;298:117164.
+Data availability
+                                                                                              [24] Yang T, Zhao L, Li W, Wu J, Zomaya AY. Towards healthy and cost-effective
+                                                                                                   indoor environment management in smart homes: A deep reinforcement learning
+    Data will be made available on request.                                                        approach. Appl Energy 2021;300:117335.
+                                                                                              [25] Fang X, Gong G, Li G, Chun L, Peng P, Li W, et al. Deep reinforcement learning
+                                                                                                   optimal control strategy for temperature setpoint real-time reset in multi-zone
+Acknowledgments
+                                                                                                   building HVAC system. Appl Therm Eng 2022;212:118552.
+                                                                                              [26] Gao Y, Matsunami Y, Miyata S, Akashi Y. Operational optimization for off-
+    This work was supported by JSPS KAKENHI Grant Number                                           grid renewable building energy system using deep reinforcement learning. Appl
+23KJ0513. We would like to thank Editage (www.editage.jp) for En-                                  Energy 2022;325:119783.
+glish language editing. The author(s) gratefully acknowledge the sup-                         [27] Brandi S, Fiorentini M, Capozzoli A. Comparison of online and offline deep
+                                                                                                   reinforcement learning with model predictive control for thermal energy
+port of the International Institute for Carbon Neutral Energy Research                             management. Autom Constr 2022;135:104128.
+(WPI-I2CNER), sponsored by the Japanese Ministry of Education, Cul-                           [28] Xu Y, Gao W, Li Y, Xiao F. Operational optimization for the grid-connected resi-
+ture, Sports, Science and Technology.                                                              dential photovoltaic-battery system using model-based reinforcement learning. J
+                                                                                                   Build Eng 2023;73:106774.
+                                                                                              [29] Zhuang D, Gan VJ, Tekler ZD, Chong A, Tian S, Shi X. Data-driven predictive
+References
+                                                                                                   control for smart HVAC system in IoT-integrated buildings with time-series
+                                                                                                   forecasting and reinforcement learning. Appl Energy 2023;338:120936.
+ [1] Liu M, Ooka R, Choi W, Ikeda S. Experimental and numerical investigation of              [30] Li Y, Jia Z, Zhang X, Liu Y, Xiao F, Gao W, et al. Energy flexibility analysis and
+     energy saving potential of centralized and decentralized pumping systems. Appl                model predictive control performances of space heating in Japanese zero energy
+     Energy 2019;251:113359.                                                                       house. J Build Eng 2023;76:107365.
+ [2] González-Torres M, Pérez-Lombard L, Coronel JF, Maestre IR, Yan D. A review              [31] Wang D, Zheng W, Wang Z, Wang Y, Pang X, Wang W. Comparison of
+     on buildings energy information: Trends, end-uses, fuels and drivers. Energy Rep              reinforcement learning and model predictive control for building energy system
+     2022;8:626–37.                                                                                optimization. Appl Therm Eng 2023;228:120430.
+ [3] Cai W, Wen X, Li C, Shao J, Xu J. Predicting the energy consumption in buildings         [32] Fan C, Wang J, Gang W, Li S. Assessment of deep recurrent neural network-
+     using the optimized support vector regression model. Energy 2023;273:127188.                  based strategies for short-term building energy predictions. Appl Energy
+ [4] Gao Y, Miyata S, Akashi Y. Energy saving and indoor temperature control for an                2019;236:700–10.
+     office building using tube-based robust model predictive control. Applied Energy         [33] Hochreiter S, Schmidhuber J. Long short-term memory. Neural Comput
+     2023;341:121106.                                                                              1997;9(8):1735–80.
+ [5] Buyak N, Deshko V, Bilous I, Pavlenko A, Sapunov A, Biriukov D. Dynamic inter-           [34] Esrafilian-Najafabadi M, Haghighat F. Impact of occupancy prediction models
+     dependence of comfortable thermal conditions and energy efficiency increase in                on building HVAC control system performance: Application of machine learning
+     a nursery school building for heating and cooling period. Energy 2023;129076.                 techniques. Energy Build 2022;257:111808.
+ [6] Chen W-A, Lim J, Miyata S, Akashi Y. Methodology of evaluating the sewage                [35] Gao Y, Ruan Y, Fang C, Yin S. Deep learning and transfer learning models
+     heat utilization potential by modelling the urban sewage state prediction model.              of energy consumption forecasting for a building with poor information data.
+     Sustainable Cities Soc 2022;80:103751.                                                        Energy Build 2020;223:110156.
+ [7] Vázquez-Canteli JR, Nagy Z. Reinforcement learning for demand response: A                [36] Somu N, Sriram A, Kowli A, Ramamritham K. A hybrid deep transfer
+     review of algorithms and modeling techniques. Appl Energy 2019;235:1072–89.                   learning strategy for thermal comfort prediction in buildings. Build Environ
+ [8] Hwang R-L, Chen W-A. Creating glazed facades performance map based on                         2021;204:108133.
+     energy and thermal comfort perspective for office building design strategies in          [37] Yang G, Yuan E, Wu W. Predicting the long-term CO2 concentration in
+     Asian hot-humid climate zone. Applied Energy 2022;311:118689.                                 classrooms based on the BO–EMD–LSTM model. Build Environ 2022;224:109568.
+ [9] Hwang R-L, Chen W-A. Identifying relative importance of solar design deter-              [38] Zou Z, Yu X, Ergan S. Towards optimal control of air handling units us-
+     minants on office building façade for cooling loads and thermal comfort in                    ing deep reinforcement learning and recurrent neural network. Build Environ
+     hot-humid climates. Building and Environment 2022;226:109684.                                 2020;168:106535.
+[10] Wang Z, Hong T. Reinforcement learning for building controls: The opportunities          [39] Pinto G, Deltetto D, Capozzoli A. Data-driven district energy manage-
+     and challenges. Appl Energy 2020;269:115036.                                                  ment with surrogate models and deep reinforcement learning. Appl Energy
+[11] Singhal A, Salsbury TI. Characterization and cancellation of static nonlinearity              2021;304:117642.
+     in HVAC systems. ASHRAE Trans 2007;113(1).                                               [40] Blad C, Bøgh S, Kallesøe CS. Data-driven offline reinforcement learning for
+[12] Attaran SM, Yusof R, Selamat H. A novel optimization algorithm based on epsilon               HVAC-systems. Energy 2022;261:125290.
+     constraint-RBF neural network for tuning PID controller in decoupled HVAC                [41] Wetter M. Modelica-based modelling and simulation to support research and
+     system. Appl Therm Eng 2016;99:613–24.                                                        development in building energy and control systems. J Build Perform Simul
+[13] Alanne K, Sierla S. An overview of machine learning applications for smart                    2009;2(2):143–61.
+     buildings. Sustainable Cities Soc 2022;76:103445.                                        [42] Blum D, Arroyo J, Huang S, Drgoňa J, Jorissen F, Walnum HT, et al. Building
+[14] Li Y, Wang J, Wang W, Liu C, Li Y. Dynamic pricing based electric ve-                         optimization testing framework (BOPTEST) for simulation-based benchmarking
+     hicle charging station location strategy using reinforcement learning. Energy                 of control strategies in buildings. J Build Perform Simul 2021;14(5):586–610.
+     2023;281:128284.                                                                         [43] Sutton RS, Barto AG. Reinforcement learning: An introduction. MIT Press; 2018.
+[15] Li Y, Wang Z, Xu W, Gao W, Xu Y, Xiao F. Modeling and energy dynamic                     [44] Song H, Liu C-C, Lawarrée J, Dahlgren RW. Optimal electricity supply bidding
+     control for a ZEH via hybrid model-based deep reinforcement learning. Energy                  by Markov decision process. IEEE Trans Power Syst 2000;15(2):618–24.
+     2023;277:127627.                                                                         [45] Lillicrap TP, Hunt JJ, Pritzel A, Heess N, Erez T, Tassa Y, et al. Continuous
+[16] Mnih V, Kavukcuoglu K, Silver D, Rusu AA, Veness J, Bellemare MG,                             control with deep reinforcement learning. 2015, arXiv preprint arXiv:1509.
+     et al. Human-level control through deep reinforcement learning. Nature                        02971.
+     2015;518(7540):529–33.                                                                   [46] Gao Y, Matsunami Y, Miyata S, Akashi Y. Multi-agent reinforcement learning
+[17] Du Y, Zandi H, Kotevska O, Kurte K, Munk J, Amasyali K, et al. Intelligent multi-             dealing with hybrid action spaces: A case study for off-grid oriented renewable
+     zone residential HVAC control strategy based on deep reinforcement learning.                  building energy system. Appl Energy 2022;326:120021.
+     Appl Energy 2021;281:116117.                                                             [47] Zhang X, Bao T, Yu T, Yang B, Han C. Deep transfer Q-learning with virtual
+[18] Brandi S, Piscitelli MS, Martellacci M, Capozzoli A. Deep reinforcement learning              leader-follower for supply-demand stackelberg game of smart grid. Energy
+     to optimise indoor temperature control and heating energy consumption in                      2017;133:348–65.
+     buildings. Energy Build 2020;224:110225.                                                 [48] Silver D, Lever G, Heess N, Degris T, Wierstra D, Riedmiller M. Deterministic
+[19] He K, Fu Q, Lu Y, Wang Y, Luo J, Wu H, et al. Predictive control optimization of              policy gradient algorithms. In: International conference on machine learning.
+     chiller plants based on deep reinforcement learning. J Build Eng 2023;107158.                 Pmlr; 2014, p. 387–95.
+[20] Zhang Z, Chong A, Pan Y, Zhang C, Lam KP. Whole building energy model                    [49] Haarnoja T, Zhou A, Abbeel P, Levine S. Soft actor-critic: Off-policy maximum
+     for HVAC optimal control: A practical framework based on deep reinforcement                   entropy deep reinforcement learning with a stochastic actor. In: International
+     learning. Energy Build 2019;199:472–90.                                                       conference on machine learning. PMLR; 2018, p. 1861–70.
+
+
+                                                                                         12
+Y. Gao et al.                                                                                                                                         Energy 291 (2024) 130344
+
+
+[50] Brandi S, Coraci D, Borello D, Capozzoli A. Energy management of a residential          [56] Raffin A, Hill A, Gleave A, Kanervisto A, Ernestus M, Dormann N. Stable-
+     heating system through deep reinforcement learning. In: Sustainability in energy             Baselines3: Reliable reinforcement learning implementations. J Mach Learn Res
+     and buildings 2021. Springer; 2022, p. 329–39.                                               2021;22(268):1–8, URL http://jmlr.org/papers/v22/20-1364.html.
+[51] Meng L, Gorbet R, Kulić D. Memory-based deep reinforcement learning for                 [57] Akiba T, Sano S, Yanase T, Ohta T, Koyama M. Optuna: A next-generation
+     POMDPs. In: 2021 IEEE/RSJ international conference on intelligent robots and                 hyperparameter optimization framework. In: Proceedings of the 25th ACM
+     systems. IEEE; 2021, p. 5619–26.                                                             SIGKDD international conference on knowledge discovery & data mining. 2019,
+[52] Gao Y, Miyata S, Akashi Y. Interpretable deep learning models for hourly solar               p. 2623–31.
+     radiation prediction based on graph neural network and attention. Appl Energy
+     2022;321:119288.
+[53] Paszke A, Gross S, Massa F, Lerer A, Bradbury J, Chanan G, et al. PyTorch: An
+     Imperative Style, High-Performance Deep Learning Library.
+[54] Blum D. Information about test case in BOPTEST. 2022, URL https://ibpsa.
+     github.io/project1-boptest/testcases/ibpsa/testcases_ibpsa_bestest_air/.
+[55] Brockman G, Cheung V, Pettersson L, Schneider J, Schulman J, Tang J, et al.
+     Openai gym (2016). 476, 2016, arXiv preprint arXiv:1606.01540.
+
+
+
+
+                                                                                        13
+

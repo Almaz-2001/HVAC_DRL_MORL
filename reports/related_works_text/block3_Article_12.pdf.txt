@@ -1,0 +1,722 @@
+                                                                         Smart Energy 13 (2024) 100131
+
+
+                                                                   Contents lists available at ScienceDirect
+
+
+                                                                             Smart Energy
+                                                   journal homepage: www.journals.elsevier.com/smart-energy
+
+
+
+
+Enhancing HVAC control systems through transfer learning with deep
+reinforcement learning agents
+Kevlyn Kadamala ∗ , Des Chambers, Enda Barrett
+School of Computer Science, University of Galway, University Road, Galway, H91 TK33, Galway, Ireland
+
+
+
+
+A R T I C L E            I N F O                          A B S T R A C T
+
+Keywords:                                                 Traditionally, building control systems for heating, ventilation, and air conditioning (HVAC) relied on rule-based
+Transfer learning                                         scheduler systems. Deep reinforcement learning techniques have the ability to learn optimal control policies
+Reinforcement learning                                    from data without the need for explicit programming or domain-speciﬁc knowledge. However, these data-driven
+Continuous HVAC control
+                                                          methods require considerable time and data to learn eﬀective policies without prior knowledge. Performing
+                                                          transfer learning using pre-trained models avoids the need to learn the underlying data from scratch, thus saving
+                                                          time and resources. In this work, we evaluate reinforcement learning as a method of pretraining and ﬁne-
+                                                          tuning neural networks for HVAC control. First, we train an RL agent in a building simulation environment to
+                                                          obtain a foundation model. We then ﬁne-tune this model on two separate simulation environments such that
+                                                          one environment simulates the same building under diﬀerent weather conditions while the other environment
+                                                          simulates a diﬀerent building under the same weather conditions. We perform these experiments with two
+                                                          diﬀerent reward functions to evaluate their eﬀect on transfer learning. The results indicate that transfer learning
+                                                          agents outperform the rule-based controller and show improvements in the range of 1% to 4% when compared
+                                                          to agents trained from scratch.
+
+
+
+
+1. Introduction                                                                                enhance smart energy systems research by evaluating whether knowl-
+                                                                                               edge from a pre-trained agent can be leveraged to eﬃciently reduce
+    Heating, ventilation and air conditioning (HVAC) play a signiﬁcant                         comfort violations and power consumption over time.
+role in ensuring occupant comfort. However, if implemented incor-                                  In domains like natural language processing (NLP) and computer
+rectly, it could lead to large amounts of energy consumption, driving                          vision (CV), most solutions for a particular task begin with using some
+up costs while reducing occupant satisfaction. Reinforcement learning                          pre-trained model. This pre-trained model is usually trained on a related
+(RL) has proven to be a viable alternative [1–3] of adaptive systems                           task and then ﬁne-tuned on the new task [4–7]. As a result, complex
+that operate without the need to capture the physical building model,                          problems can be tackled without the need for extensive computation
+thus oﬀering a more ﬂexible approach alongside rule-based and man-                             resources. There are various model repositories available online [8],
+ual HVAC systems which continue to serve valuable purposes. These RL                           HuggingFace Models 1 Tensorﬂow Model Hub 2 that enables researchers
+systems learn an optimal policy by interacting with the environment                            to download and load any NLP or CV model and use it on their task
+using actions learnt through their previous experience. However, the                           directly or perform ﬁne-tuning on a new domain-speciﬁc task. Such
+drawback of RL is that it is sample ineﬃcient, requiring a consider-                           practice, however, has not been widely adopted in RL for HVAC sys-
+able amount of time and training resources to reach a desirable level of                       tems.3 Our work addresses this gap by providing model weights that
+performance. Thus, this paper aims to see whether a transfer learning                          can be later used for ﬁne-tuning building control systems.
+approach can help address this challenge. More speciﬁcally, we re-use                              HVAC control systems vary depending on the location, building size,
+network weights trained on diﬀerent building control tasks and evalu-                          structure, and material and work under diﬀerent weather conditions.
+ate their performance relative to sample eﬃciency. The work aims to                            Imagine we have an RL agent that was already trained on a (source)
+
+
+ * Corresponding author.
+   E-mail address: k.kadamala1@universityofgalway.ie (K. Kadamala).
+ 1
+   https://huggingface.co/models.
+ 2
+   https://tfhub.dev/.
+ 3
+   HuggingFace Model Hub for RL - https://huggingface.co/models?pipeline_tag=reinforcement-learning.
+
+https://doi.org/10.1016/j.segy.2024.100131
+Received 15 September 2023; Received in revised form 17 January 2024; Accepted 17 January 2024
+Available online 26 January 2024
+2666-9552/© 2024 The Author(s). Published by Elsevier Ltd. This is an open access article under the CC BY license (http://creativecommons.org/licenses/by/4.0/).
+K. Kadamala, D. Chambers and E. Barrett                                                                                                        Smart Energy 13 (2024) 100131
+
+
+                                                                                The MDP task for building control systems is discretised into timesteps.
+                                                                                At each timestep, the RL agent observes the building state 𝑠𝑡 and then
+                                                                                chooses to perform an action 𝑎𝑡 from the possible actions. The exe-
+                                                                                cuted action would then transition the RL agent into a new state 𝑠𝑡+1
+                                                                                with reward 𝑟. Thus, the RL agent will then attempt to learn a policy
+                                                                                𝜋 that would maximise its cumulative reward. Reinforcement learning
+                                                                                algorithms can be on-policy or oﬀ-policy. The diﬀerence is based on
+                                                                                how they use the training data. As the name implies, on-policy algo-
+                                                                                rithms only utilise data sampled from the current policy 𝜋 to learn.
+                                                                                On the other hand, oﬀ-policy algorithms can use any data (from any
+                                                                                policy) collected during training. This makes it more sample eﬃcient;
+                                                                                however, storing data may require more memory. The authors in [11]
+                                                                                evaluated diﬀerent model-free RL algorithms for continuous HVAC con-
+                                                                                trol. We take inspiration from this work and assess our transfer learning
+                                                                                methodology using the Proximal Policy Optimisation (PPO) and Soft
+                                                                                Actor-Critic (SAC) algorithms.
+
+                                                                                2.1.1. PPO
+                Fig. 1. Transfer Learning Methodology Scenario.
+                                                                                    Policy gradient algorithms attempt to directly optimise a parame-
+                                                                                terised policy based on the gradients of the expected return with respect
+building. We ask the question - can we adapt it to a diﬀerent (target)          to the policy parameters using gradient ascent. However, policy gradi-
+building that may diﬀer with respect to its characteristics or climate?         ent algorithms are prone to performance collapse, wherein an agent
+Thus, in this work, we use building environments provided by Siner-             suddenly starts to perform poorly. Proximal Policy Optimisation [12]
+gym [9] to train an RL agent on a source building and then adapt it to a        is an on-policy, policy gradient algorithm that addresses this issue. It
+target building that may be of a similar structure but in a diﬀerent en-        updates policies via the objective function:
+vironment or a diﬀerent structure in a similar environment. However,
+the source building and the target building may diﬀer with respect to           𝐿CLIP (𝜃) = 𝔼̂ 𝑡 [min(𝑟𝑡 (𝜃), 𝐴̂ 𝑡 , clip(𝑟𝑡 (𝜃), 1 − 𝜖, 1 + 𝜖)𝐴̂ 𝑡 )]                  (1)
+the data available for control and the amount of equipment to be con-                                                           𝜋 (𝑎 |𝑠 )
+trolled. Thus, to address this problem, we only initialise the input and        where, 𝑟𝑡 (𝜃) is the probability ratio 𝑟𝑡 (𝜃) = 𝜃 𝑡 𝑡 . PPO can be im-
+                                                                                                                               𝜋𝜃 (𝑎𝑡 ,𝑠𝑡 )
+                                                                                                                                               old
+output layers of the agent based on the target building while using the         plemented as an extension of Actor-Critic [13] where the actor has to
+pre-trained weights of the hidden layers trained on the source building.        maximise 𝐿CLIP (𝜃), while the critic has to minimise the squared error
+We then ﬁne-tune this new agent on the target building. Fig. 1 shows            between the estimated value function and the target value 𝐿VF       𝑡 (𝜃) =
+the scenario where a trained agent is ﬁne-tuned to diﬀerent buildings in        (𝑉𝜃 (𝑠𝑡 ) − 𝑉𝑡𝑡𝑎𝑟𝑔 )2 . To encourage exploration, PPO adds an entropy bonus
+diﬀerent weather condition.4 We evaluate the ﬁne-tuned agent’s perfor-          given as 𝑆 . Thus, the overall objective function to be maximised be-
+mance against an agent trained from scratch. Finally, we evaluate both          comes:
+RL agents against a rule-based controller to provide an overall idea of
+their performance. Thus, to summarise, the main contributions of our            𝐿CLIP +VF+S       ̂ CLIP (𝜃) − 𝑐1 𝐿VF (𝜃) + 𝑐2 𝑆[𝜋𝜃 ](𝑠𝑡 )]
+                                                                                            (𝜃) = 𝔼[𝐿                                                                   (2)
+                                                                                 𝑡                   𝑡             𝑡
+work are:
+                                                                                where, 𝑐1 and 𝑐2 are coeﬃcients.
+     • Evaluate two reinforcement learning algorithms as a pre-training
+       and ﬁne-tuning methodology that can adapt to diﬀerent buildings          2.1.2. SAC
+       irrespective of their characteristics and environments.                     Like the PPO, the Soft Actor-Critic [14] is an actor-critic policy gra-
+     • Analyse their performance with and without transfer learning with        dient algorithm; however, it is an oﬀ-policy algorithm, based on the
+       respect to a rule-based controller.                                      maximum entropy framework:
+     • Release model weights trained on diﬀerent buildings to the re-                     𝑇
+                                                                                          ∑
+       search community to enable further study and evaluation of trans-        𝐽 (𝜋) =         𝔼(𝑠𝑡 ,𝑎𝑡 ) 𝜌𝜋 [𝑟(𝑠𝑡 , 𝑎𝑡 ) + 𝛼H(𝜋(⋅|𝑠𝑡 ))]                              (3)
+       fer learning for building control tasks.                                           𝑡=0
+
+                                                                                The advantage of this objective is that along with encouraging optimal
+2. Background and related work                                                  behaviour, it incentivises exploration to avoid local optima conver-
+                                                                                gence. Using this framework, the soft policy iteration algorithm learns
+2.1. Markov decision processes and reinforcement learning                       optimal maximum entropy policies, alternating between policy evalu-
+                                                                                ation and policy improvement. However, this is not practical for large
+    Reinforcement Learning (RL) is a computational learning method              continuous tasks. To address this issue, SAC utilises function approx-
+which learns through interactions with the environment [10]. An RL              imators for two soft Q-functions and the policy. The loss for the soft
+algorithm attempts to solve a Markov Decision Process (MDP). An MDP             Q-functions with the entropy regularised, and the soft Bellman update
+is based on the Markov Property, which states that the future state is          target is given as:
+entirely dependent upon its current state and is independent of the past.
+An MDP consists of four components:                                             𝐽 (𝜃𝑖𝑄 ) = 𝔼(𝑠,𝑎,𝑟,𝑠′ )∼ [𝑄𝜃𝑖 (𝑠, 𝑎) − 𝑟(𝑠, 𝑎) + 𝛾 min 𝑄𝜃𝑖 (𝑠′ , 𝑎′ ) − 𝛼𝑙𝑜𝑔(𝜋𝜙 (⋅|𝑠′ ))]
+                                                                                                                                        𝜃1,2
+     • A set of states 𝑆 .                                                                                                                                              (4)
+     • A set of actions 𝐴.
+                                                                                Here,  is the replay buﬀer that stores transitions during training, and
+     • A probability distribution of state transitions 𝑇 .
+     • A reward function 𝑅.
+                                                                                𝑎′ ∼ 𝜋(⋅|𝑠), 𝑙𝑜𝑔(𝜋𝜙 (⋅|𝑠)) approximates the entropy of the policy. Addi-
+                                                                                tionally, the objective for the policy network is given as:
+
+ 4
+     Icons for Fig. 1 were obtained from https://www.ﬂaticon.com/.              𝐽𝜋 (𝜙) = 𝔼𝑠∼ [min 𝑄𝜃𝑖 (𝑠, 𝑎) − 𝛼𝑙𝑜𝑔(𝜋𝜃 (𝑎, 𝑠))]                                        (5)
+                                                                                                    𝑖=1,2
+
+                                                                            2
+K. Kadamala, D. Chambers and E. Barrett                                                                                            Smart Energy 13 (2024) 100131
+
+
+The action 𝑎 is sampled using the reparameterisation trick where                      For building control systems, Lissa et al. [20] explore whether learn-
+𝑎̃𝜙 (𝑠, 𝜉) = tanh(𝜇𝜙 (𝑠) + 𝜎𝜙 ⊙ 𝜉) with 𝜉 ∼ 𝑁(0, 1). Finally, Haarnoja            ing can be transferred between HVAC agents with diﬀerent spatial and
+et al. [15] suggest that ﬁxing the value of entropy is a bad choice as            geographical characteristics. Using tabular Q-learning, the authors re-
+the policy should be encouraged to explore regions where the optimal              port that with transfer learning, a user experiences temperatures out
+action is unknown (high entropy) while encouraging it to be more de-              of their comfort range for only 3% of the day, compared to 7% to
+terministic when the near-optimal policy has already been learnt. For             36% without transfer learning. They also report that transfer learning
+this, as the policy is being trained, they dynamically adjust 𝛼 as:               helps achieve faster optimal convergence when there are geographical
+                                                                                  changes. Thus, by extending the work done by them [20,3], we evalu-
+                                                          ̄
+𝛼𝑡∗ = argmin𝛼𝑡 𝔼𝑎𝑡 ∼𝜋 ∗ [−𝛼𝑡 𝑙𝑜𝑔(𝜋𝑡∗ (𝑎𝑡 |𝑠𝑡 ; 𝛼𝑡 )) − 𝛼𝑡 ]           (6)        ate transfer learning in a deep learning setup. Zhang et al. [21] apply
+                       𝑡
+                                                                                  transfer learning to diﬀerent homes where they have the same types
+where  ̄ is the target entropy set to the dimension of the action space
+                                                                                  and the number of appliances to control but diﬀer with respect to other
+of the task.
+                                                                                  parameters or user preferences. They show that applying transfer learn-
+    Additionally, we experiment with the “learning starts” hyperparam-
+                                                                                  ing can eﬀectively reduce the training time of a new policy if the two
+eter of the SAC algorithm to evaluate the eﬀect that the pre-trained              homes are similar but suggest that the advantages of transfer learning
+policy has on exploration. The “learning starts” hyperparameter is the            would diminish otherwise. A novel approach for transfer learning pro-
+number of steps before the agent starts to update the policy and value            posed by Xu et al. [22] suggests that dividing the design of the neural
+networks, during which random actions are performed. We would be                  network controller into a transferable front-end network and a building-
+directly leveraging the pretrained policy by setting this to zero.                speciﬁc back-end network can learn the controls required for a target
+                                                                                  building with minimum eﬀort and better performance. The intuition
+2.2. Reinforcement learning in HVAC control                                       behind this is that the front-end network captures building-agnostic be-
+                                                                                  haviour while the back-end network would be eﬃciently trained for
+    Reinforcement learning (RL) has emerged as a promising technique              each speciﬁc building. They compare their work to prior work [23]
+for optimising the control of Heating, Ventilation, and Air Conditioning          and with an ON-OFF controller, showing that their proposed approach
+(HVAC) systems in buildings. The use of RL in HVAC control has at-                successfully transfers the Deep RL controller from a source building to
+tracted considerable attention due to its ability to learn optimal control        a target building. Apart from building HVAC systems, transfer learn-
+policies in complex and dynamic environments, such as buildings. Bar-             ing has also been applied to microgrids. Lissa et al. [24] have applied
+rett and Linder [16] proposed a tabular Q-learning with an occupancy              transfer learning to Deep RL on a microgrid of ﬁve houses, where they
+prediction approach where their approach optimised user comfort and               control a heat pump for domestic hot water usage. They experiment
+reduced energy costs compared to methods like “always on” and “pro-               with three approaches. They use independent learners for each house,
+grammable”. Lissa et al. [3] applied deep Q-learning to control space             which acts as the baseline, independent learners with transfer learn-
+heating and domestic hot water temperature, giving up to 16% in en-               ing where knowledge is shared amongst the agents, and a global agent
+ergy savings by optimising the PV consumption. Fang et al. [17] also              that controls all heat pumps in the microgrid. They reported that their
+propose a DQN framework for building HVAC system control. The au-                 transfer learning approach reduced the time to learn near-optimal poli-
+thors trained a DQN model on a multi-zone oﬃce building. Their results            cies by more than a factor of ﬁve when considering the entire cluster
+showed that the DQN control strategy can reduce the energy consump-               of houses. Fang et al. [25] propose a methodology where they trans-
+tion of the HVAC system for 11/14 of all ﬁxed temperature setpoint                fer the network weights from a pre-trained model onto a target DQN
+comparison cases, while maintaining acceptable indoor air temperature             model after which they perform ﬁnetuning. They perform experiments
+violations. Dmitrewski et al. [1] propose using RL with data assimila-            that involve transferring the ﬁrst layer, transferring the ﬁrst two layers
+tion (DA), a commonly used technique in numerical weather prediction.             and transferring the ﬁrst three layers. Their proposed methodology can
+They showed that an RL control agent with DA maintains the desired                improve the training eﬃciency by about 3%–29% compared to that of
+temperature range with 15.6% higher frequency than the RL control                 the DRL models trained from scratch.
+agent operating without DA. Similarly, Arroyo et al. [2] integrate model              Having detailed the literature in the area, no prior work has exam-
+predictive control (MPC) with reinforcement learning. In RL-MPC, the              ined the transferability of a previously trained single deep neural agent
+goal is to learn an ideal policy while ensuring that it satisﬁes every con-       onto building HVAC control systems that vary not only geographically
+straint. The authors reported that the MPC controller is more eﬀective            but also structurally.
+than a naive RL algorithm, as it has poor constraint satisfaction. How-
+ever, implementing a state estimator and a one-step-ahead optimiser               3. Methodology
+enables an RL-MPC controller to achieve similar results as the MPC. We
+use a Python simulator called Sinergym [9] (v2.3.2) to run our exper-                 Transfer learning in other domains, like computer vision and natu-
+iments. Sinergym is based on the OpenAI gym interface, is compatible              ral language processing, usually involves adapting the output layer and
+with EnergyPlus models, and provides weather variability, customisable            then ﬁne-tuning on domain-speciﬁc data. However, in the context of the
+reward functions and action spaces.                                               building HVAC control problem, diﬀerent buildings will diﬀer with re-
+                                                                                  spect to their observation and action spaces. For example, a data centre
+2.3. Transfer learning with RL in HVAC control                                    will have more input variables to consider than a house; thus, its obser-
+                                                                                  vation space would be larger than the house. Hence, a Deep RL agent
+    Given a source domain or task, transfer learning attempts to learn an         would need to adapt its input layer and the output layer according to the
+optimal policy for a target domain or task using information learnt from          dimensionality of the building control problem. This involves randomly
+the source domain [18]. The survey paper by Taylor and Stone [19] in-             initialising the weights of the new network for each new building. How-
+cludes metrics to measure the beneﬁt of transfer learning, along with             ever, instead of completely creating a new neural network, we simply
+classifying diﬀerent techniques based on their approaches and goals.              reinitialise the input and output layers of the network while keeping
+To measure the beneﬁt of transfer learning, in our work, we monitor               the hidden layers (Core) constant.
+the time to threshold along with the improvement of total reward ac-                  In order to perform this experiment, we need to train (or pre-train)
+cumulation through transfer compared to learning without transfer. We             an agent on the source building to evaluate the transfer process on
+perform experiments where the environments either have the same state             the target building. Consider Fig. 2, Building A is our source building
+and action variables or have diﬀerent state and action variables with no          that has an observation space 𝑂𝐴 = {𝑜1 , 𝑜2 , ...𝑜𝑛 } and an action space
+explicit task mappings.                                                           𝐴𝐴 = {𝑎1 , 𝑎2 , ...𝑎𝑛 }. We train (pre-train) a Deep RL agent on this build-
+
+                                                                              3
+K. Kadamala, D. Chambers and E. Barrett                                                                                              Smart Energy 13 (2024) 100131
+
+
+
+
+                                                    Fig. 2. Overview of the Transfer Learning Methodology.
+
+
+ing using one of the two algorithms described in Section 2.1. During                ing environments to evaluate our methodology. The ﬁrst is a 5-Zone
+training, we save the neural network weights for the actor and the                  single-storey building divided into one indoor and four outdoor zones,
+critic, which are later used for the transfer process. Now consider a               while the second is a two-zone data centre where the main heat
+target building (Building B), where the observation space is deﬁned as              source is the hosted servers.8 Based on prior literature [11,26,27],
+𝑂𝐵 = {𝑜1 , 𝑜2 , ...𝑜𝑚 } and an action space 𝐴𝐵 = {𝑜1 , 𝑜2 , ...𝑜𝑚 } such that       the 5ZoneAutoDXVAV.idf9 and 2ZoneDataCenterHVAC_wEcono-
+𝑛 ≠ 𝑚. Here, the input and the output dimensionalities of the neural                mizer.idf10 are commonly used EnergyPlus input data ﬁles. Hence,
+networks will not match. Hence, a direct transfer would not be possi-               for accessibility reasons, we chose these environments as they are sup-
+ble. To solve this issue, we initialise new input and output layers to              ported by Sinergym and EnergyPlus. The state spaces are given as:
+match the dimensionality of the new observation and action spaces. We
+then transfer the Core with the pre-trained weights onto the new net-                 • 5-Zone: Site outdoor air dry bulb temperature, site outdoor air rela-
+work to create a combined architecture. The combined architecture is                    tive humidity, site wind speed, site wind direction, site diﬀuse solar
+then further trained (ﬁne-tuned) using the same algorithm. The source                   radiation rate per area, site direct solar radiation rate per area, zone
+code5 and model weights6 from our implementation is available online.                   thermostat heating setpoint temperature, zone thermostat cooling
+                                                                                        setpoint temperature, zone air temperature, zone thermal comfort
+4. Experimental setup
+                                                                                        mean radiant temperature, zone air relative humidity, zone ther-
+                                                                                        mal comfort clothing value, zone thermal comfort Fanger model
+4.1. Environment
+                                                                                        PPD, zone people occupant count, people air temperature, facility
+    To simulate the building environments, we make use of a Python
+library7 called Sinergym [9] (v2.3.2). In particular, we use two build-
+                                                                                     8
+                                                                                        https://ugr-sail.github.io/sinergym/compilation/v2.3.2/pages/buildings.
+                                                                                    html.
+ 5                                                                                   9
+   https://github.com/kad99kev/EHCSTLDRL.                                               https://github.com/ugr-sail/sinergym/blob/v2.3.2/sinergym/data/
+ 6
+   https://drive.google.com/drive/folders/                                          buildings/5ZoneAutoDXVAV.idf.
+                                                                                    10
+1NAqbOnqyBS1vOKxMv4B76mZ0cDBTLjSt?usp=drive_link.                                       https://github.com/ugr-sail/sinergym/blob/v2.3.2/sinergym/data/
+ 7
+   https://ugr-sail.github.io/sinergym/compilation/v2.3.2/index.html.               buildings/2ZoneDataCenterHVAC_wEconomizer.idf.
+
+                                                                                4
+K. Kadamala, D. Chambers and E. Barrett                                                                                           Smart Energy 13 (2024) 100131
+
+
+
+
+                                                       Fig. 3. Performance on 5-Zone Hot Weather.
+
+
+     total HVAC electricity demand rate, current hour, current day, cur-           Table 1
+     rent month and year.                                                          Summary of the environments.
+   • Data Centre: Site outdoor air drybulb temperature, site outdoor air             Environment    Weather   Observation Space Shape   Action Space Shape
+     relative humidity, site wind speed, site wind direction, site diﬀuse
+                                                                                     5Zone          Hot       20                        2
+     solar radiation rate per area, site direct solar radiation rate per             5Zone          Cool      20                        2
+     area, facility total HVAC electricity demand rate, current hour, cur-           Data Centre    Hot       29                        2
+     rent day, current month and year.
+   • The data centre is split into two zones, east and west. The following
+     inputs are common for both the zones.                                       Angeles, Washington, USA. Each episode in the simulation lasts for a
+     – Zone thermostat heating setpoint temperature, zone thermostat             period of one year. An episode of one year contains 35,040 15-minute
+       cooling setpoint temperature, zone air temperature, zone ther-            timesteps. After each episode, we measure four Key Performance Indi-
+       mal comfort mean radiant temperature, zone air relative humid-            cators (KPIs):
+       ity, zone thermal comfort clothing value, zone thermal comfort
+       Fanger model PPD, zone people occupant count and people air                 • Mean Reward: Average rewards received per step in the episode.
+       temperature.                                                                • Comfort Violation Time (%): Percentage of time the temperature
+                                                                                     has been beyond the bounds of the set comfort temperature ranges.
+For both environments, the action spaces consist of the heating and                • Mean Comfort Penalty: Average of the comfort penalties from the
+cooling setpoints, which are controlled by the RL agent. Table 1 sum-                reward component per step in the episode.
+marises the environments used, their weather type and their observa-               • Mean Power: Average power consumption per step in the episode.
+tion and action space shapes. The following describes our experiment
+scenarios:                                                                       4.2. Rewards
+
+   • Pre-train - We pre-train our base agent on the 5-Zone Hot weather               The objective of the Deep RL agent is to minimise energy consump-
+     environment.                                                                tion while ensuring that the temperature lies within the given comfort
+   • Finetuning - We consider two scenarios for ﬁnetuning:                       temperature range. The objective function is a weighted sum of the
+     1. 5-Zone Cool weather environment - Same building diﬀerent                 energy consumption and thermal discomfort after normalising. We con-
+        weather.                                                                 sider two types of reward functions:
+     2. Data Centre Hot weather environment - Diﬀerent building same
+        weather.                                                                   • Linear Reward - Energy consumption and discomfort are weighted
+                                                                                     and added.
+The EnergyPlus weather data used to simulate hot weather is from
+Davis-Monthan AFB, Arizona, USA, while the cool weather is from Port                 𝑅 = −𝜔 × 𝜆𝑃 × 𝑃𝑡 − (1 − 𝜔) × 𝜆𝑇 × (|𝑇𝑡 − 𝑇𝑢𝑝 | + |𝑇𝑡 − 𝑇𝑙𝑜𝑤 |)          (7)
+
+                                                                             5
+K. Kadamala, D. Chambers and E. Barrett                                                                                           Smart Energy 13 (2024) 100131
+
+
+
+
+                                             Fig. 4. KPIs for PPO with Linear Rewards on 5-Zone Cool Weather.
+
+
+   • Exponential Reward - Energy consumption and exponential dis-                       Table 2
+     comfort are weighted and added.                                                    PPO and SAC Hyperparameters.
+
+                                                                                         Algorithm   Hyperparameter Name                    Value
+     𝑅 = −𝜔 × 𝜆𝑃 × 𝑃𝑡 − (1 − 𝜔) × 𝜆𝑇 × exp(|𝑇𝑡 − 𝑇𝑢𝑝 | + |𝑇𝑡 − 𝑇𝑙𝑜𝑤 |) (8)
+                                                                                         PPO         Total Timesteps                        500,000
+                                                                                                     Learning Rate                          3.0e-4
+where, 𝑃𝑡 is the power consumption, 𝑇𝑡 is the current indoor temper-                                 Number of Steps per Policy Rollout     2048
+ature, 𝜔 is weight assigned to power consumption and 𝜆𝑃 and 𝜆𝑇 are                                   Anneal Learning Rate                   True
+scaling constants for power and temperature respectively. Discomfort                                 Gamma                                  0.99
+                                                                                                     General Advantage Estimation           0.95
+is calculated as the absolute diﬀerence between the current temper-
+                                                                                                     Minibatch Size                         32
+ature and comfort range (𝑇𝑢𝑝 and 𝑇𝑙𝑜𝑤 ). If the temperature is inside                                Update Epochs                          10
+that range, the discomfort is 0. In our setup, energy and comfort penal-                             Advantage Normalisation                True
+ties are equally weighted. We include the exponential reward function                                Surrogate Clipping Coeﬃcient           0.2
+to evaluate whether changing the discomfort calculation from a linear                                Clip loss for Value Function           True
+                                                                                                     Entropy Coeﬃcient                      0.0
+diﬀerence to an exponential diﬀerence would increase the task diﬃ-
+                                                                                                     Value Function Coeﬃcient               0.5
+culty. Additionally, we believe an exponential reward could enforce                                  Maximum Norm for Gradient Clipping     0.5
+policies that reduce comfort violations while increasing power con-
+                                                                                         SAC         Total Timesteps                        500,000
+sumed. Hence, to monitor such behaviour, we track the diﬀerences in
+                                                                                                     Buﬀer Size                             1e6
+performance with respect to other KPIs like comfort violation time and                               Gamma                                  0.99
+power consumption.                                                                                   Target Smoothing Coeﬃcient             0.005
+                                                                                                     Batch Size                             256
+                                                                                                     Learning Starts                        5e3
+4.3. Training setup
+                                                                                                     Policy Learning Rate                   3e-4
+                                                                                                     Q-network Learning Rate                1e-3
+    The Deep RL algorithms are implemented with the help of CleanRL                                  Policy Update Frequency                2
+[28]. The default hyperparameters included with CleanRL were used                                    Target Update Frequency                2
+                                                                                                     Entropy Regularisation Coeﬃcient       0.2
+for the PPO and SAC algorithms, and they are given in Table 2. The                                   Autotune Entropy Coeﬃcient             True
+Core architecture that is pre-trained and ﬁne-tuned consists of three                                Exploration Noise                      0.1
+linear layers of size 64, 128 and 64. The input and output layers will                               Noise Clip                             0.5
+depend upon the dimensionality of the observation and action spaces as
+described previously in Section 3. The ReLU activation function is used
+after every layer, barring the output layer. An RL agent is trained on the       on the 5-Zone Cool and Data Centre Hot environments. This procedure
+5-Zone Hot environment using this setup. We then ﬁne-tune the model              is carried out for both environments. The reward functions used for
+
+                                                                             6
+K. Kadamala, D. Chambers and E. Barrett                                                                                         Smart Energy 13 (2024) 100131
+
+
+
+
+                                              Fig. 5. KPIs for SAC with Linear Rewards on 5-Zone Cool Weather.
+
+
+training are given in Section 4.2. The learning curves for both the PPO          Algorithm 2 Rule for RB Controller for Data Centre.
+and SAC algorithms are compared to the Rule-Based Controllers (RBC)                lower_limit ← 18
+provided by Sinergym.11 The rules for the RBC for both the 5Zone and               upper_limit ← 27
+data centre are deﬁned in Algorithms 1 and 2, respectively.                        for each step in environment do
+                                                                                       mean_temp ← mean(west_zone_air_temp, east_zone_air_temp)
+                                                                                      if mean_temp < lower_limit then
+Algorithm 1 Rule for RB Controller for 5Zone.
+                                                                                          heat_setpoint ← heat_setpoint + 1
+  summer_setpoint ← (22.5, 26.0)                                                          cool_setpoint ← cool_setpoint + 1
+  winter_setpoint ← (20.0, 23.5)                                                      else if mean_temp > upper_limit then
+  summer_range ← (1 June, 30 September)                                                   heat_setpoint ← heat_setpoint − 1
+  for each step in environment do                                                         cool_setpoint ← cool_setpoint − 1
+     if current_date is in summer_range then                                          end if
+         curr_setpoint ← summer_setpoint                                           end for
+     else
+         curr_setpoint ← winter_setpoint
+     end if
+  end for                                                                        reward function, while Fig. 3b shows the mean reward per episode
+                                                                                 when using the exponential reward function.
+
+5. Results                                                                       5.2. Fine-tuning on 5-zone cool
+
+5.1. Pre-training
+                                                                                     After we pre-train an agent in the Hot environment, we ﬁne-tune it
+                                                                                 on a 5-Zone building in a Cool environment. Here, the two buildings
+   We ﬁrst begin by evaluating the performance of the algorithms on
+                                                                                 have the same observation and action shapes. Hence, it is not necessary
+the 5-Zone Hot Weather simulation. The Core network from the trained
+agents in this environment will be used for transfer to the 5-Zone Cool          to re-initialise (reset) the input and output layers for transfer. But for
+and Data Centre Hot environments. The performance of the algorithms              comparison, we carry out three types of experiments:
+can be assessed from the learning curves depicted in Fig. 3. To be spe-
+ciﬁc, Fig. 3a shows the mean reward per episode when using the linear             1. Directly transfer the pre-trained agent without the input and output
+                                                                                     layer reset.
+                                                                                  2. Transfer the Core of the pre-trained agent with the input and output
+ 11
+    https://github.com/ugr-sail/sinergym/blob/v2.3.2/sinergym/utils/                 layer reset.
+controllers.py.                                                                   3. Directly train an agent on the environment from scratch.
+
+                                                                             7
+K. Kadamala, D. Chambers and E. Barrett                                                                                                  Smart Energy 13 (2024) 100131
+
+
+
+
+                                                 Fig. 6. KPIs for PPO with Exponential Rewards on 5-Zone Cool Weather.
+
+
+                                          Table 3
+                                          Performance Diﬀerence (in %) with Linear Rewards on 5-Zone Cool Weather.
+
+                                           Algorithm    Methodology   Scratch                           RB Controller
+                                                                      ≈ 250k steps       ≈ 500k steps   ≈ 250k steps    ≈ 500k steps
+                                           PPO          Scratch       —                  —              -4.4            -2.4
+                                                        No Reset      -6.5               -5.4           -11.2           -8.0
+                                                        Reset         -0.3               -0.2           -4.8            -2.6
+
+                                           SAC          Scratch       —                  —              10.2            7.9
+                                                        No Reset      -1.2               2.6            9.0             10.3
+                                                        No Reset      0.06               1.1            10.2            8.9
+                                                        with No
+                                                        Learning
+                                                        Starts
+                                                        Reset         0.4                0.4            10.6            8.3
+                                                        Reset with    -3.5               -2.1           7.0             5.9
+                                                        No Learning
+                                                        Starts
+
+
+
+5.2.1. Linear rewards                                                                      rewards. Over the training period, the PPO algorithm aims to minimise
+    Table 3 shows the performance diﬀerence with respect to scratch                        comfort violations, which, in contrast, results in utilising more power.
+and the RB Controller at the 250k timestep and 500k timestep mark
+when using linear rewards (Equation (7)). From the table, we can see                       5.2.2. Exponential rewards
+that the PPO algorithm is unable to learn a desirable policy. We also                          Table 4, shows the performance diﬀerence with respect to scratch
+see that for the algorithm, transferring network weights damages the                       and the RB Controller at the 250k timestep and 500k timestep mark
+learning process, resulting in poorer policies than when trained from                      when using exponential rewards. Unlike the results we saw in Sec-
+scratch. On the other hand, the SAC algorithm, in general, performs                        tion 5.2.1, the PPO signiﬁcantly outperforms the RB Controller. Re-
+better than PPO. It also outperforms the RB Controller by around 7%                        setting the input and output layer weights also outperforms training
+to 10%. However, when comparing the diﬀerent weight-transferring                           from scratch. From Fig. 6, we can see that the amount of power con-
+methodologies with scratch, we see that not resetting the input and                        sumed and the comfort violations stabilise over the training period.
+output layer weights has better performance. Figs. 4 and 5 show that the                   However, since the exponential reward function focuses on occupant
+two algorithms have completely diﬀerent priorities for maximising their                    comfort when comparing Figs. 4 and 6, we can see that it results in
+
+                                                                                     8
+K. Kadamala, D. Chambers and E. Barrett                                                                                                Smart Energy 13 (2024) 100131
+
+
+
+
+                                                 Fig. 7. KPIs for SAC with Exponential Rewards on 5-Zone Cool Weather.
+
+
+                                          Table 4
+                                          Performance Diﬀerence (in %) with Exponential Rewards on 5-Zone Cool Weather.
+
+                                           Algorithm   Methodology   Scratch                        RB Controller
+                                                                     ≈ 250k steps   ≈ 500k steps    ≈ 250k steps    ≈ 500k steps
+                                           PPO         Scratch       —              —               37.8            40.1
+                                                       No Reset      -1.0           -4.5            37.2            37.4
+                                                       Reset         4.3            3.5             40.5            42.3
+
+                                           SAC         Scratch       —              —               43.5            42.1
+                                                       No Reset      -0.6           3.5             43.2            44.1
+                                                       No Reset      -3.7           0.1             41.4            42.2
+                                                       with No
+                                                       Learning
+                                                       Starts
+                                                       Reset         0.7            4.1             44.0            44.5
+                                                       Reset with    -3.5           0.3             41.5            42.3
+                                                       No Learning
+                                                       Starts
+
+
+
+
+more power usage while reducing occupant discomfort. Similarly, the                     time, while for the SAC algorithm, we observe an increase of around
+SAC algorithm outperforms the RB Controller as well. While there is                     1.63% and a decrease of around 18% in the mean power consumed and
+no signiﬁcant improvement in performance around the halfway mark                        the comfort violation times, respectively.
+compared to scratch, all the weight-transferring methodologies improve
+their performance over the training period, eventually outperforming                    5.3. Fine-tuning on data centre hot
+scratch. Fig. 7 shows the KPIs for the SAC algorithm, which, on the other
+hand, manages to learn a policy that reduces power usage (Figs. 5a and                      We cannot directly transfer the model weights for the data cen-
+7a) while stabilising occupant comfort (Figs. 5b and 7b). As a result, it               tre task since the dimensionality of the observation space is diﬀerent
+is able to outperform the PPO algorithm easily. When we aggregate the                   compared to the 5-Zone environments. Hence, for all transfer learning
+results for each experimental variant of the PPO algorithm and change                   experiments in this task, we must re-initialise (reset) the input and out-
+the reward from linear to exponential, we see around a 10% increase                     put layers based on the dimensionality. Apart from this, we conduct the
+in mean power for around a 28% decrease in mean comfort violation                       same experiments described in Section 5.2.
+
+                                                                                    9
+K. Kadamala, D. Chambers and E. Barrett                                                                                                  Smart Energy 13 (2024) 100131
+
+
+
+
+                                                  Fig. 8. KPIs for PPO with Linear Rewards on Data Centre Hot Weather.
+
+
+                                          Table 5
+                                          Performance Diﬀerence (in %) with Linear Rewards on Data Centre Hot Weather.
+
+                                           Algorithm   Methodology    Scratch                         RB Controller
+                                                                      ≈ 250k steps    ≈ 500k steps    ≈ 250k steps    ≈ 500k steps
+                                           PPO         Scratch        —               —               -3.6            -3.0
+                                                       Reset          -0.3            -0.3            -3.9            -3.4
+
+                                           SAC         Scratch        —               —               0.5             1.0
+                                                       Reset          0.2             0.3             0.7             1.3
+                                                       Reset with     -0.7            -0.7            -0.1            0.3
+                                                       No Learning
+                                                       Starts
+
+
+
+5.3.1. Linear rewards                                                                     RB Controller. From Figs. 8 and 10, we can infer that there is no major
+    The performance of the PPO algorithm in this environment is similar                   diﬀerence between the two reward functions. While resetting the in-
+to its performance in Section 5.2.1. Resetting the input and output layer                 put and output layer weights for the SAC algorithm performs the worst
+weights does not outperform training from scratch. Additionally, the                      at the halfway mark, it eventually outperforms scratch and the RB Con-
+PPO algorithm fails to improve upon the RB Controller. However, the                       troller. On the other hand, the reset with no learning starts methodology
+learning curves (see Fig. 8) show that the PPO algorithm is able to                       consistently outperforms scratch, ultimately outperforming the RB Con-
+reduce comfort violation time to almost zero while reducing the amount                    troller as well. Unlike the PPO, the SAC algorithm cannot reduce the
+of power required to achieve this. On the other hand, resetting the input                 comfort violation time to zero. However, it follows a similar trend (seen
+and output layer weights works for the SAC algorithm, outperforming                       in Figs. 5, 7, 9 and 11) where mean episodic power reduces over time
+scratch and the RB Controller by a slight margin. Conversely to PPO,                      while comfort violation time increases when using linear rewards, but
+however, the SAC algorithm reduces power consumption, which greatly                       using exponential rewards reduces the mean episodic power over the
+aﬀects comfort violation, increasing it to around 12% per episode for                     training period while the comfort violation time remains stable. When
+the diﬀerent training methodologies (see Table 5).                                        we aggregate the results for each experimental variant of the PPO algo-
+                                                                                          rithm and change the reward from linear to exponential, we see around
+5.3.2. Exponential rewards                                                                a 0.1% decrease in mean power for around a 93.9% decrease in mean
+   Resetting the input and output layer weights gives a minor improve-                    comfort violation time, while for the SAC algorithm, we observe an in-
+ment over training from scratch for the PPO algorithm. From Table 6,                      crease of around 2.1% and a decrease of around 89.1% in the mean
+we see that despite this improvement, it does not do better than the                      power consumed and the comfort violation times, respectively.
+
+                                                                                     10
+K. Kadamala, D. Chambers and E. Barrett                                                                                                 Smart Energy 13 (2024) 100131
+
+
+
+
+                                                  Fig. 9. KPIs for SAC with Linear Rewards on Data Centre Hot Weather.
+
+
+                                          Table 6
+                                          Performance Diﬀerence (in %) with Exponential Rewards on Data Centre Hot Weather.
+
+                                           Algorithm   Methodology    Scratch                         RB Controller
+                                                                      ≈ 250k steps    ≈ 500k steps    ≈ 250k steps    ≈ 500k steps
+                                           PPO         Scratch        —               —               -3.5            -3.1
+                                                       Reset          0.1             0.07            -3.3            -3.0
+
+                                           SAC         Scratch        —               —               -0.5            0.07
+                                                       Reset          -0.2            0.07            -0.7            0.1
+                                                       Reset with     0.3             0.07            -0.1            0.1
+                                                       No Learning
+                                                       Starts
+
+
+
+6. Discussion                                                                             tantly, all weight-transferring methodologies exhibit improved perfor-
+                                                                                          mance over training, eventually surpassing the scratch baseline.
+    In our experiments, we evaluated two RL algorithms for transferring                       For the Datacenter Hot weather environment, the PPO algorithm
+agents across buildings with varying weather conditions and schemat-                      shows similar performance seen for the 5-Zone Cool weather envi-
+ics. The initial phase involved pre-training a model on the 5-Zone in                     ronment. When resetting the input and output layer weights, PPO
+Hot Weather using both algorithms to establish a foundational model,                      fails to surpass training from scratch and does not outperform the RB
+which was subsequently ﬁne-tuned for speciﬁc tasks, namely the 5-Zone                     Controller. However, the algorithm reduces comfort violation time to
+in Cool Weather and the Data Centre in Hot Weather. These experiments                     nearly zero while lowering power consumption. Conversely, resetting
+incorporated two diﬀerent reward functions - linear and exponential.                      input and output layer weights for the SAC algorithm shows slight
+    For the 5-Zone Cool weather environment, we have seen that the                        performance improvement over scratch and the RB Controller. SAC
+PPO algorithm struggles to learn an eﬀective policy, particularly when                    consistently reduces power consumption, impacting comfort violation.
+network weights are transferred, resulting in suboptimal policies com-                    For both algorithms, resetting input and output layer weights oﬀers
+pared to training from scratch. Conversely, the SAC algorithm consis-                     marginal enhancement for PPO and a consistent outperformance trend
+tently outperforms the PPO algorithm and the RB Controller, demon-                        for SAC. Linear rewards reduce mean episodic power for SAC and in-
+strating a performance improvement ranging from 7% to 10%. In the                         crease comfort violation time. Exponential rewards result in a reduction
+case of exponential rewards, the PPO algorithm notably improves over                      of mean power, while comfort violation time remains constant.
+the RB Controller, in contrast to its performance with linear rewards.                        Thus, our ﬁndings indicate that the SAC algorithm consistently out-
+The SAC algorithm continues to outperform the RB Controller. Impor-                       performs the PPO algorithm across both tasks and reward functions,
+
+                                                                                     11
+K. Kadamala, D. Chambers and E. Barrett                                                                                           Smart Energy 13 (2024) 100131
+
+
+
+
+                                          Fig. 10. KPIs for PPO with Exponential Rewards on Data Centre Hot Weather.
+
+
+particularly when compared to the RB Controller. Biemann et al. [11]               spect to the RB Controller. When comparing the results with respect to
+showed similar results where they trained diﬀerent on-policy and oﬀ-               training from scratch, the PPO algorithm does not provide an improve-
+policy algorithms and found that the SAC algorithm outperforms other               ment. When we evaluate the SAC algorithm, we see that around the
+RL algorithms. We have shown that this is also true when performing                halfway mark (250k steps), it provides inconsistent improvement over
+transfer learning, where the input and output layers are adjusted for the          training from scratch. However, over the entire training period, we see
+change in the observation and action spaces. Experience replay and en-             that the diﬀerent transfer learning variants of the algorithm outperform
+tropy regularisation may explain why an oﬀ-policy algorithm like SAC               training from scratch in general. This is true for both the simulation en-
+outperforms an on-policy algorithm like PPO. Compared to the PPO                   vironments with both reward functions. In general, we see around 1%
+algorithm, the SAC algorithm prefers reducing energy at a small cost               to 4% improvement in rewards.
+of increasing comfort violations. However, when changing the reward                    Apart from the rewards, we also tracked other KPIs, like the mean
+function to exponential, we notice the same trend for power consump-               power consumed per episode and the percentage of time spent outside
+tion while reducing and stabilising the comfort violations when using              the comfort temperature zone. From the evaluation for linear rewards,
+the SAC algorithm.                                                                 we see that the PPO algorithm, in general, tends to reduce comfort
+    In conclusion, resetting the input and output layers and using ex-             violation time while increasing the average power consumed, while
+ponential rewards for the SAC algorithm seems more eﬀective. It con-               the SAC algorithm shows opposite trends where it reduces the average
+sistently outperforms PPO across various tasks and reward functions.               power consumed while increasing the mean comfort violations. How-
+However, the choice between linear and exponential rewards may de-                 ever, when we use the exponential reward function, we see that these
+pend on speciﬁc considerations, such as the trade-oﬀ between power                 curves stabilise for the PPO algorithm, while we observe a similar de-
+consumption and comfort violation time.                                            creasing trend for the mean power consumed but with stabilised mean
+                                                                                   comfort violations for the SAC algorithm. Thus, the work furthers ongo-
+7. Conclusion and future work                                                      ing research in smart energy systems, where a pre-trained agent, over
+                                                                                   time, develops deep knowledge and understanding of the building un-
+    In this paper, we evaluated a methodology using two diﬀerent RL                der their control, eﬀectively being able to reduce comfort violations and
+algorithms to transfer agents across buildings under diﬀerent weather              power consumed.
+conditions and characteristics. We ﬁrst pre-trained a model using the                  For future work, a methodology that can avoid any need for re-
+two algorithms to obtain a foundation model. This model was then ﬁne-              initialisation of the input or output layers will be considered. This
+tuned on two diﬀerent tasks - the 5-Zone in Cool Weather and the Data              could lead to useful information from diﬀerent buildings and weath-
+Centre in Hot Weather. We performed these experiments using two dif-               ers being learnt by the agent, potentially developing smarter agents
+ferent reward functions - Linear and Exponential.                                  with little training required. Exploring imitation learning as a pre-
+    We showed that the SAC algorithm outperforms the PPO algorithm                 training methodology could be useful when ﬁnetuning with reinforce-
+on both tasks using both reward functions when comparing it with re-               ment learning. This approach can potentially minimise the required
+
+                                                                              12
+K. Kadamala, D. Chambers and E. Barrett                                                                                                     Smart Energy 13 (2024) 100131
+
+
+
+
+                                          Fig. 11. KPIs for SAC with Exponential Rewards on Data Centre Hot Weather.
+
+
+
+
+training and enhance overall performance. Additionally, the behaviour              Declaration of competing interest
+of an expert system like a rule-based controller can be utilised as train-
+ing data to provide a performance boost, which could result in better                  The authors declare that they have no known competing ﬁnancial
+and more eﬃcient agents. State information data could also be used                 interests or personal relationships that could have appeared to inﬂuence
+to train autoencoders, reducing the dimensionality of the observation              the work reported in this paper.
+space, enabling eﬃcient representation learning and, thus, contribut-
+ing to improved policy generalisation. Algorithmic performance could               Data availability
+also be enhanced with hyperparameter tuning that could be performed
+with the help of hyperparameter sweeps or metaheuristics like genetic                 The links to the repository and simulation library are provided in
+algorithms. There is also an opportunity to experiment with various                the paper.
+conﬁgurations by adjusting reward weights associated with power con-
+sumption and comfort, thus highlighting the potential implications of
+                                                                                   Acknowledgement
+diﬀerent weightings. Finally, there is potential to enhance this approach
+in a multi-objective setting by separately optimising energy and com-
+                                                                                      This work was conducted with the ﬁnancial support of the Science
+fort rewards, allowing for personalised weighting by occupants. With
+                                                                                   Foundation Ireland Centre for Research Training in Artiﬁcial Intelli-
+this, practicality and sustainability can be improved while exploring
+                                                                                   gence under Grant No. 18/CRT/6223.
+dynamic energy costs, varying with time or load magnitude, and in-
+tegrating considerations like time-varying carbon intensity for total
+carbon emissions.                                                                  References
+
+                                                                                    [1] Dmitrewski A, Molina-Solana M, Arcucci R. Cntrlda: a building energy management
+CRediT authorship contribution statement                                                control system with real-time adjustments. Application to indoor temperature. Build
+                                                                                        Environ 2022;215:108938.
+                                                                                    [2] Arroyo J, Manna C, Spiessens F, Helsen L. Reinforced model predictive control (rl-
+    Kevlyn Kadamala: Writing – review & editing, Writing – original                     mpc) for building energy management. Appl Energy 2022;309:118346.
+draft, Visualization, Validation, Software, Methodology, Formal analy-              [3] Lissa P, Deane C, Schukat M, Seri F, Keane M, Barrett E. Deep reinforcement learning
+sis, Data curation, Conceptualization. Des Chambers: Writing – review                   for home energy management system control. Energy AI 2021;3:100043.
+                                                                                    [4] Devlin J, Chang M-W, Lee K, Toutanova K. Bert: pre-training of deep bidirectional
+& editing, Supervision, Resources, Project administration, Investigation.               transformers for language understanding. arXiv preprint arXiv:1810.04805, 2018.
+Enda Barrett: Writing – review & editing, Writing – original draft, Su-             [5] Tan M, Le Q. Eﬃcientnet: rethinking model scaling for convolutional neural net-
+pervision, Resources, Project administration, Investigation.                            works. In: International conference on machine learning. PMLR; 2019. p. 6105–14.
+
+
+                                                                              13
+K. Kadamala, D. Chambers and E. Barrett                                                                                                                    Smart Energy 13 (2024) 100131
+
+
+ [6] Raﬀel C, Shazeer N, Roberts A, Lee K, Narang S, Matena M, et al. Exploring the              [18] Zhu Z, Lin K, Jain AK, Zhou J. Transfer learning in deep reinforcement learning: a
+     limits of transfer learning with a uniﬁed text-to-text transformer. J Mach Learn Res             survey. IEEE Trans Pattern Anal Mach Intell 2023.
+     2020;21:5485–551.                                                                           [19] Taylor ME, Stone P. Transfer learning for reinforcement learning domains: a survey.
+ [7] Yuan L, Chen D, Chen Y-L, Codella N, Dai X, Gao J, et al. Florence: a new foundation             J Mach Learn Res 2009;10.
+     model for computer vision. arXiv preprint arXiv:2111.11432, 2021.                           [20] Lissa P, Schukat M, Barrett E. Transfer learning applied to reinforcement learning-
+ [8] Wightman R. Pytorch image models. https://github.com/rwightman/pytorch-                          based hvac control. SN Comput Sci 2020;1:1–12.
+     image-models, 2019. https://doi.org/10.5281/zenodo.4414861.                                 [21] Zhang X, Jin X, Tripp C, Biagioni DJ, Graf P, Jiang H. Transferable reinforcement
+ [9] Jiménez-Raboso J, Campoy-Nieves A, Manjavacas-Lucas A, Gómez-Romero J,                           learning for smart homes. In: Proceedings of the 1st international workshop on re-
+     Molina-Solana M. Sinergym: a building simulation and control framework for train-                inforcement learning for energy management in buildings & cities; 2020. p. 43–7.
+     ing reinforcement learning agents. In: Proceedings of the 8th ACM international con-        [22] Xu S, Wang Y, Wang Y, O’Neill Z, Zhu Q. One for many: transfer learning for building
+     ference on systems for energy-eﬃcient buildings, cities, and transportation; 2021.               hvac control. In: Proceedings of the 7th ACM international conference on systems
+     p. 319–23.                                                                                       for energy-eﬃcient buildings, cities, and transportation; 2020. p. 230–9.
+[10] Sutton RS, Barto AG. Reinforcement learning: an introduction. MIT Press; 2018.              [23] Wei T, Wang Y, Zhu Q. Deep reinforcement learning for building hvac control. In:
+[11] Biemann M, Scheller F, Liu X, Huang L. Experimental evaluation of model-                         Proceedings of the 54th annual design automation conference 2017; 2017. p. 1–6.
+     free reinforcement learning algorithms for continuous hvac control. Appl Energy             [24] Lissa P, Schukat M, Keane M, Barrett E. Transfer learning applied to drl-based heat
+     2021;298:117164.                                                                                 pump control to leverage microgrid energy eﬃciency. Smart Energy 2021;3:100044.
+[12] Schulman J, Wolski F, Dhariwal P, Radford A, Klimov O. Proximal policy optimiza-            [25] Fang X, Gong G, Li G, Chun L, Peng P, Li W, et al. Cross temporal-spatial transfer-
+     tion algorithms. arXiv preprint arXiv:1707.06347, 2017.                                          ability investigation of deep reinforcement learning control strategy in the building
+[13] Konda V, Tsitsiklis J. Actor-critic algorithms. Adv Neural Inf Process Syst 1999;12.             hvac system level. Energy 2023;263:125679.
+[14] Haarnoja T, Zhou A, Abbeel P, Levine S. Soft actor-critic: oﬀ-policy maximum                [26] An Z, Ding X, Rathee A, Du W. Clue: safe model-based rl hvac control using epistemic
+     entropy deep reinforcement learning with a stochastic actor. In: International con-              uncertainty estimation. In: Proceedings of the 10th ACM international conference on
+     ference on machine learning. PMLR; 2018. p. 1861–70.                                             systems for energy-eﬃcient buildings, cities, and transportation; 2023. p. 149–58.
+[15] Haarnoja T, Zhou A, Hartikainen K, Tucker G, Ha S, Tan J, et al. Soft actor-critic          [27] Liu H-Y, Balaji B, Gupta R, Hong D. Rule-based policy regularization for reinforce-
+     algorithms and applications. arXiv preprint arXiv:1812.05905, 2018.                              ment learning-based building control. In: Proceedings of the 14th ACM international
+[16] Barrett E, Linder S. Autonomous hvac control, a reinforcement learning approach.                 conference on future energy systems; 2023. p. 242–65.
+     In: Machine learning and knowledge discovery in databases: European conference,             [28] Huang S, Dossa RFJ, Ye C, Braga J, Chakraborty D, Mehta K, et al. Cleanrl: high-
+     ECML PKDD 2015, Porto, Portugal, September 7-11, 2015, proceedings, part III 15.                 quality single-ﬁle implementations of deep reinforcement learning algorithms. J
+     Springer; 2015. p. 3–19.                                                                         Mach Learn Res 2022;23:1–18. http://jmlr.org/papers/v23/21-1342.html.
+[17] Fang X, Gong G, Li G, Chun L, Peng P, Li W, et al. Deep reinforcement learning opti-
+     mal control strategy for temperature setpoint real-time reset in multi-zone building
+     hvac system. Appl Therm Eng 2022;212:118552.
+
+
+
+
+                                                                                            14
+

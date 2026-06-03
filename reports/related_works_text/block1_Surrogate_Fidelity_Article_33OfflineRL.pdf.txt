@@ -1,0 +1,2155 @@
+Neural Computing and Applications
+
+
+REVIEW
+
+Distribution shift, generalization and OOD challenge in
+offline reinforcement learning: a comprehensive survey
+Ali Riahi Samani · Xujiang Zhao · Feng Chen
+
+Received: 13 September 2025 / Accepted: 3 February 2026
+© The Author(s) 2026
+
+Abstract
+Offline Reinforcement Learning (RL) has emerged as a promising paradigm to overcome the limitations of con-
+ventional RL methods that depend on extensive and often unsafe online interactions with the environment. By
+learning policies exclusively from pre-collected datasets, Offline RL aligns with the growing emphasis on data
+efficiency and safety in machine learning. However, existing off-policy RL algorithms encounter substantial
+difficulties when trained purely on offline data, primarily due to distributional shift between the training dataset
+and the learned policy. This issue becomes more pronounced with high-dimensional function approximation,
+leading to degraded performance and poor generalization. This survey provides a comprehensive overview of
+recent advances in Offline RL, with a particular focus on the challenges of distribution shift, generalization, and
+out-of-distribution (OOD) actions. We review the evolution of this field, discuss data limitations, and analyze
+the historical and theoretical foundations of distributional shift in Offline RL. Furthermore, we categorize exist-
+ing approaches into four major groups including Q-value restriction methods, uncertainty-based Q-restriction
+methods, policy constraint methods, and uncertainty-based policy constraint methods, highlighting their core
+principles and practical implications. We also summarize common benchmarks such as D4RL, discuss dataset
+enhancement strategies, and examine evaluation metrics and computational efficiency. Through this analysis,
+the survey offers a unified perspective on current solutions and identifies open challenges, providing valuable
+guidance for advancing robust, generalizable, and trustworthy Offline RL in domains such as robotics, health-
+care, and autonomous systems.
+
+Keywords Reinforcement learning · Offline RL · Distribution shift · Out of distribution · Uncertainty
+quantification · Multi-task data sharing
+
+
+1 Introduction
+
+Reinforcement Learning (RL) is a method in which an artificial intelligence (AI) agent learns optimal behavior
+through trial and error, guided by reward feedback from the environment [1]. RL has been particularly effective
+in solving complex sequential decision-making tasks, especially in environments where building explicit models
+is either impractical or costly [2]. However, traditional RL methods face significant limitations when continu-
+ous interaction with the environment is not feasible, leading to the rise of Offline RL. Offline RL leverages large
+
+
+
+
+         Neural Computing and Applications   (2026) 38:150                   https://doi.org/10.1007/s00521-026-11966-8
+
+                                                                                                            13
+2150       Page 2 of 38                                              https://doi.org/10.1007/s00521-026-11966-8
+
+datasets from prior interactions, allowing agents to learn without the need for additional online engagement. Yet,
+this approach introduces its own set of challenges, including reliance on static data, the potential for distributional
+shifts, and the absence of exploratory actions that are central to traditional RL [3].
+   Deep Reinforcement Learning (DRL), a specialized form of RL, integrates deep neural networks to approxi-
+mate functions such as value functions, policies, and reward models [4]. While DRL has significantly advanced
+the capabilities of RL, it requires vast amounts of data, which poses challenges in real-world applications where
+data acquisition can be costly or limited. The reliance on large datasets further complicates the training process
+and can lead to issues such as distributional shifts, especially in Offline RL scenarios, where training is conducted
+using only previously collected data [5, 6]. The complexities are further amplified by high-dimensional function
+approximation, intensifying the pivotal issue of distributional shift inherent in offline RL.
+   The field is actively advancing to improve the adaptability of offline RL algorithms across diverse and com-
+plex scenarios, thereby broadening their practical use [7]. A key area of focus is the reliance on existing datasets,
+emphasizing the need for efficient learning from limited and possibly flawed data. This challenge is heightened
+by the static nature of training data and the absence of exploratory actions during learning, which are essential
+in traditional RL settings. These issues restrict the ability to explore and find potentially beneficial actions not
+present in the dataset [8]. Additionally, offline RL deals with counterfactual queries, complicating the evaluation
+of algorithms trained on specific datasets under different conditions [9].
+   To overcome these challenges, researchers have developed various solutions, including model ensembles,
+applying uncertainty penalties to value functions, and diverse policy regularization techniques. Methods such as
+pessimistic initialization [10], density ratio-based method [11], and conservative Q-learning [12] help address
+issues like distributional shift, out-of-distribution (OOD) actions, and overestimation bias, leading to more robust
+offline RL frameworks. These solutions involve enhancing existing RL algorithms, introducing new training
+paradigms, and integrating advanced deep learning techniques to improve policy learning. Tailoring offline RL
+strategies for specific uses, such as robotics, requires overcoming adaptability challenges and compensating for
+limitations in training data.
+   This study explores these challenges and the methodologies designed to address them, highlighting their impact
+on offline RL. We present a structured classification of techniques for tackling distributional shifts, complete with
+a detailed analysis of their algorithmic innovations, advantages, and limitations. This helps researchers choose
+the most appropriate algorithms for their offline RL projects. Lastly, we share our thoughts on unresolved issues
+and suggest potential directions for future research in this rapidly progressing field. Our contributions include:
+1. Performing an extensive analysis of existing surveys to uncover research gaps,
+2. Classifying methodologies into four unique categories to cover a wide range of approaches in distribution shift
+   and OOD in offline RL,
+3. Compilation of an exhaustive list of benchmarks for evaluating Offline RL algorithms, enabling more effective
+   comparison and validation of methods,
+4. Evaluation metrics analysis to assess the effectiveness of Offline RL techniques in diverse real-world scenarios,
+5. Proposing future directions for the field, highlighting unresolved issues and suggesting innovative approaches
+   to overcome existing limitations.
+The rest of paper is organized as follow. In Sect. 2, previous surveys in the field are reviewed. Reinforcement
+learning concept are explained in Sect. 3. Data limitations and distributional shift are examined in Sects. 4 and 5.
+In Sect. 6 classification of existing methods is provided. Benchmarks are introduced in Sect. 7. Section 8 analyze
+evaluation metrics. Section 9 delves into the existing challenges. A thorough discution is provided in Sects. 10
+and 11 concludes the study.
+
+
+
+
+13                                                                                     Neural Computing and Applications
+https://doi.org/10.1007/s00521-026-11966-8                                                 Page 3 of 38     150 3
+
+2 Related surveys
+
+Various studies have examined the challenge of distribution shifts as well as OOD and have conducted compre-
+hensive surveys on this issue. Wu et al. [13] conducted a thorough examination of how graph learning methods
+can effectively manage distribution shifts. Their primary objective was to consolidate and summarize the latest
+strategies and insights in handling these shifts within graph-based learning paradigms. They categorized their
+investigation into three main areas: graph domain adaptation learning, focusing on techniques to adapt graph
+models to new domains with varying data distributions; graph OOD learning, which addresses methods for han-
+dling data significantly different from the training distribution; and graph continual learning, where they explored
+strategies to update models continuously as new data arrives without forgetting previously learned information.
+Their contributions include a comprehensive taxonomy of existing approaches based on the observability of
+distribution shifts during inference and the availability of supervision during training. They also identified key
+challenges such as the dynamic nature of real-world graph data and outlined future research directions to enhance
+model robustness under distribution shifts.
+   Li et al. [14] conducted a comprehensive review focused on methods and strategies for addressing OOD
+generalization challenges in graph learning. Their primary objective was to systematically summarize the latest
+advancements in this field. They began by formally defining OOD generalization on graphs, highlighting the
+difficulties arising from distribution shifts between training and testing datasets. The authors categorized exist-
+ing approaches into three main classes: data-level methods, which involve techniques like data augmentation
+to improve generalization; model-level methods, which modify model architectures or learning algorithms for
+enhanced robustness; and learning strategy-level methods, which encompass different training paradigms and
+optimization techniques tailored for OOD scenarios.
+   Yu et al. [15] systematically summarized existing research on methods for evaluating OOD generalization in
+machine learning models. Their primary goal was to provide insights crucial for deploying models in real-world
+applications where robust performance on unforeseen data is essential. They began by defining the challenges
+posed by OOD generalization, particularly the shifts in data distribution between training and testing phases. The
+authors categorized evaluation methods into three main paradigms: OOD performance testing, which assesses
+model performance on OOD data directly; OOD performance prediction, which predicts model behavior on OOD
+data without actual testing; and OOD intrinsic property characterization, which examines inherent model proper-
+ties influencing OOD generalization.
+   In other studies, Liu et al. [16] assessed the methodologies for OOD generalization and categorized them into
+three segments: unsupervised representation learning, supervised model learning, and optimization, based on their
+roles within the overall learning process. Yang et al. [17] reviewed the technical advancements in OOD detection
+and provided a survey introducing a unified framework called generalized OOD detection, which includes the
+five key issues: anomaly detection, novelty detection, open set recognition, OOD detection, and outlier detection.
+Ghassemi and Fazl-Ersi [18] analyzed over 70 papers in this field, highlighted challenges, and suggested direc-
+tions for future research. Their work provided a comprehensive perspective on different types of data shifts and
+proposes solutions for improved generalization.
+   Cui and Wang [19] discussed fundamental aspects of OOD detection using deep learning and classified meth-
+ods based on the type of training data. They divided OOD detection into three categories: supervised, semi-
+supervised, and unsupervised. For supervised data, they further categorized the methods into model-based,
+distance-based, and density-based approaches according to the technical methods used. Currently, there are few
+comprehensive reviews in the realm of offline RL.
+   A significant contribution is the tutorial article by Levine et al. [20], which outlines fundamental challenges,
+examines groundbreaking research, explores practical applications, and considers unresolved issues within the
+field. It outlines the major challenges in applying offline learning and dynamic programming methods in the fully
+offline setting, including high variance in importance sampling, distributional shift issues, and the difficulty of
+
+
+Neural Computing and Applications                                                                         13
+4150       Page 4 of 38                                             https://doi.org/10.1007/s00521-026-11966-8
+
+obtaining calibrated uncertainty estimates. It also highlights open problems in policy constraint methods and
+model-based RL approaches in the offline setting. The work suggests that policy constraint methods could miti-
+gate these issues by ensuring actions used for computing target values are close to the behavior distribution,
+thereby avoiding OOD queries to the Q-function.
+   Another survey in offline RL is done by Figueiredo Prudencio et al. [6] which introduces a new taxonomy that
+uses a standardized notation to classify the various components and processes that can be assembled to create an
+offline RL algorithm. It suggests that offline RL methods can be categorized into diverse groups such as model-
+based, one-step, and imitation learning methods. Additionally, it assesses the existing benchmarks in the field,
+examining the extent to which their datasets exhibit the essential characteristics desired in offline RL datasets,
+as well as analyzing the performance of individual methods and categories of methods relative to each dataset
+property.
+   Chen et al. [21] reviews current research to highlight the potential advantages and obstacles of offline RL in
+recommender systems. Unlike traditional RL methods that require continuous online interactions, offline RL uti-
+lizes existing datasets, offering a cost-effective alternative for systems with substantial offline data. The authors
+explore benefits such as enhanced data efficiency and scalability, alongside challenges like ensuring data quality
+and deploying learned policies effectively in real-world scenarios.
+   In this study, we focus exclusively on methodologies that address distribution shifts and OOD within the con-
+text of offline RL—an area that remains underexplored in prior surveys. Table 1 present the focus of previous
+work. Our work distinguishes itself in several critical ways:
+1. Focused Scope: While many related surveys, such as Wu et al. [13], Li et al. [14], and Yu et al. [15], concen-
+   trate on OOD challenges within graph learning or general machine learning paradigms, they do not delve into
+   the unique complexities of offline RL. Foundational studies like those of Levine et al. [20] and Figueiredo Pru-
+   dencio et al. [6] provide valuable insights into offline RL but lack an in-depth examination of recent advances,
+   particularly in tackling distributional shifts and OOD issues from the past four years. Our work bridges this gap
+   by systematically analyzing these recent developments, offering a targeted review tailored to offline RL.
+2. Comprehensive Categorization: Unlike earlier surveys that broadly address offline RL methods, we introduce
+   a detailed categorization focused on Q-value restriction and policy constraint approaches, with a particular
+   emphasis on the critical role of uncertainty quantification. This structured framework not only organizes the
+   existing methodologies but also provides actionable guidance for researchers and practitioners in selecting the
+   most suitable algorithms based on their specific requirements.
+3. Exhaustive Methodological Analysis: Our survey goes beyond the broader overviews presented in previous
+   works, such as Figueiredo Prudencio et al. [6], by offering an in-depth examination of algorithmic innovations,
+   strengths, and limitations of methods specifically designed to address distributional shifts and OOD in offline
+   RL. This level of detail ensures a clearer understanding of the trade-offs and practical considerations involved
+   in adopting these approaches.
+
+
+
+Table 1 Objective of related   Refs.                 Year                   Objective
+works                          [20]                  2020                   Offline RL
+                               [14]                  2022                   OOD generalization challenges in graph learning
+                               [18]                  2022                   OOD Detection
+                               [19]                  2022                   OOD Detection based on deep learning
+                               [16]                  2023                   OOD generalization methods
+                               [6]                   2024                   Offline RL
+                               [21]                  2024                   Offline RL within recommender systems
+                               [13]                  2024                   Distribution shifts in graph learning methods
+                               [15]                  2024                   Evaluating OOD generalization
+                               [17]                  2024                   Generalized OOD Detection
+                               Ours                  –                      Distribution shift and OOD in offline RL
+
+13                                                                                     Neural Computing and Applications
+https://doi.org/10.1007/s00521-026-11966-8                                                    Page 5 of 38      150 5
+
+By addressing these critical gaps, our study not only offers a comprehensive and up-to-date review but also estab-
+lishes itself as a key resource for advancing the understanding and development of robust, generalizable offline
+RL solutions.
+
+
+3 Reinforcement learning concept
+
+RL is a computational framework wherein agents are trained to optimize predefined reward functions through the
+development of policies, which delineate optimal actions within diverse domains [5].
+
+3.1 Markov decision process
+
+RL constitutes a specialized branch of machine learning that concentrates on devising algorithms capable of
+controlling dynamical systems, typically conceptualized as Markov Decision Processes (MDPs). The primary
+objective of RL is to formulate optimal strategies or policies that maximize the aggregate rewards within a speci-
+fied environment.
+   An MDP, the quintessential model underpinning RL, is characterized by a tuple M = (S, A, T, d0 , r, γ) where
+S denotes the set of states (s ∈ S), encapsulating the feasible configurations of the environment, which may be
+either discrete or continuous. A represents the set of actions (a ∈ A) available to the agent, which similarly can
+be categorized as discrete or continuous. The transition probability function T (st+1 |st , at ) specifies the probabil-
+ity of transitioning to a subsequent state st+1 given the current state st and action at . The initial state distribu-
+tion d0 (s0 ) outlines the probability distribution across initial states. The reward function r : S × A → R assigns
+rewards to state-action pairs, and γ denotes the discount factor (0 < γ ≤ 1), employed to diminish the value of
+future rewards, thereby ensuring the summation of rewards converges in scenarios with infinite horizons [22].
+   For situations where the agent lacks complete observability of the state, the MDP framework is augmented to
+a Partially Observable Markov Decision Process (POMDP), described by M = (S, A, O, T, d0 , E, r, γ). Here, O
+represents the set of observations (o ∈ O), and E is the emission function E(ot |st ), which articulates the likeli-
+hood of perceiving observation ot given the state st . This extension accommodates scenarios where direct state
+information is inaccessible, necessitating inference based on observations to deduce the underlying state [23].
+
+3.2 Reinforcement learning formulation and objective
+
+In RL [5], the learning paradigm is centered around an agent’s interactions with the environment, guided by a
+behavior policy. This process entails the agent’s observation of states, selection of actions based on these states,
+and receipt of feedback through state transitions and rewards, which inform the iterative refinement of its policy.
+A policy, denoted as π(at |st ), encapsulates the agent’s strategy, defining a conditional probability distribution
+over actions given the current state. In the context of POMDPs, the policy may additionally rely on current obser-
+vations π(at |ot ) or a history of observations π(at |o0:t ). The policy’s evolution is predicated on the transitions
+(st , at , st+1 , rt ) observed during the agent’s environmental engagement, with the learning dataset D potentially
+encompassing a complete or partial collection of these transitions.
+   A trajectory τ , representing a sequence of states and actions across a defined horizon H, is formalized as
+τ = (s0 , a0 , . . . , sH , aH ). The distribution of such trajectories under a given policy π and an MDP M is expressed
+as:                                                         H
+                                                            ∏
+                                         Pπ (τ ) = d0 (s0 )   π(at | st )T (st+1 | st , at )                        (1)
+                                                    t=0
+
+The agent’s objective, V (π), aims to maximize the expected sum of discounted rewards along a trajectory, reflect-
+ing the cumulative reward. This objective is formulated as:
+
+
+Neural Computing and Applications                                                                             13
+6150       Page 6 of 38                                                       https://doi.org/10.1007/s00521-026-11966-8
+
+Table 2 Comparing online       Parameter         Online RL                                    Offline RL
+and offline RL                 Data collection   Continuously gathers new data through        Relies on pre-collected, static datasets for
+                                                 ongoing interactions                         training
+                               Safety and cost   can be costly and hazardous in domains       Avoids risks by using existing data, mak-
+                                                 like robotics and healthcare                 ing it safer and more cost-effective
+                               Training          regularly updates policies with fresh data   Can utilize extensive datasets for improved
+                               Efficiency        but may face challenges in complex or        generalization, though it struggles with
+                                                 expensive environments                       issues like distributional shift, which arises
+                                                                                              from relying solely on static data
+
+
+
+Fig. 1 Offline reinforcement
+learning
+
+
+
+
+                                                                  [H                 ]
+                                                                   ∑
+                                            V (π) = Eτ ∼pπ (τ )          γ r(st , at ) 
+                                                                          t
+                                                                                                                                         (2)
+                                                                   t=0
+
+where H might extend to infinity, encapsulating the long-term reward maximization goal of the agent. The state
+visitation frequencies, both overall dπ (s) and at specific timesteps dπt (st ), are derived from the trajectory distri-
+bution, underpinning the RL objective’s foundation.
+
+3.3 Online vs. offline RL
+
+Online RL involves a dynamic process where an agent continually interacts with its environment, gathering new
+experiences to update its policy iteratively [24]. This approach allows the agent to learn and improve in real-time,
+utilizing the latest policy for decision-making. However, the necessity for constant interaction poses significant
+challenges in many applications, such as robotics, healthcare, and autonomous driving, where data collection can
+be expensive or risky [20].
+   Offline RL, also known as batch RL, offers an alternative by learning from pre-existing datasets of collected
+experiences. Instead of continually interacting with the environment, offline RL uses static datasets to train the
+policy [25]. This approach can leverage large amounts of previously gathered data to develop effective decision-
+making policies without additional interactions [26].
+   Online RL is capable of real-time learning and adaptation, making it highly effective in environments where
+continuous interaction is feasible. Offline RL is more practical in high-risk or costly environments and can lever-
+age large datasets to train effective policies. Table 2 present key differences of online and offline RL.
+
+3.4 Offline RL strategies
+
+Figure 1 depicts the structure of offline RL, where an agent learns a policy from pre-collected data without inter-
+acting with the environment during training. In the data collection phase, an agent governed by a behavior policy
+πβ interacts with the environment, generating experience tuples {(st , at , st+1 , rt )} that are stored in an offline
+
+13                                                                                                   Neural Computing and Applications
+https://doi.org/10.1007/s00521-026-11966-8                                                   Page 7 of 38      150 7
+
+dataset. The training phase then uses this fixed dataset to learn a new policy π , without further environment
+access. Finally, in the deployment or fine-tuning phase, the learned policy π is applied to the real environment
+and optionally refined through additional online interaction.
+   Unlike traditional online RL, which learns through continuous interaction with the environment, offline
+RL learns solely from a fixed dataset, similar to supervised learning. The terminology in this domain varies:
+"off-policy RL" refers to algorithms that learn from transition datasets collected under different policies, while
+“batch RL” denotes methods that use data batches for updates. In this survey, we adopt the term “offline RL” to
+avoid ambiguity. Theoretically, any off-policy RL algorithm might be adapted for offline use, with rudimentary
+approaches [27] possibly employing Q-learning with dataset D for initialization. However, the efficacy of such
+methods can be inconsistent, often necessitating subsequent online refinement.
+   Offline RL encompasses both model-based strategies, which either develop or employ models of the environ-
+ment [28], and model-free approaches, which directly ascertain policies or value functions. Model-based meth-
+ods are valued for their sample efficiency, enabled by the ability to simulate future states, but their performance
+depends on the accuracy of the environmental models. These approaches are especially relevant in areas such
+as robotics, where data collection is slow and risky. In offline RL, the focus is on developing robust agents from
+large datasets without interacting with the environment, with later online fine-tuning to adapt to new situations
+or address limitations in the training data. Challenges arise from distributional shifts, causing bootstrap errors, as
+described in the literature on offline RL agent fine-tuning using conventional off-policy algorithms.
+   While model-free methods offer a simpler approach, they may struggle in complex environments and large
+state-action spaces. Researchers are exploring a spectrum of algorithmic innovations tailored for offline RL,
+ranging from adaptations of existing RL algorithms to novel training paradigms and the integration of cutting-
+edge machine learning and deep learning techniques. Significant strides have been made in both model-based
+and model-free offline RL. Model-based endeavors have concentrated on dynamics model learning for policy
+optimization, whereas model-free initiatives have focused on direct learning of policies and value functions from
+static datasets. Each approach grapples with distinct challenges, such as model bias in model-based methods and
+extrapolation errors in model-free techniques.
+
+
+4 Data limitations
+
+In offline RL, relying on pre-existing datasets poses significant challenges, particularly regarding data quality and
+diversity. The performance of offline RL algorithms depends critically on the dataset’s coverage and how well it
+represents the decision-making processes [8]. Datasets with limited diversity or poor decision-making strategies
+can significantly restrict the effectiveness of learned policies. Their static nature often introduces biases in policy
+learning, especially when the data comes from suboptimal or unknown behavior policies, making it more chal-
+lenging to develop effective policies [20, 29]. A key challenge in the field is defining the conditions under which
+data coverage is sufficient to reliably learn optimal policies in an offline setting [30]. This issue is compounded
+by the absence of corrective feedback mechanisms inherent to online RL environments, which are pivotal for
+iterative policy refinement and adaptation to novel scenarios.
+   The objective of offline RL is to construct near-optimal policies from potentially flawed datasets, a stark con-
+trast to the exploratory and interactive nature of online RL [31]. Developing robust policies in offline RL requires
+careful analysis of dataset characteristics and the deliberate application of learning algorithms. In this setting, the
+traditional balance between exploration and exploitation, central to online RL, must be reconsidered and adapted
+to the limitations of offline learning environments [20].
+   Bootstrapped Transformer (BooT) [32] addresses challenges in offline RL through sequence modeling, gen-
+erating data with a Transformer model. Training is enhanced by bootstrapping with high-confidence sequence
+data. It explores autoregressive and teacher-forcing generation methods, alongside two bootstrapping strategies:
+one-time training on generated data and repetitive training with generated data. BooT algorithm is designed to
+
+Neural Computing and Applications                                                                            13
+8150       Page 8 of 38                                                 https://doi.org/10.1007/s00521-026-11966-8
+
+integrate predictive dynamics and policies within the sequence generation model, eliminating the need for sepa-
+rate environment models. This approach is aimed at producing data that align with the offline dataset, particularly
+beneficial for proprioceptive observations like positions and velocities.
+   For training with the augmented dataset, BooT-o trains the model once with the generated data and discards
+them, whereas BooT-r continually integrates the generated data into training. High-quality trajectories for train-
+ing are selected based on confidence scores, defined by the average log probability of the generated tokens. To
+stabilize the training, it applies a form of curriculum learning, starting with the original dataset and gradually
+incorporating self-generated trajectories, simplifying the process without intricate parameter tuning and showcas-
+ing effective results in their experiments.
+
+
+5 Distributional shift: a historical challenge
+
+Distributional shift in deep learning and RL has a longstanding history [33–35] and is not a recent research focus.
+In the context of deep learning, models are typically trained on large datasets with the assumption that future
+data will resemble the training set. However, when the model is deployed in the real world, it often encounters
+data that diverges from its training examples [36]. This can lead to decreased performance because the statistical
+properties of the deployment data differ from those the model learned during training. Distributional shift in RL
+involves changes between the distribution of states and actions the policy was trained on (offline data) and those
+it encounters in an online environment [37].
+    However, offline RL signifies a notable shift from traditional RL paradigms, necessitating innovative strategies
+to tackle its unique challenges [20], particularly regarding learning from static datasets and mitigating distribu-
+tional shifts. Offline RL introduces distinct challenges such as covariate shift [38], distributional shift [37], and
+extrapolation error [39], among others. The endeavor to address these challenges is pivotal for the development
+of robust, efficient, and widely applicable learning algorithms within the realm of offline RL. The field is engaged
+in a concerted effort to overcome these challenges, with the aim of establishing robust, efficient, and generaliz-
+able learning algorithms [28, 40].
+    Despite its inherent challenges, offline RL holds significant transformative potential, with the capability to
+convert vast datasets into powerful decision-making frameworks across various sectors including healthcare
+[41], autonomous vehicles, and robotics [42, 43]. The constraints inherent in offline RL have spurred divergent
+research trajectories, such as the simulation-to-reality transfer techniques prevalent in robotics and autonomous
+driving. Yet, the reliance on high-fidelity simulators for such transfers accentuates the pressing need for the
+advancement of more resilient offline RL methodologies.
+    The issue of distributional shifts is exacerbated in the offline setting, where no new data is available to rectify
+extrapolation errors, leading to biases in Q-function estimation due to reliance on the visitation distribution of
+behavior policies. This necessitates careful consideration in balancing policy constraints [44] to ensure stability
+while maintaining flexibility for effective optimization. Furthermore, the lack of environmental feedback, crucial
+in online RL for iterative policy refinement, adds complexity to the learning process.
+
+5.1 Distributional shift problem formulation in offline RL
+
+Here, we explore the concept of distributional shift within the context of offline RL. The primary objective is
+to minimize the Bellman error, which arises from the action-value Bellman equation. The formalization is as
+follows:
+                                            [                                                    ]
+                        J(θ) = Es,a,s′ ∼D r(s, a) + γEa′ ∼πoﬀ (·|s) [Qπθ (s′ , a′ )] − Qπθ (s, a)                       (3)
+
+
+
+
+13                                                                                          Neural Computing and Applications
+https://doi.org/10.1007/s00521-026-11966-8                                                 Page 9 of 38      150 9
+
+where θ represents the parameters of learned Q-function. The objective J(θ) is only accurate when the behav-
+ior policy πβ (a|s) equals the offline policy πoﬀ (a|s), because it ensures that the Q-function evaluates actions
+that were used during training. However, in practice, this equality is not feasible as the goal is to derive a new,
+improved policy πoﬀ that surpasses the behavioral policy πβ , inevitably leading to distributional shifts. Addition-
+ally, even if πoﬀ can accurately evaluate the training data objective, the induced state distribution might deviate
+due to compounding errors from sampling or function approximation, i.e., dπoﬀ (s) ̸= dπβ (s). These issues are
+particularly problematic in offline RL, where continuous interaction to correct such deviations, as seen in off-
+policy RL, is not possible.
+
+5.2 Out-of-distribution
+
+OOD refers to scenarios where a machine learning model encounters data during inference that significantly
+deviates from the distribution of the training data. These deviations can occur in various forms, including covari-
+ate shift, prior probability shift, or concept shift. In essence, OOD data lies outside the manifold or statistical
+representation of the training dataset, making accurate prediction or classification inherently challenging [16, 17].
+   OOD detection involves identifying and appropriately handling these unseen data points to ensure robust
+model performance. In the context of generalized OOD detection, frameworks aim to classify OOD data based on
+varying characteristics such as novelty detection, anomaly detection, or open-set recognition. For instance, gen-
+eralized OOD detection goes beyond traditional binary classifications of “in” vs. “out” distribution by addressing
+complex scenarios such as detecting subtle shifts in high-dimensional data (e.g., vision-language tasks) or man-
+aging cases with evolving distributions over time [14, 15].
+   The ability to generalize to OOD data is critical for real-world applications, where models often face unseen
+distributions in high-stakes domains. A growing body of research highlights the importance of designing algo-
+rithms capable of improving OOD robustness and developing evaluation metrics to quantify the extent to which
+models generalize to unseen distributions [15, 16].
+
+
+6 Classification of existing methods
+
+Research in offline RL presents a dynamic and evolving landscape, addressing unique challenges, applying inno-
+vative methods, and integrating theoretical insights with practical applications. This body of work reflects a field
+progressing toward fully realizing the potential of RL in offline settings, with significant implications for real-
+world problems. As shown in Fig. 2, we categorize the methodologies into two main groups: Q-restriction and
+policy-constraint approaches. Many studies within these frameworks also employ various uncertainty estimation
+techniques, which are examined in detail in the following subsections.
+
+6.1 Q-Restriction approaches
+
+Q-Restriction approaches involve modifying the Q-learning algorithm to be more conservative when estimating
+Q-values for actions that are not well-represented in the training data [12]. This is done to ensure that the learned
+policy does not overestimate the value of unseen actions, which can occur due to the distributional shift between
+the behavior and learned policies [45].
+
+6.1.1 Conservative methods
+
+In conservative Q-learning, the Q-values for OOD state-action pairs are penalized to ensure that the learned
+Q-function provides a lower bound on the true Q-function [46]. Conversely, value regularization modifies the
+value objective, introducing a penalty to the learned value function for more conservative estimates.
+
+Neural Computing and Applications                                                                          13
+ 150
+10         Page 10 of 38                                            https://doi.org/10.1007/s00521-026-11966-8
+
+Fig. 2 The taxonomy of the pro-
+posed method within the context
+of OOD in offline RL
+
+
+
+
+   Kumar et al. [45] developed Conservative Q-learning (CQL), a method that learns a lower bound of the
+Q-function by adding value regularization terms, ensuring the state-value function underestimates values for all
+dataset states. This conservative estimate aims to mitigate the overestimation issue in Q-learning. CQL integrates
+a Q-value regularization mechanism into Bellman error optimization, balancing the minimization of Q-values
+for a predefined state-action distribution and the maximization for empirical data. This method applies to both
+Q-learning and actor-critic architectures [47, 48] and has proven effective in various tasks, including standard
+Gym environments and complex robotic control.
+   The core algorithmic procedure of CQL entails minimizing the expected Q-value over a designated distribu-
+tion of state-action pairs, denoted by µ(s, a), which is aligned with the state marginal observed in the dataset. The
+iterative update of the Q-function is modulated by a tradeoff factor α, as delineated in the following formulation:
+                                                               [(                        )2 ]
+                                                        1
+             Q̂k+1 ← arg min αEs∼D,a∼µ(a|s) [Q̂(s, a)] + Es,a∼D Q̂(s, a) − B̂π Q̂k (s, a)                           (4)
+                        Q̂                              2
+
+where B̂π is the empirical Bellman operator. To refine the estimation of Vπ (s), an additional term that maximizes
+Q-values under the behavior policy πβ (a | s) is introduced, leading to an updated iterative process:
+                                        [               [       ]                   [          ]]
+                   Q̂k+1 ← arg min α Es∼D,a∼µ(a|s) Q̂(s, a) − Es∼D,a∼π̂β (a|s) Q̂(s, a)
+                                  Q̂
+                                   [(                       )2 ]                                                    (5)
+                        1
+                       + Es,a,s′ ∼D Q̂(s, a) − B̂π Q̂ (s, a)
+                                                     k
+                        2
+CQL’s approach emphasizes exploring unseen actions through a regularization term, providing a saddle point
+solution that can be unstable. To stabilize, Nachum et al. [49] suggest using entropy, resulting in a more sta-
+ble training process. They introduced value regularization that depresses Q-values for actions from the learned
+policy, addressing overestimation in OOD actions. Despite its advantages, the method has limitations, includ-
+ing computational challenges for continuous actions requiring numerical integration, which is often addressed
+through Monte Carlo sampling. CQL generally outperforms policy constraint methods in complex tasks requiring
+
+
+
+13                                                                                      Neural Computing and Applications
+https://doi.org/10.1007/s00521-026-11966-8                                                    Page 11 of 38   150 11
+
+the composition of sub-optimal behaviors. It’s particularly effective in environments where learning to stitch
+together different tasks learned from prior data is essential.
+   Conservative Offline Model-Based Policy Optimization (COMBO), proposed by Yu et al. [50], enhances per-
+formance and generalizability in RL tasks by avoiding the complexities of explicit uncertainty quantification.
+COMBO focuses on generating conservative value function estimates for state-action pairs outside the dataset’s
+support, ensuring robustness and safety by preventing overoptimistic value predictions. It penalizes Q-values
+from underrepresented state-action distributions while inflating those from more reliable pairs. This approach
+incorporates conservatism into policy optimization without direct uncertainty measures, streamlining the process
+and improving reliability.
+   Mildly Conservative Q-Learning (MCQ) by Lyu et al. [12] applies mild conservatism in offline RL, aiming
+to improve generalization without severely penalizing OOD actions. MCQ contrasts with existing methods that
+either restrict policies closely to the behavior policy or penalize value functions for OOD actions, often resulting
+in excessive pessimism. It actively trains OOD actions by assigning them proper pseudo Q values, ensuring that
+the learned policy performs at least as well as the behavior policy without incurring erroneous overestimation for
+OOD actions. Conditional Variational Auto-Encoder (CVAE) is been used in this method to estimate the behavior
+policy, facilitating the application of the MCQ operator. Policy optimization in MCQ endeavors to maximize the
+expected policy value, taking into account the minimum Q-value from the critic ensemble and imposing a penalty
+for high-entropy policies to foster exploration.
+   Unlike traditional methods that focus on conservative Q-function estimation, Chen et al. [51] presented Con-
+servative State Value Estimation (CSVE), which shifts the focus from penalizing OOD actions in Q-function
+estimation to directly penalizing the V-function for OOD states. CSVE enhances state value estimation with
+conservative guarantees, facilitating improved policy optimization. CSVE employs Advantage Weighted Regres-
+sion with state exploration for policy improvement, guiding the policy towards states with conservative value
+estimates and leveraging a dynamics model to sample OOD states for efficient value penalization and policy
+exploration.
+   Conservative Offline Distributional Actor-Critic (CODAC) [46] extends conservative Q-learning by penal-
+izing OOD actions, using a penalty term to ensure conservative estimates of the quantiles of the learned return
+distribution, Zk+1 . The conservative distribution evaluation is expressed as:
+                 ′
+
+
+                                                         [                     ]
+                      Zk+1 = arg min α · EU (τ ),D(s,a) c0 (s, a) · FZ(s,a) (τ ) + Lp (Z, T̂π Zk )
+                         ′                                           −1                         ′
+
+                                    Z
+                                                                                                                 (6)
+
+Here, c0 (s, a) scales penalties for OOD actions, α adjusts penalty magnitude, Lp represents a loss function, and
+ −1
+FZ(s,a) denotes the inverse cumulative distribution function of Z for a state-action pair (s, a). CODAC is shown
+to converge to an estimate of the return distribution whose quantiles uniformly lower bound the true return distri-
+bution’s quantiles. This property ensures that the algorithm is conservative across all potential returns, including
+the expected return and risk-sensitive objectives like CVaR. Practical Implementation CODAC is operational-
+ized using deep neural networks to represent the quantile function, optimizing the objectives using distributional
+temporal-differences (TD) methods. The algorithm uses a quantile regression loss for optimizing the Wasserstein
+distance between the predicted and target quantile functions.
+
+6.1.2 Pessimism methods
+
+The concept of incorporating pessimism within value estimates has been explored as a means to address the
+distributional shifts between the training data and the target policy, as evidenced in several works [52, 53], high-
+lighting the criticality of judicious data utilization and policy parameterization. Pessimistic methods, which rely
+on pessimistic extrapolation from offline data, aim to maximize the rewards the trained agent would receive in
+the worst possible MDP consistent with the observed dataset [54].
+
+
+Neural Computing and Applications                                                                             13
+ 150
+12         Page 12 of 38                                              https://doi.org/10.1007/s00521-026-11966-8
+
+   Lee et al. [55] introduced a balanced replay strategy for offline RL that prioritizes online samples while incor-
+porating near-on-policy samples from offline datasets. This method adjusts the sampling strategy to favor expe-
+riences closer to those encountered in online interactions, enhancing policy evaluation and value estimation in
+novel situations. The approach employs a pessimistically trained Q-function ensemble to maintain a conservative
+outlook on value estimations, particularly for unfamiliar state-action pairs, thus stabilizing the policy fine-tuning
+process against over-optimism. The balanced replay technique efficiently integrates online and offline learning
+phases, addressing distributional shifts by weighting samples based on their relevance to the current policy. This
+is complemented by an ensemble approach that averages multiple Q-function estimates to improve generalization
+and reduce error impacts.
+   Xie et al. [54] proposed the Bellman-consistent pessimism method, which encodes a systematic form of pes-
+simism compatible with any function approximation and MDP. This method avoids the excessive conservatism
+of traditional bonus-based pessimism, which can hinder effective policy discovery. Instead of using point-wise
+lower bounds, it implements pessimism at the initial state based on functions consistent with Bellman equations.
+They introduced an efficient information-theoretic algorithm that leverages offline data to compute lower bounds
+on policy values and automatically adapts to the optimal bias-variance trade-off. Additionally, they developed a
+practical algorithm called Pessimistic Soft Policy Iteration (PSPI), which is computationally efficient and theo-
+retically robust, using regularization and mirror descent updates for policy optimization. This algorithm uses
+regularization and mirror descent updates for efficient policy optimization. Here is the empirical estimate of Bell-
+man error where L is a loss function measuring the discrepancy between f ′ and f under policy π over dataset D.
+
+                                E(f, π; D) = L(f, f, π; D) − min
+                                                             ′
+                                                                 L(f ′ , f, π; D)                                 (7)
+                                                               f ∈F
+
+
+6.1.3 Other methods
+
+For policy regularization, Haarnoja et al. [47] proposed entropy regularization to control the stochasticity of the
+optimal policy, enhancing training robustness by preventing premature convergence.
+   Mao et al. [56] introduced Supported Value Regularization (SVR) for offline RL, which distinguishes in-distri-
+bution (ID) from OOD actions using an importance sampling bias and penalty mechanism. SVR penalizes Q-val-
+ues for OOD actions while maintaining standard Bellman updates for ID actions, balancing conservatism with
+optimal policy convergence. It automatically applies penalties based on importance sampling, avoiding manual
+discrimination between ID and OOD actions. The policy evaluation operator in SVR, designed as a contraction
+mapping in tabular MDP environments, ensures unbiased Q-value evaluation for ID actions and conservative
+underestimation for OOD actions, promoting strict policy enhancement. The SVR loss function incorporates a
+regularization term to differentiate the treatment of ID and OOD actions, enhancing its effectiveness in offline RL.
+   Table 3 provides a comprehensive summary of the reviewed methods within the Q-restriction category.
+
+6.2 Uncertainty-based Q-restriction approaches
+
+In offline RL, uncertainty estimation plays a pivotal role in enhancing policy robustness, particularly against
+OOD actions and distributional shifts. Techniques such as bootstrapped Q-networks [73], Bayesian approaches,
+and ensemble methods are employed to quantify uncertainty, aiding in addressing challenges like extrapolation
+errors. These methods focus on providing more reliable value function predictions, essential for decision-mak-
+ing in scenarios where the dataset may not fully represent the state-action space. Despite their potential, these
+approaches face difficulties in offering precise uncertainty estimates, especially when using complex function
+approximators like deep neural networks.
+   The research community is actively exploring advanced uncertainty quantification and regularization strate-
+gies to refine policy and value function updates. If we can estimate the epistemic uncertainty of the Q-function,
+
+
+13                                                                                    Neural Computing and Applications
+https://doi.org/10.1007/s00521-026-11966-8                                                               Page 13 of 38          150 13
+
+Table 3 Summary of Q-restriction methods
+Refs. Year Method          Dataset                   Evaluation metrics                    Compared results to           Code Ablation
+[47] 2018 SAC              HalfCheetah, Hop-         Average Return, Sample Efficiency,    TD3 [48], DDPG [27], PPO      [60] ✓
+                           per, Walker2d, Ant,       Stability Across Random Seeds         [57], SQL [58], Duan et al.
+                           Humanoid                                                        [59]
+[49]   2019 Algae DICE     Four Rooms domain,        Average Return, Sample Efficiency,    SAC, TD3, DDPG                –      –
+                           MuJoCo, OpenAI Gym        Stability Across Random Seeds
+[45]   2020 CQL            AntMaze, Adroit,          Average Return, Sample Efficiency,    BEAR [53], BRAC [61],         –      ✓
+                           kitchen, Atari games      Stability Across Random Seeds         SAC, REM, QR-DQN [62]
+[50]   2021 COMBO          halfcheetah-jump,         Average Return, Stability Across      BEAR, BRAC, SAC, CQL,         –      –
+                           ant-angle, walker-walk,   Random Seeds, Model Error             MOPO, MOReL, LOMPO
+                           sawyer-door                                                     [63]
+[54]   2021 Bellman-       –                         Computational complexity (O)          Liu et al. [64]               –      –
+            consistent
+            pessimism
+[46]   2021 CODAC          HalfCheetah, Hopper,      Average Return, Sample Efficiency,    CQL                           [65]   ✓
+                           Walker2d                  Stability Across Random Seeds
+[55]   2022 Balanced       halfcheetah, hopper,      Average Return, Stability Across      AWAC, BCQ [52], SAC           [66]   ✓
+            Replay and     walker2d                  Random Seeds, AUROC
+            Pessimistic
+            Q-Ensemble
+[12]   2022 MCQ            MuJoCo                    Average Return, Sample Efficiency,    BC [67], SAC, CQL,            [69]   –
+                                                     Stability Across Random Seeds         AWAC, UWAC, TD3+BC,
+                                                                                           IQL [68]
+[56]   2023 SVR            HalfCheetah, Hopper,      Normalized Return, Stability Across   BC, BCQ, BEAR, OneStep        [71]   ✓
+                           Walker2d                  Random Seeds                          RL [70], TD3+BC, CQL,
+                                                                                           AWAC, UWAC, IQL
+[51]   2023 CSVE           Gym, Adroit, Half-        Average Return, Sample Efficiency,    CQL, COMBO, AWAC,             [72]   ✓
+                           Cheetah, Hopper,          Stability Across Random Seeds         UWAC, BEAR, TD3+BC,
+                           Walker2d                                                        IQL
+
+
+we expect this uncertainty to be substantially larger for OOD actions, and can therefore utilize these uncertainty
+estimates to produce conservative target values in such cases. Learning an uncertainty set or distribution over
+possible Q-functions from the dataset enhances this approach.
+
+6.2.1 Ensemble methods
+
+Uncertainty in Q-function estimates can be addressed through an ensemble of Q-functions. Agarwal et al. [74]
+proposed a naive approach which uses disjoint dataset partitions to train multiple Q-functions, approximating the
+Q-function distribution through sample means and variances. It also proposes the Random Ensemble Mixture
+(REM) method, using a random convex combination of Q-functions to estimate Q-values, which shows effective-
+ness in datasets with high coverage but may underestimate uncertainty, potentially leading to sub-optimal OOD
+action selection. Diverging from Ensemble-DQN’s average estimation, REM uniquely optimizes Q-value com-
+binations to minimize TD errors, providing a fresh perspective on Q-value estimation and algorithmic progress
+in offline RL.
+   Ensemble-Diversified Actor Critic (EDAC) [75] addresses the issue of error propagation from OOD actions by
+penalizing uncertainty, different from typical algorithms that enforce policy or Q-function regularization towards
+the dataset. It employs an ensemble of Q-function networks to quantify the epistemic uncertainty in Q-value esti-
+mates without relying on data distribution estimation or sampling. By implementing clipped Q-learning which
+selects the minimum value as the target, mitigates overestimation errors and expanding the number of Q-ensem-
+bles, it penalizes high-variance state-action pairs, favoring actions within the dataset and imposes greater penal-
+ties on OOD actions.
+   Robust Offline RL (RORL) [76], enhanced policy and value function robustness in offline RL by employing
+conservative smoothing techniques. RORL addresses the challenge of overestimation errors, particularly for
+
+Neural Computing and Applications                                                                                               13
+ 150
+14         Page 14 of 38                                           https://doi.org/10.1007/s00521-026-11966-8
+
+OOD states, through pessimistic bootstrapping. It applies smooth regularization to both policy and value func-
+tions, using perturbation methods on state-action pairs to enforce Q-function smoothness and minimize variance
+in Q-estimates. The methodology includes a Robust Q-function formulation, utilizing an ensemble of Q-functions
+to establish learning targets that balance conservatism and exploration. RORL’s approach integrates uncertainty
+quantification and differential loss functions to achieve conservative value function estimates and enhance policy
+stability, marking a significant advancement in offline RL methodologies.
+   There was a significant issue in ensemble-based RL algorithms where shared pessimistic target values may
+inadvertently lead to optimistic value estimates. To rectify this, Model Standard-deviation Gradients (MSG) algo-
+rithm [77] assigns unique, independently computed targets to each ensemble member, thus ensuring more reliable
+and genuinely conservative value estimates. MSG emphasizes individual training for each Q-function within the
+ensemble, leveraging the lower confidence bound (Q-LCB) to guide policy optimization. It avoids the pitfalls of
+shared targets by allowing each ensemble member to contribute distinctively to the overall policy evaluation, fac-
+toring in the inherent uncertainty in value function estimation. MSG algorithm’s emphasis on independent targets
+and the use of Q-LCB for policy optimization marks a significant advancement in addressing ensemble-based RL
+algorithms’ challenges, ensuring more accurate and conservative policy evaluations.
+   Adaptive Policies with Ensembles of Value Function (APE-V) [78] introduced a Bayesian framework that
+underscores the need for adaptive policies that adjust based on accumulated episode information. They propose
+APE-V, a practical, model-free algorithm designed to approximate optimal adaptive policies within this frame-
+work. APE-V employs an ensemble of value functions to quantify the agent’s uncertainty and guides policy adap-
+tation accordingly. The core objective is to maximize expected returns across a posterior distribution of MDPs,
+reflecting the uncertainties of the offline dataset. It emphasizes the significance of adaptability and uncertainty
+estimation in enhancing offline RL policy effectiveness.
+   Multi-Task Data Sharing (MTDS) [79] proposed Uncertainty-based Data Sharing (UTDS), a novel method in
+offline RL that integrates diverse datasets from multiple tasks into a unified mixed dataset without selective cura-
+tion. UTDS employs ensemble-based uncertainty quantification to generalize across single-task and multi-task
+RL scenarios by combining datasets and using an ensemble of Q-functions to assess uncertainty. It innovatively
+applies uncertainty quantification for pessimistic value iteration, penalizing value updates based on uncertainty
+to mitigate policy deviations and ensure robust learned policies. UTDS extends this approach to penalize Q-func-
+tions for RL actions, enhancing its effectiveness in handling unfamiliar data regions. Overall, UTDS enhances
+offline RL performance by facilitating MTDS, offering a scalable approach to improve RL algorithms’ reliability
+and applicability across diverse tasks. Charpentier et al. [80] proved that disentangling aleatoric and epistemic
+uncertainty is important in RL tasks and can improve generalization and performance. They combined different
+types of uncertainty estimation methods such as MC dropout, ensemble, deep kernel learning, and evidential
+networks [81] and proposes a practical methodology to evaluate uncertainty in model-free RL based on detec-
+tion of OOD environments and generalization to perturbed environments. An approach to estimating uncertainty
+involves considering the distribution of Q-functions over a dataset D, denoted as PD (Qπ ). We can adjust our
+policy gradient objective to penalize the uncertainty represented by PD (Qπ ) as follows:
+                                            [                                       ]
+                            J(θ) = Es,a∼D EQπ ∼PD (·) [Qπ (s, a)] − αUPD (PD (·))                                (8)
+
+where UPD (·) is an uncertainty measure for PD .
+
+6.2.2 Pessimism methods
+
+Buckman et al. [82] introduced Fixed-Dataset Policy Optimization (FDPO), a theoretical framework for offline
+RL that addresses the overestimation errors in naïve FDPO strategies. These strategies assume accurate environ-
+ment modeling from finite datasets, which often isn’t realistic. The researchers highlighted the "Pessimism Prin-
+ciple," which advocates selecting policies that perform well under worst-case scenarios to avoid overestimation.
+
+
+13                                                                                   Neural Computing and Applications
+https://doi.org/10.1007/s00521-026-11966-8                                                                Page 15 of 38         150 15
+
+This principle results in underestimation errors but promotes robust policy optimization. Proximal pessimistic
+algorithms implement this by penalizing policies that deviate from the empirical policy observed in the data.
+Additionally, uncertainty-aware pessimistic algorithms incorporate state-wise Bellman uncertainty into policy
+penalization, fostering cautious value estimation. This is achieved through a penalization mechanism that adjusts
+the naïve fixed-point function by incorporating Bellman uncertainty, thereby instilling a layer of pessimism in
+value estimations.
+                                          fua (v π ) = Aπ (rD + γPD v π ) − αuπD,δ                                                 (9)
+where α is the pessimism hyper parameter and uπD,δ is the Bellman uncertainty function. Conversely, proximal
+pessimistic algorithms impose penalties based on the deviation from empirically observed policies within the
+dataset, thereby anchoring policy selection within the bounds of empirical data and reducing the propensity for
+overestimation errors. This framework not only exposes the limitations of current FDPO methods but also guides
+the development of more reliable offline RL approaches. By highlighting the contrast between uncertainty-aware
+and proximal approaches, the authors emphasizes the potential for enhanced generalizability and efficacy through
+the adoption of non-trivial uncertainty functions, a prospect currently constrained by the computational limita-
+tions of neural networks in capturing complex uncertainties.
+   Pessimistic Bootstrapping for offline RL (PBRL), as introduced by Bai et al. [83], innovatively integrates
+uncertainty quantification into Q-function updates to enhance the robustness and reliability of RL algorithms
+in offline settings. PBRL utilizes a Q-function ensemble to estimate epistemic uncertainty, leveraging variance
+among these functions to penalize OOD actions effectively. Unlike traditional conservative methods in offline
+RL, PBRL employs uncertainty quantification directly for penalization, distinguishing its approach. PBRL also
+introduces an OOD sampling technique to directly regulate OOD behavior, bolstering the stability of the ensem-
+ble Q-functions by incorporating additional OOD data points during training. This method ensures that the critic
+ensemble adjusts target values based on uncertainty levels, thereby promoting reliable policy development in
+diverse offline RL applications.
+
+
+Table 4 Summary of uncertainty-based Q-restriction methods
+Refs. Year Method         Dataset                           Evaluation metrics                     Compared results to   Code Ablation
+[74] 2020 REM             Creating a DQN Replay Dataset     Normalized scores, Average Return      QR-DQN, Averaged      [84] ✓
+                          using Atari 2600 Games                                                   Ensemble-DQN
+[82]   2020 FDPO          2000 and 500000 transitions       Performance score                      –                     [85]   –
+[75]   2021 EDAC          HalfCheetah, Hopper, Walker2d     Average Return, Runtime, GPU           BC, SAC, CQL,         [86]   –
+                                                            memory consumption                     REM
+[80]   2022 Combining     CartPole, Acrobot, LunarLander,   Training time, Testing time, Testing   –                     –      –
+            different     Gym environments                  reward
+            types of
+            uncertainty
+            estimation
+            methods
+[83]   2022 PBRL          HalfCheetah, Hopper, Walker2d      Normalized scores, Stability Across BEAR, TD3+BC,           [87]   ✓
+                                                             Random Seeds                        CQL, UWAC,
+                                                                                                 MOPO
+[76]   2022 RORL          HalfCheetah, Hopper, Walker2d      Average Return, Stability Across    BC, SAC, CQL,           –      ✓
+                                                             Random Seeds                        PBRL, EDAC
+[77]   2022 MSG           HalfCheetah, Hopper, Walker2d, Average Return, Stability Across        BC, CRR [88],           –      ✓
+                          Ant agent, RL Unplugged            Random Seeds                        MuZero Unplugged
+                                                                                                 [26]
+[78]   2022 APE-V         HalfCheetah, Hopper, Walker2d, Average Return, Stability Across        BC, SAC, CQL,           –      ✓
+                          Locked Doors, Procgen Mazes        Random Seeds, Success rates         REM, IQL
+[79]   2024 UTDS          Providing a suite of domains built Runtime, GPU memory, Number of CQL, CDS [89]                [90]   –
+                          on DeepMind Control Suite and      parameters, Average Return, Stabil-
+                          collecting multi-task datasets     ity Across Random Seeds
+
+
+Neural Computing and Applications                                                                                               13
+ 150
+16         Page 16 of 38                                           https://doi.org/10.1007/s00521-026-11966-8
+
+  Table 4 presents a concise overview of uncertainty-based Q-restriction methods.
+
+6.3 Policy constraint approaches
+
+Addressing extrapolation errors from OOD actions is pivotal in offline RL, notably the use of model-based RL
+[91, 92] techniques and enhancements to off-policy RL algorithms. A common strategy is policy regularization,
+which restricts the policy to actions present in the training dataset to mitigate the evaluation of OOD actions.
+   However, this may limit the policy’s ability to generalize and discover optimal strategies, constrained by the
+accuracy of behavior policy estimation. A significant portion of offline RL research aims to closely align the
+learned policy with the behavior policy through techniques like Kullback–Leibler (KL) divergence, ensuring
+policy learning stability in the absence of new data. These approaches necessitate careful selection of hyper-
+parameters and regularization terms, with Wu et al. [61] emphasizing their critical role in the success of offline
+RL regularization strategies. A significant challenge remains that constraints within the data distribution do not
+fully mitigate the errors in Q-value estimation caused by successive off-policy evaluations [70].
+   The performance of RL algorithms is significantly influenced by the accuracy with which the behavior policy
+is estimated. This task becomes particularly challenging in real-world scenarios characterized by highly multi-
+modal behaviors. To mitigate these challenges, methods that use only samples without explicit behavior policy
+estimation, offer a promising approach. Additionally, function approximation issues can inhibit the Q-function
+from learning meaningful values, especially when OOD actions are included in target values. This problem is
+exacerbated when the dataset is small, leading to cumulative errors, or when the dataset’s distribution is too nar-
+row, potentially yielding brittle, non-generalizable solutions.
+   An ongoing crucial question in the field is how to effectively adjust the level of conservatism to balance the
+risks of overestimation with the potential pitfalls of avoiding unfamiliar actions, ensuring the algorithm remains
+both effective and robust. Some of the methods use importance sampling which can suffer from high variance,
+which can dramatically increase in a sequential setting due to the multiplication effect, leading to exponential
+blowup. To mitigate this, some strategies avoid the multiplication of weights, but challenges remain.
+   Batch Optimization of Policy And Hyper-parameter (BOPAH) [93] utilizes gradient-based hyper-parameter
+optimization on a validation dataset to improve batch RL [94] performance. This method leverages a state-depen-
+dent KL-regularized RL framework to minimize the divergence between the estimation and behavior policies,
+effectively mitigating the covariate shift.
+   Behavior-Regularized Model-Ensemble (BREMEN) [95] tackles model bias and distribution shift in offline
+RL by combining ensemble dynamics models with behavior cloning (BC) and trust-region policy updates. This
+method merges Dyna-style model-based RL with behavior regularization to train policies that adhere closely to
+observed behaviors in the training data. By generating simulated roll-outs using an ensemble of models and ini-
+tializing policies through BC, BREMEN ensures policy refinement through trust-region updates. The framework
+employs KL-based trust-region optimization to balance expected returns with policy consistency, ensuring mini-
+mal divergence between consecutive policies and maintaining fidelity to data-collection policy.
+   The Advantage-weighted Behavior Model (ABM) [96] constrains the policy optimization to the state-action
+space covered by the batch data, enhancing the stability and reliability of off-policy learning from static datasets.
+ABM serves as a learned prior, guiding the RL policy towards actions with a historical precedent of success,
+thereby improving task-specific performance. The core methodology involves a policy iteration process where
+the policy enhancement phase is deliberately restricted to maintain proximity to the empirical behavior mani-
+fested within the batch data. This represents a significant departure from conventional Q-learning paradigms in
+batch RL, introducing a methodological innovation aimed at stabilizing the policy refinement phase. ABM’s
+integration as a behavioral prior within the policy iteration cycle is a novel contribution, ensuring a balanced
+exploration-exploitation trade-off and fostering the utilization of diverse or imperfect batch data for effective
+RL. The methodology is formalized through the following equations, where Dµ is the behavior data and θbm
+
+
+
+13                                                                                    Neural Computing and Applications
+https://doi.org/10.1007/s00521-026-11966-8                                                              Page 17 of 38   150 17
+
+is optimized to maximize the likelihood of observed actions within the dataset, essentially learning a behavior
+model that reflects the data:                                             
+                                                                     |τ |
+                                                                     ∑
+                                      θbm = arg max Eτ ∼Dµ                 log πθbm (at | st )                         (10)
+                                                    θbm              t=1
+
+
+Furthermore, θabm is optimized to bias the RL policy towards data-supported and task-beneficial actions, employ-
+ing a weighted behavior model to refine policy decisions:
+                                                                                                          
+                                             |τ |                                    (                    )
+                                            ∑
+                     θabm = arg max Eτ ∼Dµ  log πθ               abm
+                                                                        (at | st ) · f R(τt:N ) − V̂ πi (s)             (11)
+                                    θabm                  t=1
+
+
+On the other hand, Rezaeifar et al. [97] proposed method subtracts a prediction-based exploration penalty instead
+of adding a conventional exploration bonus, discouraging the selection of uncertain actions to maintain align-
+ment with the dataset’s support. Utilizing a Variational Auto-Encoder (VAE) trained on offline data, this approach
+which emphasizes behavior regularization, leverages reconstruction error as a penalty, aiding in distinguishing
+between ID and OOD actions.
+   Fisher-BRC (Behavior Regularized Critic) [98] emphasizes regularizing the critic component of actor-critic
+algorithms. The critic is parameterized as the log-behavior-policy (which generated the offline data) plus a state-
+action value offset term. This offset term is key to their approach. They suggest using a gradient penalty as a
+regularizer for the offset term and demonstrate its equivalence to Fisher divergence regularization, drawing con-
+nections to score matching and energy-based model literature. By drawing parallels between Fisher-BRC and
+CQL, the research delineates how CQL’s KL divergence regularization between a Boltzmann policy and the
+behavior policy can be conceptually aligned with Fisher-BRC’s regularization approach. This insight underscores
+the broader applicability of behavior regularization in offline RL and highlights Fisher-BRC’s computational effi-
+ciency, particularly in circumventing the intensive numerical integration often required by CQL.
+   Policy-guided Offline RL (POR) [99] proposed decomposing the conventional RL task into two sub-tasks han-
+dled by the guide-policy and execute-policy which simplifies the learning problem for each policy and enhances
+training stability and combines the stability of imitation-style methods with the potential for OOD generalization.
+The guide-policy learns the optimal next state for maximizing rewards, while the execute-policy learns to execute
+actions that lead to desired next states. This separation allows for leveraging state-compositionality from the
+dataset for logical OOD generalization. Unlike prior imitation-based methods that focus on action composition-
+ality, POR enables state-compositionality, allowing the model to logically generalize beyond the actions present
+in the dataset and potentially surpass the dataset’s limitations. Value function learning for guide-policy equation
+represents the asymmetric loss used for training the state value function V(s) for the guide-policy. Also, learning
+objective for guide-policy maximizes the expected value of the next state as suggested by the guide-policy gω
+while maintaining similarity to an estimated behavior guide-policy gµ , controlled by the trade-off parameter α.
+                                           max Es∼D,s′ ∼gω (s) [Vϕ (s′ ) + α log gµ (s′ |s)]                             (12)
+                                            ω
+
+The details of policy constraint methods are presented in Table 5.
+
+6.4 Uncertainty-based policy-constraint approaches
+
+Model-Based Offline RL (MOReL) [92] introduced the Pessimistic Markov Decision Process (P-MDP) to seg-
+ment the state space into known and unknown regions, crucial for creating a conservative learning environment.
+This approach aims to mitigate model exploitation risks by penalizing exploration into uncertain territories,
+addressing challenges in offline RL where model imperfections can lead to unreliable policy decisions. MOReL
+distinguishes well-represented from underrepresented state-action pairs within the dataset using uncertainty-aware
+
+
+Neural Computing and Applications                                                                                       13
+ 150
+18          Page 18 of 38                                                   https://doi.org/10.1007/s00521-026-11966-8
+
+Table 5 Summary of policy constraint methods
+Refs. Year Method        Dataset                   Evaluation metrics                      Compared results to      Code   Ablation
+[93] 2020 BOPAH          MuJoCo                    Mean (normalized) performance, The      BasicRL, RaMDP [100],    –      –
+                                                   conditional value at risk performance   Robust MDP [101, 102],
+                                                   (CVaR)                                  SPIBB [103]
+[95]   2020 BREMEN       Ant, HalfCheetah, Hop-    Average cumulative reward               BC, BCQ, BRAC, SAC,      [105] –
+                         per, Walker2d                                                     ME-TRPO [104]
+[96]   2020 ABM          Cheetah, Hopper,          Average Return, Stability Across        BCQ, BEAR                –      ✓
+                         Quadruped                 Random Seeds
+[92]   2020 CVAE         HalfCheetah, Hopper,      Average Return, Stability Across        BCQ, BEAR, BRAC,    –      –
+                         Walker2d, Human dataset   Random Seeds                            CQL, TD3+BC
+[98]   2021 Fisher-BRC   Cheetah, Hopper,          Average Return, Stability Across        BC, BRAC, CQL, MBOP [107] ✓
+                         Quadruped                 Random Seeds                            [106]
+[97]   2022 POR          AntMaze, Cheetah, Hop-    Averaged normalized scores, Stability   BCQ, BEAR, BRAC,     [109] –
+                         per, Quadruped            Across Random Seeds                     AWR [108], CQL
+
+
+state discretization. It then optimizes a near-optimal policy within this pessimistically bounded environment,
+ensuring cautious reward estimation to prevent overoptimistic assessments in unfamiliar regions. By integrating
+pessimism into decision-making, MOReL enhances policy robustness, utilizing BC for initial policy approxi-
+mation and subsequent planning within the P-MDP framework to effectively utilize pre-existing datasets for
+decision-making in complex environments.
+   Model-based RL with Adaptive Behavioral Priors (MABE) [110] merges the paradigms of model-based RL
+with adaptive behavioral priors. This approach deviates from traditional reliance on uncertainty quantification by
+focusing on the synthesis of neural network-based dynamics models and behavioral priors, which are effectively
+policies approximating actions within the offline dataset to enhance policy generalization both within and across
+domains. Central to MABE is its unique methodology that encompasses policy optimization through model-
+based RL, regularization via adaptive behavioral priors, and an optional component of uncertainty quantification
+for detailed policy refinement. The framework’s standout feature is its capacity for cross-domain behavioral
+transfer, facilitated by the strategic application of learned dynamics models alongside the transferability of behav-
+ioral priors across diverse datasets.
+   Model-based Offline Policy Optimization (MOPO) algorithm [91], a novel adaptation of model-based RL
+techniques, distinguished by its integration of uncertainty-penalized rewards derived from the dynamics model.
+MOPO is designed to maximize a lower bound on the expected return of a policy under the true dynamics of a
+MDP, while carefully navigating the balance between exploiting the available batch data and the inherent risks
+of venturing into regions beyond the data’s support. The algorithm employs neural network-based dynamics
+models that output Gaussian predictions, utilizing the predicted variance as a mechanism for uncertainty estima-
+tion. This uncertainty serves as a pivotal component in MOPO’s strategy, acting as a penalty factor in the reward
+function. This penalization framework enables MOPO to cautiously extend its policy’s exploration to OOD states
+and actions, mitigating potential risks associated with model inaccuracies. MOPO’s methodological framework
+includes several key steps: quantifying the uncertainty present in the dynamics model, adjusting the reward func-
+tion with a penalty reflective of this uncertainty to yield a conservative return estimate, and employing standard
+RL techniques to optimize this adjusted return estimate. This approach effectively ensures that the algorithm
+maintains a prudent exploration strategy, emphasizing safety and robustness in decision-making.
+                                         ηM (π) ≥ Ē(s,a)∼ρπ [r(s,a)−γ|GπMc (s,a)|]                                           (13)
+                                                               T̂
+
+
+The mathematical foundation of MOPO is encapsulated in its formulation of an uncertainty-penalized reward
+function, denoted as r̃(s, a), which underpins a conservative estimate of the policy’s return. This formulation
+is crucial for achieving a balance between exploration and exploitation, providing a rigorous basis for the algo-
+rithm’s operation within the confines of offline data. MOPO’s innovative incorporation of model uncertainty into
+
+
+13                                                                                                Neural Computing and Applications
+https://doi.org/10.1007/s00521-026-11966-8                                              Page 19 of 38      150 19
+
+the reward mechanism marks a significant advancement in the domain of offline RL, enhancing the capacity for
+generalization beyond the limitations of traditional model-free approaches.
+   Building on the MOPO [91] framework, Tennenholtz and Mannor [111] introduced a method that penalizes
+rewards in OOD areas by estimating model errors, thus forming a penalized MDP. This is a hybrid approach for
+uncertainty estimation in offline RL by merging parametric methods like bootstrap ensembles [73] with non-para-
+metric techniques such as k-nearest neighbors (k-NN). This strategy is designed to enhance model-based offline
+RL by quantifying uncertainty, particularly useful in data-sparse regions. Riemannian metric which is introduced
+based on an encoder-decoder model, to quantify both epistemic and aleatoric uncertainties evaluates the geodesic
+distance to k-NN in the dataset, aiding in assessing the reliability of OOD samples. The method employs k-NN
+to approximate model errors as a measure of uncertainty and leverages a generative latent model with an encoder
+and a decoder to further refine uncertainty estimation.
+   Uncertainty Weighted Actor-Critic (UWAC) [112] enhance offline RL by identifying and attenuating the influ-
+ence of OOD state-action pairs. UWAC employs a dropout-based uncertainty estimation mechanism within the
+offline RL context, offering a pragmatic solution for integrating uncertainty estimation with minimal computa-
+tional overhead. This method innovatively adjusts Bellman updates in actor-critic algorithms to de-emphasize
+contributions from state-action pairs with high uncertainty levels. Central to UWAC are the application of Monte
+Carlo dropout for uncertainty quantification and the employment of an uncertainty-weighted policy distribu-
+tion, providing a Bayesian perspective to the Q-function optimization by maximizing the posterior distribution
+Ensemble methods play a crucial role in RL, particularly in mitigating overestimation biases in Q-functions,
+fostering exploration, and minimizing bootstrap error propagation. Adapted for both model-free and model-based
+RL frameworks, these methods are instrumental in tackling the distinct challenges presented by offline RL.
+   1R2R algorithm [113] addressed both epistemic uncertainty, related to data scarcity, and aleatoric uncertainty,
+inherent in environmental randomness, in offline RL. It uses ensemble models to represent uncertainty and penal-
+izes actions with variable outcomes, discouraging risky decisions. The goal is to avoid distributional shifts and
+enhance risk-averse behavior, all within a bayesian MDP framework where the posterior distribution over MDPs
+is approximated from an offline dataset. The core mechanism is adversarially modifying the transition distribu-
+tion during model roll-outs to induce risk aversion. The algorithm utilizes an ensemble of neural networks for
+transition and reward approximation, with policy training via SAC.
+   To address both immediate and future trajectory uncertainties in offline RL, a novel approach called Pessimis-
+tic Policy Iteration (PPI) [114] was proposed. It incorporates a global uncertainty estimator that adjusts policies
+or Q-values based on assessed uncertainty, promoting a more conservative strategy in high-uncertainty regions.
+It differentiates between policy-constraint [61] and Q-restriction [115] techniques by using global uncertainty to
+modulate policies for cautious exploration or to refine penalties for OOD actions, respectively. The global uncer-
+tainty is dynamically updated, taking into account both local uncertainties and the anticipated uncertainties of
+future state-action pairs. This approach enables a more granular and flexible handling of uncertainties, enhancing
+policy reliability and adaptation in uncertain environments. It is in contrast with IQL [68] that avoids evaluating
+actions outside the dataset, yet allows policy improvement through generalization by iteratively fitting the upper
+expectile value function and integrating it into a Q-function. Policy improvement with Q-value penalization with
+uncertainty penalizes the Q-values based on the level of uncertainty, thereby encouraging conservative Q-value
+estimations in regions of high uncertainty.
+   Table 6 provides a summary of methods classified as uncertainty-based policy-constraint approaches.–
+
+
+7 Offline RL benchmarks
+
+Previous work in offline RL often used online RL algorithms to train the behavior policy, utilizing data from
+replay buffers or rollouts from the final policy to create a static dataset. However, such data might originate
+from non-Markovian policies like human-driven or handcrafted strategies, making these datasets potentially
+
+Neural Computing and Applications                                                                        13
+ 150
+20          Page 20 of 38                                                https://doi.org/10.1007/s00521-026-11966-8
+
+Table 6 Uncertainty-based policy-constraint methods
+Refs.   Year Method   Dataset                          Evaluation metrics               Compared results to   Code Ablation
+[92]    2020 MOReL    HalfCheetah, Hopper, Walker2d,   Average Return, Stability Across BCQ, BEAR, BRAC       [116] –
+                      Ant                              Random Seeds
+[91]    2020 MOPO     HalfCheetah, Hopper, Walker2d,   Average Return, Stability Across BC, BEAR, BRAC, SAC   –     ✓
+                      AntMaze, Adroit, Kitchen         Random Seeds
+[112] 2021 UWAC       HalfCheetah, Hopper, Walker2d,   Average Return, Stability Across BC, MOPO, MOReL,      –     ✓
+                      Adroit                           Random Seeds                     BEAR, AWR, BRAC,
+                                                                                        BCQ, CQL, REM,
+                                                                                        AlgaeDICE [49]
+[110] 2021 MABE       HalfCheetah, Hopper, Walker2d    Average Return, Stability Across BC, MOPO, MOReL,      –     ✓
+                                                       Random Seeds                     BRAC, CQL, SAC
+[111] 2022 GELATO HalfCheetah, Hopper, Walker2d,       Average Return, Stability Across MOPO, SAC, MBPO       –     –
+                  Autonomous vehicle environ-          Random Seeds                     [117]
+                  ments highway-env
+[114] 2023 PPI    HalfCheetah, Hopper, Walker2d        Average Return, Stability Across TD3+BC, CQL           –     –
+                                                       Random Seeds, Robustness
+[113] 2023 1R2R       HalfCheetah, Hopper, Walk-       Average Return, Stability Across ORAAC [118], CODAC,   [119] –
+                      er2d, Currency Exchange, HIV     Random Seeds                     RAMBO [28], COMBO,
+                      Treatment                                                         MOPO, TD3+BC, IQL,
+                                                                                        CQL, ATAC [115]
+
+
+unrepresentative of real-world scenarios where offline RL could be applied. In an ideal situation, real-world data-
+sets would be used to evaluate offline RL algorithms.
+   Narrow and Biased Data Distributions manage data from human or crafted policies to prevent divergence into
+OOD states. Undirected and Multitask Data challenge algorithms to synthesize segments into viable solutions,
+testing non-multistep dynamic programming methods. Sparse Rewards pose credit assignment challenges, neces-
+sitating simple, effective task completion criteria. Suboptimal Data pushes algorithms beyond imitation, enhanc-
+ing their refinement capabilities. Nonrepresentable Behavior Policies arise when behavioral complexity exceeds
+the model’s capacity, requiring adaptable network architectures. Non-Markovian Behavior Policies, typical in
+human-derived systems, challenge RL’s Markovian assumptions. Realistic Domains call for high-fidelity simula-
+tions to ensure algorithm effectiveness, circumventing the impracticality of real-world testing. Nonstationarity
+demands dynamic adaptation to environmental changes like sensor malfunctions or mechanical wear, ensuring
+robustness in diverse, dynamic scenarios.
+   Desired properties for offline datasets to advance offline RL in realistic applications, based on insights from Fu
+et al. [120] and Gulcehre et al. [121] are handling narrow and biased data distributions, undirected and multitask
+data, sparse rewards, sub-optimal data, non-representable behavior policies, non-Markovian behavior policies,
+realistic domains, and non-stationarity. Each attribute addresses specific challenges in offline RL, such as ensur-
+ing algorithms do not diverge when faced with biased data or enabling them to stitch together data fragments to
+solve tasks that individual trajectories do not solve. Key environmental characteristics sought in offline RL data-
+sets are continuous action and state spaces, stochastic dynamics, and partial observability. Continuous spaces,
+challenging due to their inability to visit every state, require agents to generalize beyond observed states and
+actions. Stochastic dynamics mimic the natural world’s inherent randomness, often stemming from model limita-
+tions. Partial observability, common when full domain knowledge is unavailable, is crucial for applying offline
+RL in realistic scenarios like POMDPs.
+   The D4RL and RL Unplugged benchmarks, covering a range of tasks from Gym-MuJoCo, mazes, and dexter-
+ous manipulation to robotic tasks and autonomous driving (CARLA [122]) offer environments and datasets that
+cover many of the qualities essential for an effective offline RL dataset. Almost all of the algorithms discussed
+in this survey have used D4RL benchmark specially the GYm-MuJoCo environment and some used AntMaze
+and Adroit [123] environments aswell. RL Unplugged primarily features datasets from behavior policies trained
+online, contrasting with D4RL’s inclusion of diverse policies like non-Markovian ones. RL Unplugged’s data
+
+
+13                                                                                          Neural Computing and Applications
+https://doi.org/10.1007/s00521-026-11966-8                                                                 Page 21 of 38          150 21
+
+typically solves tasks directly, reducing the need for algorithms to perform task stitching. Evaluation-wise, D4RL
+does not specify protocols, whereas RL Unplugged uses both online and offline validations, with the former
+allowing for online samples which deviates from the typical offline RL setup. D4RL also offers datasets from a
+range of policy types (random to expert) enabling testing across different data qualities, whereas RL Unplugged
+generally provides data from more successful policies, limiting behavior policy variety.
+
+7.1 D4RL benchmark
+
+D4RL (Datasets for Deep Data-Driven Reinforcement Learning) offers a comprehensive collection of benchmark
+datasets tailored for advancing DRL research. These datasets span diverse environments including robotics (e.g.,
+manipulation tasks), control scenarios (e.g., balancing, navigating), and game-playing domains (e.g., Atari, Go).
+Each dataset comprises extensive trajectories generated by executing policies within these environments, serving
+as training data for RL algorithms aimed at policy improvement. The primary objectives of D4RL is to estab-
+lish a standardized benchmark for evaluating data-driven RL algorithms, foster the development of novel algo-
+rithms capable of learning from large-scale experience data, and enable comparative analyses across different RL
+approaches on common tasks. Key features include large-scale and diverse datasets, high-quality data generated
+from both simulation and real-world sources, standardized formats for accessibility, and predefined evaluation
+metrics such as return and success rate [120]. This benchmark is available on GitHub [124]. Some key aspects
+of D4RL are presented in Table 7.
+
+7.1.1 OpenAI Gym
+
+OpenAI Gym [125] is a toolkit developed by OpenAI for developing and comparing RL algorithms. It provides
+a collection of standardized environments and benchmarks to facilitate RL research. Here are some key aspects
+of OpenAI Gym:
+
+● Environment Collection: Gym includes a wide range of environments, from simple classical control tasks (like
+  CartPole and MountainCar) to more complex robotics simulations. These environments are designed to test
+  various aspects of RL algorithms.
+● Interface: Gym provides a consistent API for interacting with different environments. This API includes meth-
+  ods like reset(), step(action), and render(), allowing users to start an episode, apply actions, and
+  view the environment, respectively.
+● Custom Environments: Users can create their own environments by following Gym’s API guidelines. This flex-
+  ibility allows researchers to test RL algorithms on custom scenarios.
+
+
+
+Table 7 Key Aspects of D4RL
+Aspect                 Description
+Diverse Datasets       D4RL includes various types of datasets collected from different environments. These datasets typically contain
+                       trajectories from policies that are either suboptimal or generated through different levels of exploration.
+Benchmark              It encompasses a range of benchmark environments, including:
+Environments           • Classic Control: Simple environments like CartPole and MountainCar.
+                       • Mujoco: More complex robotic control tasks.
+                       • Adroit: Tasks involving dexterous manipulation using simulated robotic hands.
+                       • Robotic Manipulation: Scenarios involving more complex interactions with objects.
+Offline RL             D4RL is particularly useful for offline RL, where the goal is to learn from a fixed dataset of trajectories without
+                       further interaction with the environment.
+Metrics                It provides specific metrics to evaluate the performance of RL algorithms, such as Average Return and Success Rate.
+Comparison             By using D4RL, researchers can compare different RL algorithms under the same conditions, ensuring a fair evalua-
+                       tion of their performance.
+
+
+Neural Computing and Applications                                                                                              13
+ 150
+22         Page 22 of 38                                          https://doi.org/10.1007/s00521-026-11966-8
+
+● Benchmarks: Gym environments serve as benchmarks for comparing the performance of different RL algo-
+  rithms, providing a common ground for evaluating progress in the field.
+● Integration: Gym integrates with various RL libraries and frameworks, making it easy to use with popular RL
+  toolkits like Stable Baselines, RLlib, and TensorFlow.
+D4RL uses environments from OpenAI Gym as part of its benchmarking suite. The D4RL benchmark includes
+several classic control and robotics environments that are part of the Gym collection. These environments are
+used to create datasets for offline RL tasks and are integral to evaluating and comparing different RL algorithms.
+Some specific Gym environments used in D4RL include:
+
+● CartPole: A classic control task where the goal is to balance a pole on a cart.
+● MountainCar: A task where the agent must build up momentum to drive a car up a hill.
+● Acrobot: A task involving a two-link robotic arm where the goal is to swing the end of the arm above a certain
+  height.
+● LunarLander: A simulation of landing a spacecraft on the moon.
+
+7.1.2 MuJoCo
+
+MuJoCo (Multi-Joint dynamics with Contact) [126] is a physics engine developed by Emo Todorov at the Uni-
+versity of Washington. It is designed for high-fidelity simulation of robotics and biomechanics. Key features of
+MuJoCo include:
+
+● Realistic Physics Simulation: MuJoCo provides accurate simulation of rigid body dynamics, contact forces,
+  and soft constraints. It is well-suited for tasks that require high precision in physical interactions.
+● Continuous Control: The engine is particularly useful for continuous control tasks, such as those involving
+  complex robotic movements and manipulation. It supports simulations with a high degree of realism and detail.
+● Performance: MuJoCo is known for its efficiency and speed, allowing for the simulation of complex environ-
+  ments with many interacting objects in real-time.
+● Visualization: It includes tools for visualizing simulations, making it easier to debug and understand the behav-
+  ior of robotic systems and other physical simulations.
+● Integration with Gym: MuJoCo can be used with OpenAI Gym through the mujoco-py library. This integra-
+  tion allows users to access MuJoCo’s high-fidelity simulations within the Gym framework, combining Gym’s
+  easy-to-use API with MuJoCo’s advanced physics.
+MuJoCo environments are also a significant part of D4RL, particularly for more complex and high-dimensional
+tasks. The D4RL benchmark includes environments from MuJoCo for evaluating offline RL performance in real-
+istic and challenging scenarios. Some examples include:
+
+● HalfCheetah: A 2D simulation of a robotic cheetah where the goal is to run as fast as possible.
+● Hopper: A single-legged robot that hops across a flat surface.
+● Walker2d: A 2D bipedal robot walking across a surface.
+● Ant: A 3D quadrupedal robot navigating a simulated environment.
+● Humanoid: A 3D humanoid robot walking or performing movements.
+These MuJoCo environments are used in D4RL to provide high-fidelity simulations and complex tasks for offline
+RL algorithms.
+
+7.1.3 Role in D4RL
+
+In D4RL, both Gym and MuJoCo environments are used to:
+
+
+13                                                                                  Neural Computing and Applications
+https://doi.org/10.1007/s00521-026-11966-8                                              Page 23 of 38      150 23
+
+● Create Diverse Datasets: Different environments provide datasets of various types, such as classical control
+  tasks, complex robotic manipulations, and high-dimensional control problems.
+● Benchmark Algorithms: The standardization of environments allows for fair and consistent benchmarking of
+  RL algorithms across different tasks and difficulty levels.
+● Evaluate Offline Learning: The environments help in assessing how well offline RL algorithms can perform
+  given a fixed dataset, without further interaction with the environment.
+Table 8 summarizes the environment used in offline RL.
+
+7.2 Enhancing offline RL datasets
+
+Despite the availability of various offline RL datasets for autonomous driving, significant challenges persist,
+particularly concerning static data limitations and distribution biases. Several recent studies [143, 144] have
+explored potential improvements to existing datasets, which are discussed in the following.
+
+● Augmented data generation for enhanced policy learning: A critical limitation of real-world datasets is their
+  incompleteness, particularly regarding action and reward information. To address this, Fang et al. [143] intro-
+  duced a data-driven simulator that augments real-world datasets with synthetic yet realistic interactions. By
+  simulating diverse driving scenarios based on the INTERACTION dataset [145], this approach enables the
+  generation of additional training samples that better capture edge cases and improve policy robustness.
+● Combining expert and exploratory data: Traditional datasets primarily contain expert demonstrations, which
+  may not adequately expose RL algorithms to a diverse set of state-action distributions. Hao et al. [144] showed
+  that incorporating exploratory data—such as randomly generated or failure scenarios—into training datasets
+  significantly improves offline RL performance. Their study demonstrates that policies trained on mixed datas-
+  ets (expert + exploratory) achieve better generalization and robustness compared to those trained exclusively
+  on expert data.
+● Multi-source data integration to mitigate biases: Single-source datasets often introduce biases due to their
+  specific data collection environments, leading to poor generalization in unseen conditions. To overcome this,
+  leveraging multiple real-world datasets, such as INTERACTION and Argoverse [146] can provide a more
+  comprehensive state-action space coverage. Integrating heterogeneous datasets enables offline RL models to
+  learn from a richer variety of driving behaviors and environmental conditions, reducing overfitting to a particu-
+  lar driving style or road structure.
+By incorporating these strategies, offline RL datasets can be significantly improved, allowing for more robust
+policy evaluation and training.
+
+
+8 Evaluation metrics in offline RL
+
+In offline RL, evaluating the performance of learned policies is critical to understanding their effectiveness and
+robustness. Here are some commonly used evaluation metrics and techniques in offline RL:
+
+1. Return Metrics: The first metric is Average Return, which represents the average cumulative reward a policy
+   receives over a series of episodes. It is calculated as (14):
+
+                                                              1 ∑N
+                                         AverageReturn =            Ri                                       (14)
+                                                              N i=1
+
+
+
+
+Neural Computing and Applications                                                                        13
+ 150
+24            Page 24 of 38                                                     https://doi.org/10.1007/s00521-026-11966-8
+
+Table 8 Environments used for evaluating offline RL algorithms
+Environment      Library   Description                                  State space           Action space     Reward          Refs.
+CartPole         Gym       A classic control problem where the goal     Position, veloc-      Discrete (left,  +1 for every    [127]
+                           is to balance a pole on a cart by applying   ity, angle, angular   right)           step the pole
+                           forces to the cart.                          velocity                               remains upright
+Acrobot          Gym       A two-link pendulum environment              Angular position and Discrete (torque  −1 for every    [128]
+                           where the goal is to swing the end of the    velocity of two links applied to joint)step until the
+                           lower link to a given height.                                                       goal is reached
+LunarLander      Gym       A rocket trajectory optimization problem  Position, velocity,   Discrete (main      +100 for land-  [129]
+                           where the goal is to land a lunar module  angle, angular veloc- engine, left/right  ing, −100 for
+                           on a landing pad.                         ity, leg contact      engines)            crashing, +10
+                                                                                                               for each leg
+                                                                                                               contact, −0.3
+                                                                                                               for each engine
+                                                                                                               firing
+HalfCheetah      Mujoco    A 2D robot with 9 links and 8 joints,     Position and velocity Continuous          Based on the    [130]
+                           where the goal is to make the cheetah     of 9 links            (torques applied to distance moved
+                           run forward as fast as possible.                                joints)             forward
+Hopper           Mujoco    A single-legged robot that hops forward, Position and velocity Continuous           Based on the    [131]
+                           with the goal of maximizing forward       of 4 body parts       (torques applied to distance hopped
+                           distance.                                                       joints)
+Walker2d         Mujoco    A two-legged robot that walks forward, Position and velocity Continuous             Based on the    [132]
+                           with the goal of maximizing forward       of 6 body parts       (torques applied to distance walked
+                           distance.                                                       joints)
+Ant              Mujoco    A four-legged robot that walks forward, Position and velocity Continuous            Based on the    [133]
+                           with the goal of maximizing forward       of 13 body parts      (torques applied to distance moved
+                           distance.                                                       joints)             forward
+Humanoid         Mujoco    A humanoid robot that walks forward,      Position and velocity Continuous          Based on the    [134]
+                           with the goal of maximizing forward       of 17 body parts      (torques applied to distance walked
+                           distance.                                                       joints)
+Four Rooms       Gym       A grid-based environment with four        Position in a grid    Discrete (up,       Based on reach- [5]
+domain                     rooms connected by corridors, where the                         down, left, right) ing the goal
+                           goal is to navigate to a target location.
+AntMaze          Mujoco    A maze environment where an ant robot Position and velocity Continuous              Based on reach- [135]
+                           must navigate to a target location.       of 13 body parts      (torques applied to ing the goal
+                                                                                           joints)
+Adroit           Mujoco    A dexterous hand manipulation environ- Position and velocity Continuous             Based on task-  [136]
+                           ment with various tasks such as object    of 24 body parts      (torques applied to specific goals
+                           relocation and in-hand manipulation.                            joints)
+Kitchen          Mujoco    A kitchen environment where a robot       Position and velocity Continuous          Based on task-  [137]
+                           must perform various tasks such as        of various kitchen    (torques applied to specific goals
+                           opening doors and manipulating objects. objects                 joints)
+Atari games      Gym       A collection of classic Atari games used Pixel values of the    Discrete (game-     Game-specific   [138]
+                           for RL research.                          game screen           specific actions)   scoring
+walker-walk      Mujoco    Similar to Walker2d, but with different   Position and velocity Continuous          Based on the    [132]
+                           task specifications.                      of 6 body parts       (torques applied to distance walked
+                                                                                           joints)
+sawyer-door      Mujoco    A robotic manipulation task where a       Position and velocity Continuous          Based on open- [139]
+                           Sawyer robot must open a door.            of the robot and door (torques applied to ing the door
+                                                                                           joints)
+Locked Doors     Gym       A grid-based environment with locked      Position in a grid    Discrete (up,       Based on reach- [5]
+                           doors that must be navigated to reach a                         down, left, right) ing the goal
+                           target location.
+Procgen Mazes    Gym       A procedurally generated maze environ- Position in a proce- Discrete (up,           Based on reach- [140]
+                           ment where the goal is to navigate to a   durally generated     down, left, right) ing the goal
+                           target location.                          maze
+Quadruped        Mujoco    A four-legged robot that walks forward, Position and velocity Continuous            Based on the    [141]
+                           similar to the Ant environment.           of 13 body parts      (torques applied to distance moved
+                                                                                           joints)             forward
+
+
+
+
+13                                                                                                     Neural Computing and Applications
+https://doi.org/10.1007/s00521-026-11966-8                                                                Page 25 of 38           150 25
+
+Table 8 (continued)
+Environment     Library     Description                               State space             Action space       Reward           Refs.
+Autono-         Separate    Environments for testing autonomous       Position, velocity,     Continuous (steer- Based on task-   [142]
+mous vehicle                vehicle algorithms, including highway     and other state vari-   ing, acceleration, specific goals
+environments                driving scenarios.                        ables of the vehicle    braking)
+highway-env                                                           and environment
+
+
+    where Ri is the return of episode i and N is the total number of episodes. Another important metric is Median
+   Return, which represents the middle value of returns across episodes. This measure is more robust to outliers
+   than the average return and can provide a clearer picture of typical performance.
+2. Value-Based Metrics: The Q-Value or Action-Value Function estimates the expected return when an action is
+   taken in a given state. To evaluate this, one common metric is the Mean Squared Error between the estimated
+   Q-values and the true Q-values, which helps in understanding how accurate the value predictions are.
+3. Distribution of States: State Distribution Matching is a critical metric to assess how well the learned policy
+   matches the state distribution present in the offline dataset. This ensures that the policy operates within the
+   range of the data used during training. One way to measure this is through the KL Divergence, which quantifies
+   the difference between the state distributions of the policy and the offline dataset. The formula is (15):
+                                                                ∑                       pdata (s)
+                                    DKL (πdata ∥ πpolicy ) =          pdata (s) log
+                                                                s∈S
+                                                                                       ppolicy (s)                                 (15)
+
+
+    where pdata (s) is the state distribution from the offline dataset, and ppolicy (s) is the state distribution of the
+   learned policy.
+4. Stability Across Random Seeds: Stability Across Random Seeds evaluates the consistency of a policy’s perfor-
+   mance across different random seeds, which is essential for understanding the robustness and reliability of the
+   model. Key metrics include the Standard Deviation of Returns, which measures the variability of the policy’s
+   performance across random seeds, calculated as (16):
+                                                      
+                                                      
+                                                      1 
+                                                         K         2
+                                             StdDev =       Rk − R̄                                                               (16)
+                                                              K k=1
+
+   where Rk is the return for the k -th random seed, and R̄ is the mean return. Additionally, Confidence Intervals
+  (17) provide a statistical measure of the policy’s reliability, calculated as:
+                                                                        StdDev
+                                                 CI = R̄ ± tα/2 ·        √                                                         (17)
+                                                                           K
+    where tα/2 is the critical value for the desired confidence level.
+5. Off-Policy Evaluation: Off-Policy Evaluation (OPE) assesses a method’s expected performance using only
+   offline data. OPE is crucial for tasks such as hyperparameter tuning, model fine-tuning, and deciding when to
+   stop training to avoid overfitting. The DOPE benchmark provides a standardized framework for comparing
+   OPE algorithms across a wide range of tasks, leveraging datasets that reflect realistic scenarios like human
+   demonstrations and random exploration. The DOPE benchmark includes metrics such as Absolute Error, which
+   prioritizes robustness to outliers, Regret@k, which measures the performance gap between estimated top poli-
+   cies and the actual best policy, and Rank Correlation, which assesses how accurately the OPE estimates match
+   the true rankings of policies.
+
+
+
+
+Neural Computing and Applications                                                                                             13
+ 150
+26         Page 26 of 38                                          https://doi.org/10.1007/s00521-026-11966-8
+
+8.1 Analysis of quantitative results
+
+Normalized Score is the primary metric used by Fujimoto and Gu [147] to evaluate the performance of each
+algorithm across different tasks (e.g., HalfCheetah, Hopper, and Walker2d) in various dataset settings such as
+Random, Medium, Medium-Expert, and Expert. The normalized score represents the model’s performance in
+comparison to the optimal performance, with higher values indicating better performance. These scores are aver-
+aged over 5 seeds, and the standard deviation across seeds is also reported, providing insights into the stability
+of the methods. TD3+BC achieves performance comparable to Fisher-BRC and CQL across most tasks, with
+slight variations in different dataset settings. For instance, in the HalfCheetah-Expert task, TD3+BC scores 106.8,
+which is nearly identical to CQL’s 105.7 and Fisher-BRC’s 106.1. In the Hopper task, TD3+BC consistently
+outperforms CQL and Fisher-BRC in Medium and Expert settings, scoring 99.4 and 112.3, respectively. In Walk-
+er2d, TD3+BC outperforms CQL in all settings, achieving better scores in Medium and Expert datasets (79.5 and
+105.7) compared to CQL’s 57.5 and 103.8.
+   Evaluates the performance of different variations of CQL [12] showed that CQL(H) generally outperforms oth-
+ers in MuJoCo tasks, with significantly higher returns in environments like halfcheetah-medium-expert (7234.5
+vs. 3995.6). Including the dataset maximization term improves performance, as seen in the hopper-medium task
+(1866.1 vs. 1028.4 without it). Additionally, CQL(H)-Lagrange, which adapts the regularization weight dynami-
+cally, outperforms manually tuned versions in complex tasks such as AntMaze-medium-diverse (0.53 vs. 0.21),
+demonstrating its robustness in challenging scenarios. However, the adaptive version provides less benefit in
+simpler MuJoCo tasks.
+   MABE [110] performs well, achieving the top score in 7 out of 9 D4RL datasets compared to previous meth-
+ods. It consistently outperforms MOPO, MOReL, SAC, CQL, and BRAC-v in several environments. On aver-
+age, MABE achieves a score of 77.5, while CQL scores 63.9 and MOPO scores 72.9. This shows that MABE
+performs well across different tasks and environments.
+   BooT [32] achieves a 16.8% improvement in average score and outperforms other methods across all 9 data-
+sets. BooT performs with an average score of 81.9, slightly ahead of other methods like BooT-r, AR (79.1) and
+BooT-o, AR (79.9), reflecting the overall strength of BooT in both trajectory generation and bootstrapping.
+   COMBO [50] demonstrates strong performance across various D4RL datasets, consistently outperforming
+other offline RL algorithms such as MOPO, MOReL, CQL, SAC-off, BEAR, BRAC-p, and BRAC-v. COMBO
+consistently outperforms BC and other baselines across a wide range of tasks, with an average score of 77.5,
+compared to CQL’s 63.9 and MOPO’s 72.9. This shows the effectiveness and adaptability of COMBO in both
+simple and complex environments.
+   In more recent study, the averaged normalized scores was used to evaluate the performance of the POR [99]
+compared to other baseline algorithms across various tasks from the D4RL dataset. The results are averaged over
+the final 10 evaluations with 5 different seeds to ensure robustness. POR achieved the highest score in 11 out of
+18 tasks, demonstrating its competitive edge over the other baselines. For example, in the antmaze-u task, POR
+scored 90.6, outperforming the best baseline BCQ, which scored 89.0. Similarly, in the antmaze-l-d task, POR
+achieved 73.4, significantly surpassing the best baseline CQL, which scored 45.6.
+
+8.2 Computational efficiency
+
+Computational efficiency plays a key role in the practical deployment of offline RL methods, particularly when
+training models on large-scale datasets. However, most studies in this field provide limited or inconsistent infor-
+mation on runtime and memory usage, making direct comparisons challenging.
+   Among the few works that report training time, TD3+BC is noted for slightly shorter training durations com-
+pared with methods such as Fisher-BRC and CQL (e.g., approximately 2 h 8 min vs. 2 h 12 min and 4 h 11 min,
+respectively). While these results suggest modest improvements in efficiency, the differences are relatively small
+
+
+
+13                                                                                  Neural Computing and Applications
+https://doi.org/10.1007/s00521-026-11966-8                                                 Page 27 of 38      150 27
+
+and may be influenced by experimental setup, hardware configurations, or hyperparameter tuning rather than
+inherent algorithmic advantages.
+   Comprehensive evaluations of computational efficiency remain scarce in the offline RL literature. Most studies
+prioritize performance metrics such as return scores or stability, while resource-related metrics such as runtime
+and memory are often underreported. Future research should therefore include standardized benchmarks for
+computational efficiency to provide a more complete understanding of trade-offs between performance and com-
+putational cost in offline RL methods.
+
+
+9 Discussion
+
+Offline RL has significant potential in high-stakes domains such as autonomous driving and robotics, where real-
+world interactions are costly, risky, or impractical. In autonomous driving, vehicles must make decisions based
+on previously collected data, often from a variety of environments (e.g., urban areas, highways, adverse weather
+conditions). Offline RL is particularly relevant here, as the algorithm can learn policies from this static data with-
+out requiring further real-world interactions, which could be expensive or unsafe. One critical challenge is han-
+dling scenarios that deviate significantly from the training data distribution, such as encountering an unfamiliar
+road layout or extreme weather conditions.
+    Historically, model-free offline RL algorithms have depended on policy constraints [53, 147] to prevent the
+learned policy from generating OOD actions. These constraints have taken various forms, including the addi-
+tion of BC loss to measure divergence between the behavior and learned policies, the application of advantage-
+weighted constraints, penalization of prediction errors from variational auto-encoders [97], and the learning of
+latent actions from offline data. However, these approaches may result in overly conservative value functions
+and heavy reliance on the behavior policy, despite some OOD actions potentially being reliable if they closely
+match the offline data’s support. CQL addresses this by minimizing Q-values for OOD samples, thus implicitly
+constraining the policy.
+    Model-based approaches like MOPO and MOReL utilize ensembles of dynamics models for uncertainty quan-
+tification and apply pessimistic updates to the value function. Unlike earlier work that applies conservatism
+directly to state-action pairs or actions, these approaches focuses on state-level conservative estimation without
+the need for explicit uncertainty quantification. CODAC builds on Q-value restriction methods, but by acquir-
+ing conservative quantifications for the entire spectrum of quantile values within the return distribution, instead
+of merely focusing on the expected return. On the other hand, the other risk-sensetive algorithm, 1R2R, avoids
+combining different techniques, shows that solely being risk-averse can sufficiently prevent distributional shift
+without the need for a computationally intensive distributional value function.
+    Integrating RL with BC and imitation learning is also a notable trend in offline RL, aimed at enhancing learn-
+ing from existing datasets. This strategy is implemented in algorithms like DDPG [27] and natural policy gradi-
+ent [148], boosting learning speed, exploration, and efficiency. Notable examples include the integration of Soft
+Actor-Critic (SAC) with BC [47] and the combination of Proximal Policy Optimization (PPO) with BC [149].
+Additionally, [48] modified the TD3 algorithm for offline use by adding a BC term to the policy update step, sig-
+nificantly reducing computational demands.
+    A challenge arises as most methods apply a uniform constraint on the policy, ignoring the varying degrees
+of OOD actions. To address this, uncertainty estimation techniques have been introduced. For instance, UWAC
+employs MC-dropout [150] for local uncertainty estimation but neglects the broader uncertainty across future tra-
+jectories, a gap in the literature for policy-constraint methods. Q-restriction approaches like SAC-N [75], MOPO,
+and PBRL consider local uncertainty as an intrinsic reward, incorporating it into the Q-value estimation. PBRL,
+in particular, distinguishes itself by explicitly quantifying uncertainty for OOD actions, in contrast to CQL’s
+uniform penalization. In contrast to MOReL, which creates terminal states using a fixed uncertainty threshold,
+
+
+Neural Computing and Applications                                                                           13
+ 150
+28         Page 28 of 38                                           https://doi.org/10.1007/s00521-026-11966-8
+
+MOPO applies a flexible reward penalty to integrate uncertainty into its framework. ABM learns an adaptive
+behavior prior similar to MABE, but learns the policy using the model-free MPO algorithm.
+   Uncertainty-based methods in offline RL, borrowing from online RL strategies like bootstrapped Q-networks
+and ensemble dynamics, face additional challenges due to limited data coverage and policy distribution shifts.
+While BOPAH combines uncertainty penalization with behavior-policy constraints, UWAC and PBRL adopt
+dropout-based uncertainty estimations without the need for further policy constraints, focusing on penalizing
+OOD actions through direct sampling and uncertainty quantification. PBRL, proposes a novel approach of
+explicit value underestimation for OOD actions based on uncertainty, requiring fewer ensemble networks com-
+pared to methods like SAC-N, which necessitates a large ensemble for Q-value estimation. COMBO offers a
+more cautious and precise value approximation compared to CQL, while CSVE reaches equivalent minimum
+value estimates as COMBO across a broader range of state distributions. On the other hand, EDAC computes
+the gradient of every Q-function and ensures variation in these gradients to adequately penalize actions that are
+out of distribution. Meanwhile, UTDS imposes penalties on out-of-distribution actions by directly sampling such
+actions and quantifying the related uncertainty.
+   While CQL aims to establish a lower bound for the policy’s value function by minimizing Q-values for OOD
+actions, there’s a noted lack of analysis on the error propagation in policy iteration within offline RL contexts.
+The PPI method seeks to fill this gap by exploring the sub-optimality in offline policy iteration and adjusting
+constraints based on policy uncertainty, potentially uncovering viable actions close to the dataset’s support. This
+adaptability, aligned with uncertainty estimation in offline RL, suggests a move towards more flexible and effi-
+cient approaches in managing OOD actions and policy generalization within the constraints of offline RL datas-
+ets. The integration of uncertainty estimation presents a promising avenue for enhancing policy robustness and
+generalization.
+   Several researches have studied the adoption of pessimistic approaches to mitigate the limitations of overly
+optimistic value estimations. By assuming worst-case scenarios for unknown states or actions, these methods aim
+to develop more reliable, albeit conservative, policies. This approach often leads to more reliable but potentially
+more conservative policies. Approaches that estimate a conservative or pessimistic value function might avoid
+overestimation but can suffer from underestimation. Excessive pessimism in conservative value function meth-
+ods is a key issue, and how to modulate conservatism dynamically to balance the risks of overestimation with the
+drawbacks of avoiding unfamiliar actions.
+   Regularization in offline RL is employed to enhance the learned policy by including a penalty term in the
+objective function. Policy regularization modifies the policy gradient objective to not only maximize the expected
+return but also a regularization term. Table 9 presents a comparative analysis of various approaches, highlighting
+the advantages and limitations of each.
+
+
+10 Challenges and future direction
+
+Despite the considerable progress made in offline RL, several significant challenges remain that must be addressed
+for more widespread and effective application. These challenges are crucial to overcome to ensure the robustness
+and adaptability of offline RL systems:
+● Out-of-Distribution: A persistent challenge in offline RL is ensuring reliable performance when encountering
+  unseen states or actions outside the training distribution. Despite various approaches, OOD issues remain a key
+  bottleneck that limits real-world applicability. Models trained solely on static datasets often fail to generalize
+  under distribution shifts, leading to unsafe or suboptimal behavior. Future work should therefore continue to
+  focus on developing uncertainty modeling to mitigate OOD risks.
+● Model Overfitting: In offline RL, there is a risk that models overfit to the training data, particularly when the
+  offline dataset does not cover the full spectrum of states and actions that the agent may encounter. This leads
+
+
+13                                                                                   Neural Computing and Applications
+https://doi.org/10.1007/s00521-026-11966-8                                                                     Page 29 of 38          150 29
+
+Table 9 Comparison of different approaches for handling distribution shift in Offline RL
+Approach            Pros                                                                       Cons
+Q-Restriction       - Guarantees that the learned value function is a lower bound of its       - Penalizes Q-values of all OOD samples
+                    true value (CQL).                                                          equally.
+                    - Handles OOD and extrapolation error well by minimizing Q-values          - Maintains a constant level of pessimism,
+                    for OOD samples (CQL) or V-function at state-level conservatism            ignoring the OOD degree, which may hurt
+                    (CSVE).                                                                    generalization.
+                    - Penalizes high-entropy policies with mild conservatism (MCQ).            - May underestimate or overestimate Q-values
+                    - Distinguishes ID from OOD actions and ensures unbiased estima-           (CQL).
+                    tion for ID actions (SVR).                                                 - Difficulty in determining the OOD region.
+                    - Converges to optimal support-constrained policy and is less suscep-      - Requires pre-training the behavior model
+                    tible to model errors (SVR)                                                (SVR)
+Policy-Constraint   - Handles OOD by staying close to behavior policy.                         - Suppresses OOD actions that could be
+                    - Balances policy closeness with flexibility (Fisher-BRC).                 trustworthy.
+                    - Can use behavior model as a prior (ABM).                                 - May cause overly conservative value function.
+                    - Uses BC initialization with trust-region updates rather than explic-     - Biased towards behavior policy.
+                    itly forcing policy closeness (BREMEN)                                     - Can propagate behavior policy errors.
+                                                                                               - Risky if behavior policy is not optimal.
+                                                                                               - Data might come from non-Markovian poli-
+                                                                                               cies in the real world.
+                                                                                               - Lacks analysis on error propagation of policy
+                                                                                               iteration
+Uncertainty-based   - Conducts explicit uncertainty quantification for OOD actions rather      - Uncertainty quantification is more challeng-
+                    than penalizing all OOD samples equally.                                   ing in offline RL due to limited offline data
+                    - Ensures sufficient penalization for OOD actions using ensemble           coverage.
+                    Q-networks (EDAC).                                                         - Performance is limited by the data
+                    - Bootstrapped uncertainty is more robust to data shift than dropout-      distribution.
+                    based approaches (PBRL).                                                   - Uncertainty estimation is more limited in
+                    - Restricts Q-value error under the trained policy’s distribution (PPI).   practical situations with deep neural networks.
+                    - Can perform well even without uncertainty estimation and benefits        - Some approaches implicitly calculate global
+                    from adaptive behavioral priors (MABE)                                     uncertainty using hundreds of Q-networks,
+                                                                                               which is computationally inefficient
+
+
+
+
+  to poor performance when the model faces distribution shifts that deviate from the training distribution. Over-
+  fitting is particularly concerning when models lack generalization, which can compromise decision-making
+  in dynamic environments [91]. Future work could explore advanced regularization techniques or robust algo-
+  rithms that improve generalization capabilities in the face of unseen data.
+● Complexity of the Environment: Real-world environments are inherently dynamic and complex, often exhibit-
+  ing continuous changes in data distribution. This makes it difficult to model distribution shifts accurately and
+  adapt effectively. Furthermore, changes in the environment may occur unpredictably, adding additional chal-
+  lenges to the adaptation process [151]. Tackling this issue requires more advanced modeling techniques that
+  can account for these dynamic shifts and provide real-time updates to offline models. Future approaches might
+  explore contextual adaptation or dynamic model architectures to handle such environments more effectively.
+● Scalability: As datasets grow larger and more complex, the ability of offline RL algorithms to scale efficiently
+  becomes increasingly important. Many offline RL algorithms struggle with the computational complexity as-
+  sociated with large, high-dimensional datasets, and this limits their applicability in practical, real-world sce-
+  narios [152]. Future research should focus on computational efficiency and distributed learning frameworks
+  that can manage massive datasets with varying degrees of distribution shifts. Techniques such as parallel pro-
+  cessing or distributed optimization [153] could help address these scalability challenges.
+As offline RL continues to evolve, there are several critical areas that require further exploration to address exist-
+ing challenges and improve the robustness of algorithms in real-world applications. In this context, the following
+areas of research offer promising opportunities for advancing the field:
+
+
+
+
+Neural Computing and Applications                                                                                                  13
+ 150
+30         Page 30 of 38                                            https://doi.org/10.1007/s00521-026-11966-8
+
+● Synthetic Data Generation: One promising area for future research is the generation of synthetic data that is
+  more representative of real-world distribution shifts and OOD scenarios. Synthetic data could be used to cre-
+  ate a more diverse range of states and actions, especially for environments where collecting diverse real-world
+  data is impractical. This could involve techniques such as data augmentation or leveraging generative models
+  like GANs to simulate a variety of OOD conditions that may not be present in the original offline dataset [154,
+  155].
+● Interpretable Models: As offline RL models become more complex, understanding how they make decisions
+  in the presence of distribution shifts is increasingly important. Designing interpretable models can provide
+  valuable insights into how distribution shifts impact decision-making, helping researchers identify when and
+  why models fail. Furthermore, interpretable models can guide the development of more reliable models by
+  highlighting key decision-making factors that may be influenced by shifts, which is crucial for real-world de-
+  ployment [156, 157].
+● Adaptive Algorithms: One key area for future work is developing adaptive algorithms that can dynamically
+  adjust to distribution shifts without requiring complete retraining. Techniques such as meta-learning or adap-
+  tive learning rates could be leveraged to create models that can learn to adapt more quickly to new data dis-
+  tributions. These approaches could improve both the efficiency and effectiveness of offline RL in real-world
+  applications, particularly in environments that are subject to frequent or unpredictable changes [78, 158].
+● Human-in-the-Loop: Integrating human feedback into the offline RL process is another promising avenue for
+  addressing distribution shifts and OOD issues. By incorporating expert knowledge or real-time human input,
+  offline RL models could more effectively identify and address the challenges posed by unseen data distribu-
+  tions. This approach could be particularly useful in complex, high-stakes environments, such as healthcare and
+  autonomous driving, where expert intervention can provide critical insights into model behavior [159].
+● Transfer Learning: The use of transfer learning techniques offers a way to leverage knowledge from related
+  tasks or environments to address distribution shifts in offline RL scenarios. Transfer learning allows models to
+  apply insights gained from one task to a new, but related task, potentially reducing the amount of data required
+  to adapt to shifting distributions. Future work could explore multi-task learning or domain adaptation strate-
+  gies to enhance the generalization capabilities of offline RL algorithms across a wider range of applications
+  [110, 160].
+
+
+11 Conclusion
+
+The field of Offline RL is undergoing rapid evolution, with a strong focus on developing algorithms capable of
+addressing the inherent challenges of learning from fixed datasets. This study has explored the critical issues of
+distributional shifts and OOD actions, emphasizing the pivotal role of uncertainty quantification in enhancing the
+robustness and generalization of Offline RL policies.
+   Our analysis revealed that approaches based on Q-value restriction and policy constraints have demon-
+strated significant potential in mitigating the risks associated with distributional shifts. As we discussed, in both
+approaches, incorporating uncertainty quantification holds potential for improving the robustness and generaliza-
+tion of Offline RL policies.
+   Moreover, this study highlights the importance of aligning algorithmic development with practical benchmarks
+and evaluation metrics, as these are critical for translating theoretical advancements into real-world impact. The
+categorization of methods and the detailed analysis provided in this work aim to serve as a valuable resource for
+researchers and practitioners, facilitating informed decisions when selecting or designing Offline RL techniques
+(Table 10).
+
+
+
+
+13                                                                                    Neural Computing and Applications
+https://doi.org/10.1007/s00521-026-11966-8                                                            Page 31 of 38             150 31
+
+Table 10 Summary of sym-          Symbol                                                      Description
+bols and parameters used in                                    s                              State
+equations                                                      a                              Action
+                                                               T                              Transition probability function
+                                                               d                              Distribution
+                                                               r                              Reward
+                                                               γ                              Discount factor
+                                                               o                              Observation
+                                                              E                               Expectation (objective) function
+                                                              π                               Policy
+                                                               τ                              Trajectory
+                                                              V                               Value estimation function
+                                                               θ                              Parameters of the learned Q-function
+                                                             J(θ)                             Bellman objective
+                                                              πβ                              Behavioral policy
+                                                              Bπ                              Empirical Bellman operator
+                                                               c                              Scaling factor for penalties
+                                                              α                               Coefficient adjusting penalty magnitude
+                                                              Lp                              Loss function
+                                                              F                               Cumulative distribution function (CDF)
+                                                              D                               Dataset
+                                                               u                              Bellman uncertainty function
+                                                             V(s)                             State-value function
+                                                               g                              Guide policy
+                                                            µ(s, a)                           State–action pair distribution
+                                                              U                               Uniform distribution U ([0, 1])
+
+
+Acknowledgements Not applicable
+
+Author contributions Not applicable.
+
+Funding Not applicable.
+
+Data availability This study is a survey paper and does not involve the generation or analysis of any new datasets. All data-
+sets and works referenced are publicly available and cited accordingly throughout the manuscript.
+
+Materials availability   Not applicable.
+
+Code availability   Not applicable.
+
+Declarations
+Conflict of interest The authors declare that they have no known competing financial interests or personal relationships that
+could have appeared to influence the work reported in this paper.
+
+Ethics approval and consent to participate Not applicable
+
+Consent for publication Not applicable
+
+Open Access This article is licensed under a Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 Interna-
+tional License, which permits any non-commercial use, sharing, distribution and reproduction in any medium or format, as
+long as you give appropriate credit to the original author(s) and the source, provide a link to the Creative Commons licence,
+and indicate if you modified the licensed material. You do not have permission under this licence to share adapted material
+derived from this article or parts of it. The images or other third party material in this article are included in the article’s Cre-
+ative Commons licence, unless indicated otherwise in a credit line to the material. If material is not included in the article’s
+
+
+Neural Computing and Applications                                                                                           13
+ 150
+32            Page 32 of 38                                                                   https://doi.org/10.1007/s00521-026-11966-8
+
+Creative Commons licence and your intended use is not permitted by statutory regulation or exceeds the permitted use, you
+will need to obtain permission directly from the copyright holder. To view a copy of this licence, visit ​h​t​t​p​:​/​/​c​r​e​a​t​i​v​e​c​o​m​m​o​
+n​s​.​o​r​g​/​l​i​c​e​n​s​e​s​/​b​y​-​n​c​-​n​d​/​4​.​0​/.
+
+
+
+References
+  1.            Ladosz P, Weng L, Kim M, Oh H (2022) Exploration in deep reinforcement learning: a survey. Inf Fusion 85:1–22.​
+  h​t​t​p​s​:​/​/​d​o​i​.​o​r​g​/​1​0​.​1​0​1​6​/​j​.​i​n​f​f​u​s​.​2​0​2​2​.​0​3​.​0​0​3
+  2.            Shakya AK, Pillai G, Chakrabarty S (2023) Reinforcement learning algorithms: a brief survey. Expert Syst Appl
+  231:120495. ​h​t​t​p​s​:​/​/​d​o​i​.​o​r​g​/​1​0​.​1​0​1​6​/​j​.​e​s​w​a​.​2​0​2​3​.​1​2​0​4​9​5
+  3.            Landers M, Doryab A (2023) Deep reinforcement learning verification: a survey. ACM Comput Surv. ​h​t​t​p​s​:​/​/​d​o​i​.​o​
+  r​g​/​1​0​.​1​1​4​5​/​3​5​9​6​4​4​4
+  4.            Li SE (2023) Deep reinforcement learning. Springer, Singapore, pp 365–402. ​h​t​t​p​s​:​/​/​d​o​i​.​o​r​g​/​1​0​.​1​0​0​7​/​9​7​8​-​9​8​1​-​1​9​-​7​
+  7​8​4​-​8​_​1​0
+  5.            Sutton RS, Barto AG (2018) Reinforcement learning: an introduction. MIT press, London
+  6.            Figueiredo Prudencio R, Maximo MROA (2024) A survey on offline reinforcement learning: taxonomy, review, and
+  open problems. IEEE Trans Neural Netw Learn Syst 35(8):10237–10257. ​h​t​t​p​s​:​/​/​d​o​i​.​o​r​g​/​1​0​.​1​1​0​9​/​T​N​N​L​S​.​2​0​2​3​.​3​2​5​0​2​6​9
+  7.            Kim T, Suk H, Kim S (2024) Chapter nine - offline reinforcement learning methods for real-world problems. In:
+  Kim S, Deka GC (eds) Artificial intelligence and machine learning for open-world novelty advances in computers, vol
+  134. Elsevier, Amsterdam, pp 285–315. ​h​t​t​p​s​:​/​/​d​o​i​.​o​r​g​/​1​0​.​1​0​1​6​/​b​s​.​a​d​c​o​m​.​2​0​2​3​.​0​3​.​0​0​1
+  8.            Schweighofer K, Dinu M-C, Radler A, Hofmarcher M, Patil VP, Bitto-Nemling A, Eghbal-Zadeh H, Hochreiter S
+  (2022) A dataset perspective on offline reinforcement learning. In: Chandar S, Pascanu R, Precup D (eds) Proceedings of
+  The 1st conference on lifelong learning agents. Proceedings of machine learning research, vol 199. PMLR, pp 470–517
+  9.            Sun Z, He B, Liu J, Chen X, Ma C, Zhang S (2023) Offline imitation learning with variational counterfactual rea-
+  soning. Adv Neural Inf Process Syst 36:43729
+  10. Blanchet J, Lu M, Zhang T, Zhong H (2023) Double pessimism is provably efficient for distributionally robust
+  offline reinforcement learning: Generic algorithm and robust partial coverage. In: Oh A, Naumann T, Globerson A, Saenko
+  K, Hardt M, Levine S (eds) Advances in Neural Information Processing Systems, vol 36. Curran Associates Inc, pp
+  66845–66859
+  11. Hong Z-W, Kumar A, Karnik S, Bhandwaldar A, Srivastava A, Pajarinen J, Laroche R, Gupta A, Agrawal P (2023)
+  Beyond uniform sampling: Offline reinforcement learning with imbalanced datasets. In: Oh A, Naumann T, Globerson A,
+  Saenko K, Hardt M, Levine S (eds) Advances in neural information processing systems, vol 36. Curran Associates Inc, pp
+  4985–5009
+  12. Lyu J, Ma X, Li X, Lu Z (2022) Mildly conservative q-learning for offline reinforcement learning. Adv Neural Inf
+  Process Syst 35:1711–1724
+  13. Wu M, Zheng X, Zhang Q, Shen X, Luo X, Zhu X, Pan S (2024) Graph learning under distribution shifts: a com-
+  prehensive survey on domain adaptation, out-of-distribution, and continual learning. ​h​t​t​p​s​:​/​/​a​r​x​i​v​.​o​r​g​/​a​b​s​/​2​4​0​2​.​1​6​3​7​4
+  14. Li H, Wang X, Zhang Z, Zhu W (2022) Out-of-distribution generalization on graphs: a survey. ​h​t​t​p​s​:​/​/​a​r​x​i​v​.​o​r​g​/​a​b​
+  s​/​2​2​0​2​.​0​7​9​8​7
+  15. Yu H, Liu J, Zhang X, Wu J, Cui P (2024) A survey on evaluation of out-of-distribution generalization. Preprint at​
+  a​r​X​i​v​:​2​4​0​3​.​0​1​8​7​4
+  16. Liu J, Shen Z, He Y, Zhang X, Xu R, Yu H, Cui P (2023) Towards out-of-distribution generalization: a survey. ​h​t​t​p​
+  s​:​/​/​a​r​x​i​v​.​o​r​g​/​a​b​s​/​2​1​0​8​.​1​3​6​2​4
+  17. Yang J, Zhou K, Li Y, Liu Z (2024) Generalized out-of-distribution detection: a survey. Int J Comput Vision
+  132:1–28
+  18. Ghassemi N, Fazl-Ersi E (2022) A comprehensive review of trends, applications and challenges in out-of-distribu-
+  tion detection. ​h​t​t​p​s​:​/​/​a​r​x​i​v​.​o​r​g​/​a​b​s​/​2​2​0​9​.​1​2​9​3​5
+  19. Cui P, Wang J (2022) Out-of-distribution (ood) detection based on deep learning: a review. Electronics. ​h​t​t​p​s​:​/​/​d​o​i​.​
+  o​r​g​/​1​0​.​3​3​9​0​/​e​l​e​c​t​r​o​n​i​c​s​1​1​2​1​3​5​0​0
+  20. Levine S, Kumar A, Tucker G, Fu J (2020) Offline reinforcement learning: tutorial, review, and perspectives on
+  open problems. ​h​t​t​p​s​:​/​/​a​r​x​i​v​.​o​r​g​/​a​b​s​/​2​0​0​5​.​0​1​6​4​3
+  21. Chen X, Wang S, McAuley J, Jannach D, Yao L (2024) On the opportunities and challenges of offline reinforcement
+  learning for recommender systems. ACM Trans Inf Syst. ​h​t​t​p​s​:​/​/​d​o​i​.​o​r​g​/​1​0​.​1​1​4​5​/​3​6​6​1​9​9​6
+  22. Padakandla S (2021) A survey of reinforcement learning algorithms for dynamically varying environments. ACM
+  Comput Surv 54(6):14. ​h​t​t​p​s​:​/​/​d​o​i​.​o​r​g​/​1​0​.​1​1​4​5​/​3​4​5​9​9​9​1
+  23. Lauri M, Hsu D, Pajarinen J (2023) Partially observable Markov decision processes in robotics: a survey. IEEE
+  Trans Rob 39(1):21–40. ​h​t​t​p​s​:​/​/​d​o​i​.​o​r​g​/​1​0​.​1​1​0​9​/​T​R​O​.​2​0​2​2​.​3​2​0​0​1​3​8
+
+
+13                                                                                                                     Neural Computing and Applications
+https://doi.org/10.1007/s00521-026-11966-8                                                                                  Page 33 of 38              150 33
+
+  24. Xie T, Foster DJ, Bai Y, Jiang N, Kakade SM (2022) The role of coverage in online reinforcement learning. ​h​t​t​p​s​:​/​
+  /​a​r​x​i​v​.​o​r​g​/​a​b​s​/​2​2​1​0​.​0​4​1​5​7
+  25. Xie T, Jiang N, Wang H, Xiong C, Bai Y (2021) Policy finetuning: Bridging sample-efficient offline and online
+  reinforcement learning. In: Ranzato M, Beygelzimer A, Dauphin Y, Liang PS, Vaughan JW (eds) Advances in neural
+  information processing systems, vol 34. Curran Associates Inc, pp 27395–27407
+  26. Schrittwieser J, Hubert T, Mandhane A, Barekatain M, Antonoglou I, Silver D (2021) Online and offline reinforce-
+  ment learning by planning with a learned model. In: Ranzato M, Beygelzimer A, Dauphin Y, Liang PS, Vaughan JW (eds)
+  Advances in neural information processing systems, vol 34. Curran Associates Inc, pp 27580–27591
+  27. Lillicrap TP, Hunt JJ, Pritzel A, Heess N, Erez T, Tassa Y, Silver D, Wierstra D (2019) Continuous control with deep
+  reinforcement learning. ​h​t​t​p​s​:​/​/​a​r​x​i​v​.​o​r​g​/​a​b​s​/​1​5​0​9​.​0​2​9​7​1
+  28. Rigter M, Lacerda B, Hawes N (2022) Rambo-rl: robust adversarial model-based offline reinforcement learning. In:
+  Koyejo S, Mohamed S, Agarwal A, Belgrave D, Cho K, Oh A (eds) Advances in neural information processing systems,
+  vol 35. Curran Associates Inc, pp 16082–16097
+  29. Ran Y, Li Y-C, Zhang F, Zhang Z, Yu Y (2023) Policy regularization with dataset constraint for offline reinforce-
+  ment learning. In: Krause A, Brunskill E, Cho K, Engelhardt B, Sabato S, Scarlett J (eds) Proceedings of the 40th interna-
+  tional conference on machine learning. Proceedings of machine learning research, vol 202. PMLR, pp 28701–28717. ​h​t​t​
+  p​s​:​/​/​p​r​o​c​e​e​d​i​n​g​s​.​m​l​r​.​p​r​e​s​s​/​v​2​0​2​/​r​a​n​2​3​a​.​h​t​m​l
+  30. Jiang L, Cheng S, Qiu J, Xu H, Chan WK, Ding Z (2024) Offline reinforcement learning with imbalanced datasets.​
+  h​t​t​p​s​:​/​/​a​r​x​i​v​.​o​r​g​/​a​b​s​/​2​3​0​7​.​0​2​7​5​2
+  31. Tarasov D, Nikulin A, Akimov D, Kurenkov V, Kolesnikov S (2023) CORL: research-oriented deep offline rein-
+  forcement learning library. ​h​t​t​p​s​:​/​/​a​r​x​i​v​.​o​r​g​/​a​b​s​/​2​2​1​0​.​0​7​1​0​5
+  32. Wang K, Zhao H, Luo X, Ren K, Zhang W, Li D (2022) Bootstrapped transformer for offline reinforcement learn-
+  ing. In: Koyejo S, Mohamed S, Agarwal A, Belgrave D, Cho K, Oh A (eds) Advances in neural information processing
+  systems, vol 35. Curran Associates Inc, pp 34748–34761
+  33. Mnih V, Kavukcuoglu K, Silver D, Rusu AA, Veness J, Bellemare MG, Graves A, Riedmiller M, Fidjeland AK,
+  Ostrovski G et al (2015) Human-level control through deep reinforcement learning. Nature 518(7540):529–533
+  34. Ernst D, Geurts P, Wehenkel L (2005) Tree-based batch mode reinforcement learning. J Mach Learn Res 6:503
+  35. Hallak A, Mannor S (2017) Consistent on-line off-policy evaluation. In: Precup D, Teh YW (eds) Proceedings of
+  the 34th international conference on machine learning. Proceedings of machine learning research, vol 70. PMLR, pp
+  1372–1383. ​h​t​t​p​s​:​/​/​p​r​o​c​e​e​d​i​n​g​s​.​m​l​r​.​p​r​e​s​s​/​v​7​0​/​h​a​l​l​a​k​1​7​a​.​h​t​m​l
+  36. Talaei Khoei T, Ould Slimane H, Kaabouch N (2023) Deep learning: systematic review, models, challenges, and
+  research directions. Neural Comput Appl 35(31):23103–23124
+  37. Panaganti K, Xu Z, Kalathil D, Ghavamzadeh M (2023) Bridging Distributionally Robust Learning and Offline RL:
+  an approach to mitigate distribution shift and partial data coverage. ​h​t​t​p​s​:​/​/​a​r​x​i​v​.​o​r​g​/​a​b​s​/​2​3​1​0​.​1​8​4​3​4
+  38. Gelada C, Bellemare MG (2019) Off-policy deep reinforcement learning by bootstrapping the covariate shift. In:
+  Proceedings of the aaai conference on artificial intelligence, vol 33. pp 3647–3655. ​h​t​t​p​s​:​/​/​d​o​i​.​o​r​g​/​1​0​.​1​6​0​9​/​a​a​a​i​.​v​3​3​i​0​1​.​3​
+  3​0​1​3​6​4​7
+  39. Gulcehre C, Colmenarejo SG, wang, Sygnowski J, Paine T, Zolna K, Chen Y, Hoffman M, Pascanu R, Freitas N
+  (2021) addressing extrapolation error in deep offline reinforcement learning. ​h​t​t​p​s​:​/​/​o​p​e​n​r​e​v​i​e​w​.​n​e​t​/​f​o​r​u​m​?​i​d​= ​O​C​R​K​C​u​l​
+  3​e​K​N
+  40. Mazoure B, Kostrikov I, Nachum O, Tompson JJ (2022) Improving zero-shot generalization in offline reinforce-
+  ment learning using generalized similarity functions. In: Koyejo S, Mohamed S, Agarwal A, Belgrave D, Cho K, Oh A
+  (eds) Advances in neural information processing systems, vol 35. Curran Associates Inc, pp 25088–25101
+  41. Yu C, Liu J, Nemati S, Yin G (2021) Reinforcement learning in healthcare: a survey. ACM Comput Surv. ​h​t​t​p​s​:​/​/​d​
+  o​i​.​o​r​g​/​1​0​.​1​1​4​5​/​3​4​7​7​6​0​0
+  42. Kalashnikov D, Irpan A, Pastor P, Ibarz J, Herzog A, Jang E, Quillen D, Holly E, Kalakrishnan M, Vanhoucke
+  V, Levine S (2018) Scalable deep reinforcement learning for vision-based robotic manipulation. In: Billard A, Dragan
+  A, Peters J, Morimoto J (eds) Proceedings of The 2nd conference on robot learning. Proceedings of machine learning
+  research, vol 87. PMLR, pp 651–673. ​h​t​t​p​s​:​/​/​p​r​o​c​e​e​d​i​n​g​s​.​m​l​r​.​p​r​e​s​s​/​v​8​7​/​k​a​l​a​s​h​n​i​k​o​v​1​8​a​.​h​t​m​l
+  43. Mandlekar A, Xu D, Wong J, Nasiriany S, Wang C, Kulkarni R, Fei-Fei L, Savarese S, Zhu Y, Martín-Martín R
+  (2021) What matters in learning from offline human demonstrations for robot manipulation. ​h​t​t​p​s​:​/​/​a​r​x​i​v​.​o​r​g​/​a​b​s​/​2​1​0​8​.​0​3​
+  2​9​8
+  44. Schulman J, Levine S, Abbeel P, Jordan M, Moritz P (2015) Trust region policy optimization. In: Bach F, Blei D
+  (eds) Proceedings of the 32nd international conference on machine learning. Proceedings of machine learning research,
+  vol 37. PMLR, Lille, France, pp 1889–1897. ​h​t​t​p​s​:​/​/​p​r​o​c​e​e​d​i​n​g​s​.​m​l​r​.​p​r​e​s​s​/​v​3​7​/​s​c​h​u​l​m​a​n​1​5​.​h​t​m​l
+  45. Kumar A, Zhou A, Tucker G, Levine S (2020) Conservative q-learning for offline reinforcement learning. In:
+  Larochelle H, Ranzato M, Hadsell R, Balcan MF, Lin H (eds) Advances in neural information processing systems, vol 33.
+  Curran Associates Inc, pp 1179–1191
+
+
+
+Neural Computing and Applications                                                                                                                  13
+ 150
+34             Page 34 of 38                                                                                 https://doi.org/10.1007/s00521-026-11966-8
+
+ 46. Ma Y, Jayaraman D, Bastani O (2021) Conservative offline distributional reinforcement learning. In: Ranzato M,
+ Beygelzimer A, Dauphin Y, Liang PS, Vaughan JW (eds) Advances in neural information processing systems, vol 34. Cur-
+ ran Associates Inc, pp 19235–19247
+ 47. Haarnoja T, Zhou A, Abbeel P, Levine S (2018) Soft actor-critic: off-policy maximum entropy deep reinforcement
+ learning with a stochastic actor. In: Dy J, Krause A (eds) Proceedings of the 35th international conference on machine
+ learning. Proceedings of machine learning research, vol 80. PMLR, pp 1861–1870. ​h​t​t​p​s​:​/​/​p​r​o​c​e​e​d​i​n​g​s​.​m​l​r​.​p​r​e​s​s​/​v​8​0​/​h​a​a​
+ r​n​o​j​a​1​8​b​.​h​t​m​l
+ 48. Fujimoto S, Hoof H, Meger D (2018) Addressing function approximation error in actor-critic methods. In: Dy J,
+ Krause A (eds) Proceedings of the 35th international conference on machine learning. Proceedings of machine learning
+ research, vol 80. PMLR, pp 1587–1596. ​h​t​t​p​s​:​/​/​p​r​o​c​e​e​d​i​n​g​s​.​m​l​r​.​p​r​e​s​s​/​v​8​0​/​f​u​j​i​m​o​t​o​1​8​a​.​h​t​m​l
+ 49. Nachum O, Dai B, Kostrikov I, Chow Y, Li L, Schuurmans D (2019) AlgaeDICE: policy gradient from arbitrary
+ experience. ​h​t​t​p​s​:​/​/​a​r​x​i​v​.​o​r​g​/​a​b​s​/​1​9​1​2​.​0​2​0​7​4
+ 50. Yu T, Kumar A, Rafailov R, Rajeswaran A, Levine S, Finn C (2021) Combo: Conservative offline model-based
+ policy optimization. In: Ranzato M, Beygelzimer A, Dauphin Y, Liang PS, Vaughan JW (eds) Advances in Neural Infor-
+ mation Processing Systems, vol 34. Curran Associates Inc, pp 28954–28967. ​h​t​t​p​s​:​/​/​p​r​o​c​e​e​d​i​n​g​s​.​n​e​u​r​i​p​s​.​c​c​/​p​a​p​e​r​_​f​i​l​e​s​/​p​
+ a​p​e​r​/​2​0​2​1​/​f​i​l​e​/​f​2​9​a​1​7​9​7​4​6​9​0​2​e​3​3​1​5​7​2​c​4​8​3​c​4​5​e​5​0​8​6​-​P​a​p​e​r​.​p​d​f
+ 51. Chen L, Yan J, Shao Z, Wang L, Lin Q, Rajmohan S, Moscibroda T, Zhang D (2023) Conservative state value
+ estimation for offline reinforcement learning. In: Oh A, Naumann T, Globerson A, Saenko K, Hardt M, Levine S (eds)
+ Advances in neural information processing systems, vol 36. Curran Associates Inc, pp 35064–35083. ​h​t​t​p​s​:​/​/​p​r​o​c​e​e​d​i​n​g​s​
+ .​n​e​u​r​i​p​s​.​c​c​/​p​a​p​e​r​_​f​i​l​e​s​/​p​a​p​e​r​/​2​0​2​3​/​f​i​l​e​/​6​e​4​6​9​f​b​d​c​4​3​a​d​e​1​2​1​1​7​0​f​6​1​0​9​6​f​4​4​5​8​b​-​P​a​p​e​r​-​C​o​n​f​e​r​e​n​c​e​.​p​d​f
+ 52. Fujimoto S, Meger D, Precup D (2019) Off-policy deep reinforcement learning without exploration. In: Chaudhuri
+ K, Salakhutdinov R (eds) Proceedings of the 36th international conference on machine learning. Proceedings of machine
+ learning research, vol 97. PMLR, pp 2052–2062. ​h​t​t​p​s​:​/​/​p​r​o​c​e​e​d​i​n​g​s​.​m​l​r​.​p​r​e​s​s​/​v​9​7​/​f​u​j​i​m​o​t​o​1​9​a​.​h​t​m​l
+ 53. Kumar A, Fu J, Soh M, Tucker G, Levine S (2019) Stabilizing off-policy q-learning via bootstrapping error reduc-
+ tion. In: Wallach H, Larochelle H, Beygelzimer A, Alché-Buc F, Fox E, Garnett R (eds) Advances in neural information
+ processing systems, vol 32. Curran Associates Inc. ​h​t​t​p​s​:​/​/​p​r​o​c​e​e​d​i​n​g​s​.​n​e​u​r​i​p​s​.​c​c​/​p​a​p​e​r​_​f​i​l​e​s​/​p​a​p​e​r​/​2​0​1​9​/​f​i​l​e​/​c​2​0​7​3​f​f​a​7​7​
+ b​5​3​5​7​a​4​9​8​0​5​7​4​1​3​b​b​0​9​d​3​a​-​P​a​p​e​r​.​p​d​f
+ 54. Xie T, Cheng C-A, Jiang N, Mineiro P, Agarwal A (2021) Bellman-consistent pessimism for offline reinforcement
+ learning. In: Ranzato M, Beygelzimer A, Dauphin Y, Liang PS, Vaughan JW (eds) Advances in neural information pro-
+ cessing systems, vol 34. Curran Associates Inc, pp 6683–6694. ​h​t​t​p​s​:​/​/​p​r​o​c​e​e​d​i​n​g​s​.​n​e​u​r​i​p​s​.​c​c​/​p​a​p​e​r​_​f​i​l​e​s​/​p​a​p​e​r​/​2​0​2​1​/​f​i​l​e​
+ /​3​4​f​9​8​c​7​c​5​d​7​0​6​3​1​8​1​d​a​8​9​0​e​a​8​d​2​5​2​6​5​a​-​P​a​p​e​r​.​p​d​f
+ 55. Lee S, Seo Y, Lee K, Abbeel P, Shin J (2022) Offline-to-online reinforcement learning via balanced replay and pes-
+ simistic q-ensemble. In: Faust A, Hsu D, Neumann G (eds) Proceedings of the 5th conference on robot learning. Proceed-
+ ings of machine learning research, vol 164. PMLR, pp 1702–1712. ​h​t​t​p​s​:​/​/​p​r​o​c​e​e​d​i​n​g​s​.​m​l​r​.​p​r​e​s​s​/​v​1​6​4​/​l​e​e​2​2​d​.​h​t​m​l
+ 56. Mao Y, Zhang H, Chen C, Xu Y, Ji X (2023) Supported value regularization for offline reinforcement learning. In:
+ Oh A, Naumann T, Globerson A, Saenko K, Hardt M, Levine S (eds) Advances in neural information processing systems,
+ vol 36. Curran Associates Inc, pp 40587–40609
+ 57. Schulman J, Chen X, Abbeel P (2018) equivalence between policy gradients and soft Q-learning. ​h​t​t​p​s​:​/​/​a​r​x​i​v​.​o​r​g​/​
+ a​b​s​/​1​7​0​4​.​0​6​4​4​0
+ 58. Haarnoja T, Tang H, Abbeel P, Levine S (2017) Reinforcement learning with deep energy-based policies. In: Precup
+ D, Teh YW (eds) Proceedings of the 34th international conference on machine learning. Proceedings of machine learning
+ research, vol 70. PMLR, pp 1352–1361. ​h​t​t​p​s​:​/​/​p​r​o​c​e​e​d​i​n​g​s​.​m​l​r​.​p​r​e​s​s​/​v​7​0​/​h​a​a​r​n​o​j​a​1​7​a​.​h​t​m​l
+ 59. Duan Y, Chen X, Houthooft R, Schulman J, Abbeel P (2016) Benchmarking deep reinforcement learning for con-
+ tinuous control. In: Balcan MF, Weinberger KQ (eds) Proceedings of the 33rd international conference on machine learn-
+ ing. Proceedings of machine learning research, vol 48. PMLR, Ne York, pp 1329–1338. ​h​t​t​p​s​:​/​/​p​r​o​c​e​e​d​i​n​g​s​.​m​l​r​.​p​r​e​s​s​/​v​4​
+ 8​/​d​u​a​n​1​6​.​h​t​m​l
+ 60. SAC code. ​h​t​t​p​s​:​/​/​g​i​t​h​u​b​.​c​o​m​/​h​a​a​r​n​o​j​a​/​s​a​c. Accessed 08 Aug 2024
+ 61. Wu Y, Tucker G, Nachum O (2019) Behavior regularized offline reinforcement learning. ​h​t​t​p​s​:​/​/​a​r​x​i​v​.​o​r​g​/​a​b​s​/​1​9​1​1​
+ .​1​1​3​6​1
+ 62. Dabney W, Rowland M, Bellemare M, Munos R (2018) Distributional reinforcement learning with quantile regres-
+ sion. In: Proceedings of the AAAI conference on artificial intelligence. ​h​t​t​p​s​:​/​/​d​o​i​.​o​r​g​/​1​0​.​1​6​0​9​/​a​a​a​i​.​v​3​2​i​1​.​1​1​7​9​1
+ 63. Rafailov R, Yu T, Rajeswaran A, Finn C (2021) Offline reinforcement learning from images with latent space mod-
+ els. In: Proceedings of the 3rd conference on learning for dynamics and control. Proceedings of machine learning research,
+ vol 144, PMLR, pp 1154–1168. ​h​t​t​p​s​:​/​/​p​r​o​c​e​e​d​i​n​g​s​.​m​l​r​.​p​r​e​s​s​/​v​1​4​4​/​r​a​f​a​i​l​o​v​2​1​a​.​h​t​m​l
+ 64. Liu Y, Swaminathan A, Agarwal A, Brunskill E (2020) Provably good batch off-policy reinforcement learning with-
+ out great exploration. In: Larochelle H, Ranzato M, Hadsell R, Balcan MF, Lin H (eds) Advances in neural information
+ processing systems, vol 33. Curran Associates Inc, pp 1264–1274
+ 65. CODAC code. ​h​t​t​p​s​:​/​/​g​i​t​h​u​b​.​c​o​m​/​J​a​s​o​n​M​a​2​0​1​6​/​C​O​D​A​C. Accessed 08 Aug 2024
+ 66. Off2OnRL code. ​h​t​t​p​s​:​/​/​g​i​t​h​u​b​.​c​o​m​/​s​h​l​e​e​9​4​/​O​f​f​2​O​n​R​L. Accessed 08 Aug 2024
+
+
+13                                                                                                                                         Neural Computing and Applications
+https://doi.org/10.1007/s00521-026-11966-8                                                                                                                 Page 35 of 38                     150 35
+
+  67. Pomerleau DA (1988) Alvinn: an autonomous land vehicle in a neural network. In: Touretzky D (ed) Advances in
+  neural information processing systems, vol 1. Morgan-Kaufmann. ​h​t​t​p​s​:​/​/​p​r​o​c​e​e​d​i​n​g​s​.​n​e​u​r​i​p​s​.​c​c​/​p​a​p​e​r​_​f​i​l​e​s​/​p​a​p​e​r​/​1​9​8​8​/​
+  f​i​l​e​/​8​1​2​b​4​b​a​2​8​7​f​5​e​e​0​b​c​9​d​4​3​b​b​f​5​b​b​e​8​7​f​b​-​P​a​p​e​r​.​p​d​f
+  68. Kostrikov I, Nair A, Levine S (2021) Offline reinforcement learning with implicit Q-learning. ​h​t​t​p​s​:​/​/​a​r​x​i​v​.​o​r​g​/​a​b​s​
+  /​2​1​1​0​.​0​6​1​6​9
+  69. MCQ code. ​h​t​t​p​s​:​/​/​g​i​t​h​u​b​.​c​o​m​/​d​m​k​s​j​f​l​/​M​C​Q. Accessed 08 Aug 2024
+  70. Brandfonbrener D, Whitney W, Ranganath R, Bruna J (2021) Offline rl without off-policy evaluation. In: Ranzato
+  M, Beygelzimer A, Dauphin Y, Liang PS, Vaughan JW (eds) Advances in neural information processing systems, vol 34.
+  Curran Associates Inc, pp 4933–4946
+  71. SVR code. ​h​t​t​p​s​:​/​/​g​i​t​h​u​b​.​c​o​m​/​M​A​O​Y​I​X​I​U​/​S​V​R. Accessed 08 Aug 2024
+  72. CSVE code. ​h​t​t​p​s​:​/​/​g​i​t​h​u​b​.​c​o​m​/​2​0​2​3​A​n​n​o​n​y​m​o​u​s​A​u​t​h​o​r​/​c​s​v​e. Accessed 08 Aug 2024
+  73. Osband I, Blundell C, Pritzel A, Van Roy B (2016) Deep exploration via bootstrapped dqn. In: Lee D, Sugiyama M,
+  Luxburg U, Guyon I, Garnett R (eds) Advances in neural information processing systems, vol 29. Curran Associates Inc.​
+  h​t​t​p​s​:​/​/​p​r​o​c​e​e​d​i​n​g​s​.​n​e​u​r​i​p​s​.​c​c​/​p​a​p​e​r​_​f​i​l​e​s​/​p​a​p​e​r​/​2​0​1​6​/​f​i​l​e​/​8​d​8​8​1​8​c​8​e​1​4​0​c​6​4​c​7​4​3​1​1​3​f​5​6​3​c​f​7​5​0​f​-​P​a​p​e​r​.​p​d​f
+  74. Agarwal R, Schuurmans D, Norouzi M (2020) An optimistic perspective on offline reinforcement learning. In: III
+  HD, Singh A (eds) Proceedings of the 37th international conference on machine learning. Proceedings of machine learning
+  research, vol 119. PMLR, pp 104–114. ​h​t​t​p​s​:​/​/​p​r​o​c​e​e​d​i​n​g​s​.​m​l​r​.​p​r​e​s​s​/​v​1​1​9​/​a​g​a​r​w​a​l​2​0​c​.​h​t​m​l
+  75. An G, Moon S, Kim J-H, Song HO (2021) Uncertainty-based offline reinforcement learning with diversified
+  q-ensemble. In: Ranzato M, Beygelzimer A, Dauphin Y, Liang PS, Vaughan JW (eds) Advances in neural information
+  processing systems, vol 34. Curran Associates Inc, pp 7436–7447. ​h​t​t​p​s​:​/​/​p​r​o​c​e​e​d​i​n​g​s​.​n​e​u​r​i​p​s​.​c​c​/​p​a​p​e​r​_​f​i​l​e​s​/​p​a​p​e​r​/​2​0​2​1​/​
+  f​i​l​e​/​3​d​3​d​2​8​6​a​8​d​1​5​3​a​4​a​5​8​1​5​6​d​0​e​0​2​d​8​5​7​0​c​-​P​a​p​e​r​.​p​d​f
+  76. Yang R, Bai C, Ma X, Wang Z, Zhang C, Han L (2022) Rorl: Robust offline reinforcement learning via conserva-
+  tive smoothing. In: Koyejo S, Mohamed S, Agarwal A, Belgrave D, Cho K, Oh A (eds) Advances in neural information
+  processing systems, vol 35. Curran Associates Inc, pp 23851–23866. ​h​t​t​p​s​:​/​/​p​r​o​c​e​e​d​i​n​g​s​.​n​e​u​r​i​p​s​.​c​c​/​p​a​p​e​r​_​f​i​l​e​s​/​p​a​p​e​r​/​2​0​
+  2​2​/​f​i​l​e​/​9​6​b​b​d​d​0​e​d​2​a​9​e​7​c​d​2​f​b​7​c​a​f​2​f​a​e​1​5​f​3​d​-​P​a​p​e​r​-​C​o​n​f​e​r​e​n​c​e​.​p​d​f
+  77. Ghasemipour K, Gu SS, Nachum O (2022) Why so pessimistic? estimating uncertainties for offline rl through
+  ensembles, and why their independence matters. In: Koyejo S, Mohamed S, Agarwal A, Belgrave D, Cho K, Oh A (eds)
+  Advances in neural information processing systems, vol 35. Curran Associates Inc, pp 18267–18281. ​h​t​t​p​s​:​/​/​p​r​o​c​e​e​d​i​n​g​s​
+  .​n​e​u​r​i​p​s​.​c​c​/​p​a​p​e​r​_​f​i​l​e​s​/​p​a​p​e​r​/​2​0​2​2​/​f​i​l​e​/​7​4​2​3​9​0​2​b​5​5​3​4​e​2​b​2​6​7​4​3​8​c​8​5​4​4​4​a​5​4​b​1​-​P​a​p​e​r​-​C​o​n​f​e​r​e​n​c​e​.​p​d​f
+  78. Ghosh D, Ajay A, Agrawal P, Levine S (2022) Offline RL policies should be trained to be adaptive. In: Chaudhuri
+  K, Jegelka S, Song L, Szepesvari C, Niu G, Sabato S (eds) Proceedings of the 39th international conference on machine
+  learning. Proceedings of machine learning research, vol 162. PMLR, pp 7513–7530. ​h​t​t​p​s​:​/​/​p​r​o​c​e​e​d​i​n​g​s​.​m​l​r​.​p​r​e​s​s​/​v​1​6​2​/​g​
+  h​o​s​h​2​2​a​.​h​t​m​l
+  79. Bai C, Wang L, Hao J, Yang Z, Zhao B, Wang Z, Li X (2024) Pessimistic value iteration for multi-task data sharing
+  in offline reinforcement learning. Artif Intell 326:104048. ​h​t​t​p​s​:​/​/​d​o​i​.​o​r​g​/​1​0​.​1​0​1​6​/​j​.​a​r​t​i​n​t​.​2​0​2​3​.​1​0​4​0​4​8
+  80. Charpentier B, Senanayake R, Kochenderfer M, Günnemann S (2022) Disentangling epistemic and aleatoric uncer-
+  tainty in reinforcement learning. ​h​t​t​p​s​:​/​/​a​r​x​i​v​.​o​r​g​/​a​b​s​/​2​2​0​6​.​0​1​5​5​8
+  81. Sensoy M, Kaplan L, Kandemir M (2018) Evidential deep learning to quantify classification uncertainty. In: Bengio
+  S, Wallach H, Larochelle H, Grauman K, Cesa-Bianchi N, Garnett R (eds) Advances in neural information processing
+  systems, vol 31. Curran Associates Inc. ​h​t​t​p​s​:​/​/​p​r​o​c​e​e​d​i​n​g​s​.​n​e​u​r​i​p​s​.​c​c​/​p​a​p​e​r​_​f​i​l​e​s​/​p​a​p​e​r​/​2​0​1​8​/​f​i​l​e​/​a​9​8​1​f​2​b​7​0​8​0​4​4​d​6​f​b​4​a​
+  7​1​a​1​4​6​3​2​4​2​5​2​0​-​P​a​p​e​r​.​p​d​f
+  82. Buckman J, Gelada C, Bellemare MG (2020) The importance of pessimism in fixed-dataset policy optimization. ​h​
+  t​t​p​s​:​/​/​a​r​x​i​v​.​o​r​g​/​a​b​s​/​2​0​0​9​.​0​6​7​9​9
+  83. Bai C, Wang L, Yang Z, Deng Z, Garg A, Liu P, Wang Z (2022) Pessimistic bootstrapping for uncertainty-driven
+  offline reinforcement learning. ​h​t​t​p​s​:​/​/​a​r​x​i​v​.​o​r​g​/​a​b​s​/​2​2​0​2​.​1​1​5​6​6
+  84. google batch_rl. ​h​t​t​p​s​:​/​/​g​i​t​h​u​b​.​c​o​m​/​g​o​o​g​l​e​-​r​e​s​e​a​r​c​h​/​b​a​t​c​h​_​r​l. Accessed 08 Aug 2024
+  85. FDPO code. ​h​t​t​p​s​:​/​/​g​i​t​h​u​b​.​c​o​m​/​j​b​u​c​k​m​a​n​/​t​i​o​p​i​f​d​p​o. Accessed 08 Aug 2024
+  86. EDAC code. ​h​t​t​p​s​:​/​/​g​i​t​h​u​b​.​c​o​m​/​s​n​u​-​m​l​l​a​b​/​E​D​A​C. Accessed 08 Aug 2024
+  87. PBRL. ​h​t​t​p​s​:​/​/​g​i​t​h​u​b​.​c​o​m​/​B​a​i​c​h​e​n​j​i​a​/​P​B​R​L. Accessed 08 Aug 2024
+  88. Wang Z, Novikov A, Zolna K, Merel JS, Springenberg JT, Reed SE, Shahriari B, Siegel N, Gulcehre C, Heess N,
+  Freitas N (2020)Critic regularized regression. In: Larochelle H, Ranzato M, Hadsell R, Balcan MF, Lin H (eds) Advances
+  in neural information processing systems, vol 33. Curran Associates Inc, pp 7768–7778. ​h​t​t​p​s​:​/​/​p​r​o​c​e​e​d​i​n​g​s​.​n​e​u​r​i​p​s​.​c​c​/​p​
+  a​p​e​r​_​f​i​l​e​s​/​p​a​p​e​r​/​2​0​2​0​/​f​i​l​e​/​5​8​8​c​b​9​5​6​d​6​b​b​e​6​7​0​7​8​f​2​9​f​8​d​e​4​2​0​a​1​3​d​-​P​a​p​e​r​.​p​d​f
+  89. Yu T, Kumar A, Chebotar Y, Hausman K, Levine S, Finn C (2021) Conservative data sharing for multi-task offline
+  reinforcement learning. In: Ranzato M, Beygelzimer A, Dauphin Y, Liang PS, Vaughan JW (eds) Advances in neural
+  information processing systems, vol 34. Curran Associates Inc, pp 11501–11516. ​h​t​t​p​s​:​/​/​p​r​o​c​e​e​d​i​n​g​s​.​n​e​u​r​i​p​s​.​c​c​/​p​a​p​e​r​_​f​i​l​
+  e​s​/​p​a​p​e​r​/​2​0​2​1​/​f​i​l​e​/​5​f​d​2​c​0​6​f​5​5​8​3​2​1​e​f​f​6​1​2​b​b​b​e​4​5​5​f​6​f​b​d​-​P​a​p​e​r​.​p​d​f
+  90. UTDS code. ​h​t​t​p​s​:​/​/​g​i​t​h​u​b​.​c​o​m​/​B​a​i​c​h​e​n​j​i​a​/​U​T​D​S. Accessed 08 Aug 2024
+
+
+
+Neural Computing and Applications                                                                                                                                                        13
+ 150
+36               Page 36 of 38                                                                                             https://doi.org/10.1007/s00521-026-11966-8
+
+ 91. Yu T, Thomas G, Yu L, Ermon S, Zou JY, Levine S, Finn C, Ma T (2020) Mopo: Model-based offline policy opti-
+ mization. In: Larochelle H, Ranzato M, Hadsell R, Balcan MF, Lin H (eds) Advances in neural information processing
+ systems, vol 33. Curran Associates Inc, pp 14129–14142. ​h​t​t​p​s​:​/​/​p​r​o​c​e​e​d​i​n​g​s​.​n​e​u​r​i​p​s​.​c​c​/​p​a​p​e​r​_​f​i​l​e​s​/​p​a​p​e​r​/​2​0​2​0​/​f​i​l​e​/​a​3​2​2​
+ 8​5​2​c​e​0​d​f​7​3​e​2​0​4​b​7​e​6​7​c​b​b​e​f​0​d​0​a​-​P​a​p​e​r​.​p​d​f
+ 92. Kidambi R, Rajeswaran A, Netrapalli P, Joachims T (2020) Morel: Model-based offline reinforcement learning. In:
+ Larochelle H, Ranzato M, Hadsell R, Balcan MF, Lin H (eds) Advances in neural information processing systems, vol 33.
+ Curran Associates Inc, pp 21810–21823. ​h​t​t​p​s​:​/​/​p​r​o​c​e​e​d​i​n​g​s​.​n​e​u​r​i​p​s​.​c​c​/​p​a​p​e​r​_​f​i​l​e​s​/​p​a​p​e​r​/​2​0​2​0​/​f​i​l​e​/​f​7​e​f​a​4​f​8​6​4​a​e​9​b​8​8​d​4​
+ 3​5​2​7​f​4​b​1​4​f​7​5​0​f​-​P​a​p​e​r​.​p​d​f
+ 93. Lee B, Lee J, Vrancx P, Kim D, Kim K-E (2020) Batch reinforcement learning with hyperparameter gradients. In:
+ III HD, Singh A (eds) Proceedings of the 37th international conference on machine learning. Proceedings of machine
+ learning research, vol 119. PMLR, pp 5725–5735. ​h​t​t​p​s​:​/​/​p​r​o​c​e​e​d​i​n​g​s​.​m​l​r​.​p​r​e​s​s​/​v​1​1​9​/​l​e​e​2​0​d​.​h​t​m​l
+ 94. Lange S, Gabel T, Riedmiller M (2012) In: Wiering M, Otterlo M (eds) Batch reinforcement learning. Springer,
+ Berlin, pp 45–73. ​h​t​t​p​s​:​/​/​d​o​i​.​o​r​g​/​1​0​.​1​0​0​7​/​9​7​8​-​3​-​6​4​2​-​2​7​6​4​5​-​3​_​2
+ 95. Matsushima T, Furuta H, Matsuo Y, Nachum O, Gu S (2020) Deployment-efficient reinforcement learning via
+ model-based offline optimization. ​h​t​t​p​s​:​/​/​a​r​x​i​v​.​o​r​g​/​a​b​s​/​2​0​0​6​.​0​3​6​4​7
+ 96. Siegel NY, Springenberg JT, Berkenkamp F, Abdolmaleki A, Neunert M, Lampe T, Hafner R, Heess N, Riedmiller
+ M (2020) Keep doing what worked: behavioral modelling priors for offline reinforcement learning. ​h​t​t​p​s​:​/​/​a​r​x​i​v​.​o​r​g​/​a​b​s​/​
+ 2​0​0​2​.​0​8​3​9​6
+ 97. Rezaeifar S, Dadashi R, Vieillard N, Hussenot L, Bachem O, Pietquin O, Geist M (2022) Offline reinforcement
+ learning as anti-exploration. In: Proceedings of the AAAI conference on artificial intelligence, vol 36, no 7, pp 8106–8114.​
+ h​t​t​p​s​:​/​/​d​o​i​.​o​r​g​/​1​0​.​1​6​0​9​/​a​a​a​i​.​v​3​6​i​7​.​2​0​7​8​3
+ 98. Kostrikov I, Fergus R, Tompson J, Nachum O (2021) Offline reinforcement learning with fisher divergence critic
+ regularization. In: Meila M, Zhang T (eds) Proceedings of the 38th international conference on machine learning. Pro-
+ ceedings of machine learning research, vol 139. PMLR, pp 5774–5783. ​h​t​t​p​s​:​/​/​p​r​o​c​e​e​d​i​n​g​s​.​m​l​r​.​p​r​e​s​s​/​v​1​3​9​/​k​o​s​t​r​i​k​o​v​2​1​a​.​
+ h​t​m​l
+ 99. Xu H, Jiang L, Jianxiong L, Zhan X (2022) A policy-guided imitation approach for offline reinforcement learning.
+ In: Koyejo S, Mohamed S, Agarwal A, Belgrave D, Cho K, Oh A (eds) Advances in neural information processing sys-
+ tems, vol 35. Curran Associates Inc, pp 4085–4098. ​h​t​t​p​s​:​/​/​p​r​o​c​e​e​d​i​n​g​s​.​n​e​u​r​i​p​s​.​c​c​/​p​a​p​e​r​_​f​i​l​e​s​/​p​a​p​e​r​/​2​0​2​2​/​f​i​l​e​/​1​a​0​7​5​5​b​2​
+ 4​9​b​7​7​2​e​d​5​5​2​9​7​9​6​b​0​a​7​c​c​9​b​d​-​P​a​p​e​r​-​C​o​n​f​e​r​e​n​c​e​.​p​d​f
+ 100. Ghavamzadeh M, Petrik M, Chow Y (2016) Safe policy improvement by minimizing robust baseline regret. In: Lee
+ D, Sugiyama M, Luxburg U, Guyon I, Garnett R (eds) Advances in neural information processing systems, vol 29. Curran
+ Associates Inc. ​h​t​t​p​s​:​/​/​p​r​o​c​e​e​d​i​n​g​s​.​n​e​u​r​i​p​s​.​c​c​/​p​a​p​e​r​_​f​i​l​e​s​/​p​a​p​e​r​/​2​0​1​6​/​f​i​l​e​/​9​a​3​d​4​5​8​3​2​2​d​7​0​0​4​6​f​6​3​d​f​d​8​b​0​1​5​3​e​c​e​4​-​P​a​p​e​r​.​p​
+ d​f
+ 101. Iyengar GN (2005) Robust dynamic programming. Math Oper Res 30(2):257–280
+ 102. Nilim A, El Ghaoui L (2005) Robust control of Markov decision processes with uncertain transition matrices. Oper
+ Res 53(5):780–798
+ 103. Laroche R, Trichelair P, Combes RTD (2019) Safe policy improvement with baseline bootstrapping. In: Chaudhuri
+ K, Salakhutdinov R (eds) Proceedings of the 36th international conference on machine learning. Proceedings of machine
+ learning research, vol 97. PMLR, pp 3652–3661. ​h​t​t​p​s​:​/​/​p​r​o​c​e​e​d​i​n​g​s​.​m​l​r​.​p​r​e​s​s​/​v​9​7​/​l​a​r​o​c​h​e​1​9​a​.​h​t​m​l
+ 104. Kurutach T, Clavera I, Duan Y, Tamar A, Abbeel P (2018) Model-ensemble trust-region policy optimization. ​h​t​t​p​s​:​
+ /​/​a​r​x​i​v​.​o​r​g​/​a​b​s​/​1​8​0​2​.​1​0​5​9​2
+ 105. BREMEN code. ​h​t​t​p​s​:​/​/​g​i​t​h​u​b​.​c​o​m​/​m​a​t​s​u​o​l​a​b​/​B​R​E​M​E​N. Accessed 08 Aug 2024
+ 106. Argenson A, Dulac-Arnold G (2021) Model-based offline planning. ​h​t​t​p​s​:​/​/​a​r​x​i​v​.​o​r​g​/​a​b​s​/​2​0​0​8​.​0​5​5​5​6
+ 107. Fisher-BRC code. ​h​t​t​p​s​:​/​/​g​i​t​h​u​b​.​c​o​m​/​g​o​o​g​l​e​-​r​e​s​e​a​r​c​h​/​g​o​o​g​l​e​-​r​e​s​e​a​r​c​h​/​t​r​e​e​/​m​a​s​t​e​r​/​f​i​s​h​e​r​_​b​r​c. Accessed 08 Aug
+ 2024
+ 108. Peng XB, Kumar A, Zhang G, Levine S (2019) Advantage-weighted regression: simple and scalable off-policy
+ reinforcement learning. ​h​t​t​p​s​:​/​/​a​r​x​i​v​.​o​r​g​/​a​b​s​/​1​9​1​0​.​0​0​1​7​7
+ 109. POR code. ​h​t​t​p​s​:​/​/​g​i​t​h​u​b​.​c​o​m​/​r​y​a​n​x​h​r​/​P​O​R. Accessed 08 Aug 2024
+ 110. Cang C, Rajeswaran A, Abbeel P, Laskin M (2021) Behavioral priors and dynamics models: improving perfor-
+ mance and domain transfer in offline RL. ​h​t​t​p​s​:​/​/​a​r​x​i​v​.​o​r​g​/​a​b​s​/​2​1​0​6​.​0​9​1​1​9
+ 111. Tennenholtz G, Mannor S (2022) Uncertainty estimation using riemannian model dynamics for offline reinforce-
+ ment learning. In: Koyejo S, Mohamed S, Agarwal A, Belgrave D, Cho K, Oh A (eds) Advances in neural information
+ processing systems, vol 35. Curran Associates Inc, pp 19008–19021
+ 112. Wu Y, Zhai S, Srivastava N, Susskind J, Zhang J, Salakhutdinov R, Goh H (2021) Uncertainty weighted actor-critic
+ for offline reinforcement learning. ​h​t​t​p​s​:​/​/​a​r​x​i​v​.​o​r​g​/​a​b​s​/​2​1​0​5​.​0​8​1​4​0
+ 113. Rigter M, Lacerda B, Hawes N (2023) One risk to rule them all: A risk-sensitive perspective on model-based offline
+ reinforcement learning. In: Oh A, Naumann T, Globerson A, Saenko K, Hardt M, Levine S (eds) Advances in neural infor-
+ mation processing systems, vol 36. Curran Associates Inc, pp 77520–77545
+
+
+
+13                                                                                                                                                           Neural Computing and Applications
+https://doi.org/10.1007/s00521-026-11966-8                                                                                                                Page 37 of 38                    150 37
+
+  114. Zhang H, Wang B, Mao Y, Shao J, Jiang Y, Xu Y, Ji X (2023) Pessimistic policy iteration for offline reinforcement
+  learning. ​h​t​t​p​s​:​/​/​o​p​e​n​r​e​v​i​e​w​.​n​e​t​/​f​o​r​u​m​?​i​d​= ​T​m​J​t​B​n​I​W​k​B
+  115. Cheng C.-A., Xie T, Jiang N, Agarwal A (2022) Adversarially trained actor critic for offline reinforcement learning.
+  In: Chaudhuri K, Jegelka S, Song L, Szepesvari C, Niu G, Sabato S (eds) Proceedings of the 39th international conference
+  on machine learning. Proceedings of machine learning research, vol 162. PMLR, pp 3852–3878. ​h​t​t​p​s​:​/​/​p​r​o​c​e​e​d​i​n​g​s​.​m​l​r​.​
+  p​r​e​s​s​/​v​1​6​2​/​c​h​e​n​g​2​2​b​.​h​t​m​l
+  116. MOReL code. ​h​t​t​p​s​:​/​/​g​i​t​h​u​b​.​c​o​m​/​a​r​a​v​i​n​d​r​9​3​/​m​j​r​l​/​t​r​e​e​/​v​2​/​p​r​o​j​e​c​t​s​/​m​o​r​e​l. Accessed 08 Aug 2024
+  117. Janner M, Fu J, Zhang M, Levine S. (2019): When to trust your model: Model-based policy optimization. In: Wal-
+  lach H, Larochelle H, Beygelzimer A, Alché-Buc F, Fox E, Garnett R (eds) Advances in neural information processing
+  systems, vol 32. Curran Associates Inc. ​h​t​t​p​s​:​/​/​p​r​o​c​e​e​d​i​n​g​s​.​n​e​u​r​i​p​s​.​c​c​/​p​a​p​e​r​_​f​i​l​e​s​/​p​a​p​e​r​/​2​0​1​9​/​f​i​l​e​/​5​f​a​f​4​6​1​e​f​f​3​0​9​9​6​7​1​a​d​6​
+  3​c​6​f​3​f​0​9​4​f​7​f​-​P​a​p​e​r​.​p​d​f
+  118. Urpí NA, Curi S, Krause A (2021) Risk-averse offline reinforcement learning. ​h​t​t​p​s​:​/​/​a​r​x​i​v​.​o​r​g​/​a​b​s​/​2​1​0​2​.​0​5​3​7​1
+  119. 1R2R code. ​h​t​t​p​s​:​/​/​g​i​t​h​u​b​.​c​o​m​/​m​a​r​c​-​r​i​g​t​e​r​/​1​R​2​R. Accessed 08 Aug 2024
+  120. Fu J, Kumar A, Nachum O, Tucker G, Levine S (2021) D4RL: datasets for deep data-driven reinforcement learning.​
+  h​t​t​p​s​:​/​/​a​r​x​i​v​.​o​r​g​/​a​b​s​/​2​0​0​4​.​0​7​2​1​9
+  121. Gulcehre C, Wang Z, Novikov A, Paine T, Gómez S, Zolna K, Agarwal R, Merel JS, Mankowitz DJ, Paduraru C,
+  Dulac-Arnold G, Li J, Norouzi M, Hoffman M, Heess N, Freitas N (2020) Rl unplugged: a suite of benchmarks for offline
+  reinforcement learning. In: Larochelle H, Ranzato M, Hadsell R, Balcan MF, Lin H (eds) Advances in neural information
+  processing systems, vol 33. Curran Associates Inc, pp 7248–7259
+  122. Dosovitskiy A, Ros G, Codevilla F, Lopez A, Koltun V (2017) CARLA: an open urban driving simulator. In: Levine
+  S, Vanhoucke V, Goldberg K (eds) Proceedings of the 1st annual conference on robot learning. Proceedings of machine
+  learning research, vol 78. PMLR, pp 1–16. ​h​t​t​p​s​:​/​/​p​r​o​c​e​e​d​i​n​g​s​.​m​l​r​.​p​r​e​s​s​/​v​7​8​/​d​o​s​o​v​i​t​s​k​i​y​1​7​a​.​h​t​m​l
+  123. Rajeswaran A, Kumar V, Gupta A, Vezzani G, Schulman J, Todorov E, Levine S (2018) Learning complex dexter-
+  ous manipulation with deep reinforcement learning and demonstrations. ​h​t​t​p​s​:​/​/​a​r​x​i​v​.​o​r​g​/​a​b​s​/​1​7​0​9​.​1​0​0​8​7
+  124. D4RL. ​h​t​t​p​s​:​/​/​g​i​t​h​u​b​.​c​o​m​/​F​a​r​a​m​a​-​F​o​u​n​d​a​t​i​o​n​/​D​4​R​L. Accessed 08 Aug 2024
+  125. Gym Library Documentation. ​h​t​t​p​s​:​/​/​w​w​w​.​g​y​m​l​i​b​r​a​r​y​.​d​e​v​/. Accessed 18 Oct 2024
+  126. MuJoCo Environment Documentation. ​h​t​t​p​s​:​/​/​w​w​w​.​g​y​m​l​i​b​r​a​r​y​.​d​e​v​/​e​n​v​i​r​o​n​m​e​n​t​s​/​m​u​j​o​c​o​/. Accessed 18 Oct 2024
+  127. Cart Pole. ​h​t​t​p​s​:​/​/​w​w​w​.​g​y​m​l​i​b​r​a​r​y​.​d​e​v​/​e​n​v​i​r​o​n​m​e​n​t​s​/​c​l​a​s​s​i​c​_​c​o​n​t​r​o​l​/​c​a​r​t​_​p​o​l​e​/. Accessed 08 Aug 2024
+  128. Acrobot. ​h​t​t​p​s​:​/​/​w​w​w​.​g​y​m​l​i​b​r​a​r​y​.​d​e​v​/​e​n​v​i​r​o​n​m​e​n​t​s​/​c​l​a​s​s​i​c​_​c​o​n​t​r​o​l​/​a​c​r​o​b​o​t​/. Accessed 08 Aug 2024
+  129. Lunar Lander. ​h​t​t​p​s​:​/​/​w​w​w​.​g​y​m​l​i​b​r​a​r​y​.​d​e​v​/​e​n​v​i​r​o​n​m​e​n​t​s​/​b​o​x​2​d​/​l​u​n​a​r​_​l​a​n​d​e​r​/. Accessed 08 Aug 2024
+  130. Half Cheetah. ​h​t​t​p​s​:​/​/​w​w​w​.​g​y​m​l​i​b​r​a​r​y​.​d​e​v​/​e​n​v​i​r​o​n​m​e​n​t​s​/​m​u​j​o​c​o​/​h​a​l​f​_​c​h​e​e​t​a​h​/. Accessed 08 Aug 2024
+  131. Hopper. ​h​t​t​p​s​:​/​/​w​w​w​.​g​y​m​l​i​b​r​a​r​y​.​d​e​v​/​e​n​v​i​r​o​n​m​e​n​t​s​/​m​u​j​o​c​o​/​h​o​p​p​e​r​/. Accessed 08 Aug 2024
+  132. Walker2D. ​h​t​t​p​s​:​/​/​g​y​m​n​a​s​i​u​m​.​f​a​r​a​m​a​.​o​r​g​/​e​n​v​i​r​o​n​m​e​n​t​s​/​m​u​j​o​c​o​/​w​a​l​k​e​r​2​d​/. Accessed 08 Aug 2024
+  133. Ant. ​h​t​t​p​s​:​/​/​w​w​w​.​g​y​m​l​i​b​r​a​r​y​.​d​e​v​/​e​n​v​i​r​o​n​m​e​n​t​s​/​m​u​j​o​c​o​/​a​n​t​/. Accessed 08 Aug 2024
+  134. Humanoid. ​h​t​t​p​s​:​/​/​w​w​w​.​g​y​m​l​i​b​r​a​r​y​.​d​e​v​/​e​n​v​i​r​o​n​m​e​n​t​s​/​m​u​j​o​c​o​/​h​u​m​a​n​o​i​d​/. Accessed 08 Aug 2024
+  135. Ant Maze. ​h​t​t​p​s​:​/​/​r​o​b​o​t​i​c​s​.​f​a​r​a​m​a​.​o​r​g​/​e​n​v​s​/​m​a​z​e​/​a​n​t​_​m​a​z​e​/. Accessed 08 Aug 2024
+  136. Kumar V.: Manipulators and Manipulation in High Dimensional Spaces. Available online. Accessed 08 Aug 2024
+  137. Kitchen. ​h​t​t​p​s​:​/​/​r​o​b​o​t​i​c​s​.​f​a​r​a​m​a​.​o​r​g​/​e​n​v​s​/​f​r​a​n​k​a​_​k​i​t​c​h​e​n​/​f​r​a​n​k​a​_​k​i​t​c​h​e​n​/. Accessed 08 Aug 2024
+  138. Atari. ​h​t​t​p​s​:​/​/​w​w​w​.​g​y​m​l​i​b​r​a​r​y​.​d​e​v​/​e​n​v​i​r​o​n​m​e​n​t​s​/​a​t​a​r​i​/​i​n​d​e​x​.​h​t​m​l. Accessed 08 Aug 2024
+  139. sawyer. ​h​t​t​p​s​:​/​/​g​i​t​h​u​b​.​c​o​m​/​r​l​w​o​r​k​g​r​o​u​p​/​g​y​m​-​s​a​w​y​e​r. Accessed 08 Aug 2024
+  140. procgen. ​h​t​t​p​s​:​/​/​g​i​t​h​u​b​.​c​o​m​/​o​p​e​n​a​i​/​p​r​o​c​g​e​n. Accessed 08 Aug 2024
+  141. Quadruped. ​h​t​t​p​s​:​/​/​g​i​t​h​u​b​.​c​o​m​/​n​i​m​a​z​a​r​e​i​a​n​/​q​u​a​d​r​u​p​e​d​-​r​l​-​l​o​c​o​m​o​t​i​o​n. Accessed 08 Aug 2024
+  142. Highway-env. ​h​t​t​p​s​:​/​/​h​i​g​h​w​a​y​-​e​n​v​.​f​a​r​a​m​a​.​o​r​g​/​i​n​d​e​x​.​h​t​m​l. Accessed 08 Aug 2024
+  143. Fang X, Zhang Q, Gao Y, Zhao D (2022) Offline reinforcement learning for autonomous driving with real world driv-
+  ing data. In: 2022 IEEE 25th international conference on intelligent transportation systems (ITSC). IEEE, pp 3417–3422
+  144. Hao J, Xu S, Chen X, Fu S, Yang D (2024) Real-data-driven offline reinforcement learning for autonomous vehicle
+  speed decision making. In: 2024 36th Chinese control and decision conference (CCDC). IEEE, pp 2504–2511
+  145. Zhan W, Sun L, Wang D, Shi H, Clausse A, Naumann M, Kummerle J, Konigshof H, Stiller C, La Fortelle A, et
+  al (2019) Interaction dataset: an international, adversarial and cooperative motion dataset in interactive driving scenarios
+  with semantic maps. Preprint at ​a​r​X​i​v​:​1​9​1​0​.​0​3​0​8​8
+  146. Chang M-F, Lambert J, Sangkloy P, Singh J, Bak S, Hartnett A, Wang D, Carr P, Lucey S, Ramanan D, et al (2019)
+  Argoverse: 3d tracking and forecasting with rich maps. In: Proceedings of the IEEE/CVF conference on computer vision
+  and pattern recognition, pp 8748–8757
+  147. Fujimoto S, Gu SS (2021) A minimalist approach to offline reinforcement learning. In: Ranzato M, Beygelzimer A,
+  Dauphin Y, Liang PS, Vaughan JW (eds) Advances in neural information processing systems, vol 34. Curran Associates
+  Inc, pp 20132–20145
+  148. Rajeswaran A, Lowrey K, Todorov EV, Kakade SM (2017) Towards generalization and simplicity in continuous
+  control. In: Guyon I, Luxburg U.V., Bengio S, Wallach H, Fergus R, Vishwanathan S, Garnett R (eds) Advances in neural
+
+
+
+Neural Computing and Applications                                                                                                                                                      13
+ 150
+38                Page 38 of 38                                                                           https://doi.org/10.1007/s00521-026-11966-8
+
+    information processing systems, vol 30. Curran Associates Inc. ​h​t​t​p​s​:​/​/​p​r​o​c​e​e​d​i​n​g​s​.​n​e​u​r​i​p​s​.​c​c​/​p​a​p​e​r​_​f​i​l​e​s​/​p​a​p​e​r​/​2​0​1​7​/​f​i​l​e​
+    /​9​d​d​b​9​d​d​5​d​8​a​e​e​9​a​7​6​b​f​2​1​7​a​2​a​3​c​5​4​8​3​3​-​P​a​p​e​r​.​p​d​f
+    149. Schulman J, Wolski F, Dhariwal P, Radford A, Klimov O (2017) Proximal policy optimization algorithms. ​h​t​t​p​s​:​/​/​a​
+    r​x​i​v​.​o​r​g​/​a​b​s​/​1​7​0​7​.​0​6​3​4​7
+    150. Gal Y, Ghahramani Z (2016) Dropout as a bayesian approximation: Representing model uncertainty in deep learn-
+    ing. In: Balcan MF, Weinberger KQ (eds) Proceedings of the 33rd international conference on machine learning. Proceed-
+    ings of machine learning research, vol 48. PMLR, New York, pp 1050–1059. ​h​t​t​p​s​:​/​/​p​r​o​c​e​e​d​i​n​g​s​.​m​l​r​.​p​r​e​s​s​/​v​4​8​/​g​a​l​1​6​.​h​t​m​
+    l
+    151. Shi L, Chi Y (2024) Distributionally robust model-based offline reinforcement learning with near-optimal sample
+    complexity. J Mach Learn Res 25(200):1–91
+    152. Chebotar Y, Vuong Q, Hausman K, Xia F, Lu Y, Irpan A, Kumar A, Yu T, Herzog A, Pertsch K, Gopalakrishnan K,
+    Ibarz J, Nachum O, Sontakke SA, Salazar G, Tran HT, Peralta J, Tan C, Manjunath D, Singh J, Zitkovich B, Jackson T,
+    Rao K, Finn C, Levine S (2023) Q-transformer: scalable offline reinforcement learning via autoregressive q-functions. In:
+    Tan J, Toussaint M, Darvish K (eds) Proceedings of the 7th conference on robot learning. Proceedings of Machine Learn-
+    ing Research, vol 229. PMLR, pp 3909–3928. ​h​t​t​p​s​:​/​/​p​r​o​c​e​e​d​i​n​g​s​.​m​l​r​.​p​r​e​s​s​/​v​2​2​9​/​c​h​e​b​o​t​a​r​2​3​a​.​h​t​m​l
+    153. Dehghani M, Yazdanparast Z (2023) From distributed machine to distributed deep learning: a comprehensive sur-
+    vey. J Big Data 10(1):158
+    154. Cho D, Shim D, Kim HJ (2022) S2p: State-conditioned image synthesis for data augmentation in offline reinforce-
+    ment learning. In: Koyejo S, Mohamed S, Agarwal A, Belgrave D, Cho K, Oh A (eds) Advances in neural information
+    processing systems, vol 35. Curran Associates Inc, pp 11534–11546. ​h​t​t​p​s​:​/​/​p​r​o​c​e​e​d​i​n​g​s​.​n​e​u​r​i​p​s​.​c​c​/​p​a​p​e​r​_​f​i​l​e​s​/​p​a​p​e​r​/​2​0​2​
+    2​/​f​i​l​e​/​4​b​3​2​c​2​9​4​3​a​0​2​3​3​1​7​9​2​8​7​7​c​c​6​b​5​2​0​5​f​4​9​-​P​a​p​e​r​-​C​o​n​f​e​r​e​n​c​e​.​p​d​f
+    155. Wang Z, Wang C, Dong Z, Ross K (2024) Pre-training with synthetic data helps offline reinforcement learning. ​h​t​t​
+    p​s​:​/​/​a​r​x​i​v​.​o​r​g​/​a​b​s​/​2​3​1​0​.​0​0​7​7​1
+    156. Glanois C, Weng P, Zimmer M, Li D, Yang T, Hao J, Liu W (2024) A survey on interpretable reinforcement learn-
+    ing. Mach Learn 113:1–44
+    157. Deshmukh SV, Dasgupta A, Agarwal C, Jiang N, Krishnamurthy B, Theocharous G, Subramanian J (2022) Trajec-
+    tory-based explainability framework for offline RL. In: 3rd offline RL workshop: offline RL as a “Launchpad”. ​h​t​t​p​s​:​/​/​o​p​
+    e​n​r​e​v​i​e​w​.​n​e​t​/​f​o​r​u​m​?​i​d​= ​p​8​_​Q​C​s​0​_​q​-​A
+    158. Wang J, Zhang J, Jiang H, Zhang J, Wang L, Zhang C Offline meta reinforcement learning with in-distribution
+    online adaptation. In: Krause A, Brunskill E, Cho K, Engelhardt B, Sabato S, Scarlett J (eds) Proceedings of the 40th inter-
+    national conference on machine learning. Proceedings of Machine Learning Research, vol 202. PMLR, pp 36626–36669.​
+    h​t​t​p​s​:​/​/​p​r​o​c​e​e​d​i​n​g​s​.​m​l​r​.​p​r​e​s​s​/​v​2​0​2​/​w​a​n​g​2​3​a​u​.​h​t​m​l
+    159. Zhan W, Uehara M, Kallus N, Lee JD, Sun W (2023) Provable offline reinforcement learning with human feedback.
+    In: ICML 2023 workshop the many facets of preference-based learning. ​h​t​t​p​s​:​/​/​o​p​e​n​r​e​v​i​e​w​.​n​e​t​/​f​o​r​u​m​?​i​d​= ​A​Y​1​d​s​K​p​N​T​u
+    160. Zhu Z, Lin K, Jain AK, Zhou J (2023) Transfer learning in deep reinforcement learning: a survey. IEEE Trans Pat-
+    tern Anal Mach Intell 45(11):13344–13362. ​h​t​t​p​s​:​/​/​d​o​i​.​o​r​g​/​1​0​.​1​1​0​9​/​T​P​A​M​I​.​2​0​2​3​.​3​2​9​2​0​7​5
+
+Publisher’s Note            Springer Nature remains neutral with regard to jurisdictional claims in published maps and institutional
+affiliations.
+
+
+
+Authors and Affiliations
+
+Ali Riahi Samani1 · Xujiang Zhao2 · Feng Chen1
+
+     Ali Riahi Samani
+     ali.riahi@utdallas.edu
+     Xujiang Zhao
+     xuzhao@nec-labs.com
+     Feng Chen
+     feng.chen@utdallas.edu
+1
+     Department of Computer Science, The University of Texas at Dallas, Richardson, Texas, USA
+2
+     NEC Laboratories America, Princeton, New Jersey, USA
+
+
+
+
+13                                                                                                                                    Neural Computing and Applications
+

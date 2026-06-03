@@ -1,0 +1,951 @@
+                                                                          Energy & Buildings 348 (2025) 116456
+
+
+                                                                        Contents lists available at ScienceDirect
+
+
+                                                                            Energy & Buildings
+                                                              journal homepage: www.elsevier.com/locate/enbuild
+
+
+
+
+Deploying deep reinforcement learning for low-level HVAC control in
+multi-zone buildings: A comparative study with ASHRAE G36 sequences
+Sabrina Savino a , Giuseppe Razzano                                     a , Michele Pagone                 b , Carlo Novara           b,
+
+Alfonso Capozzoli a,∗
+a Department of Energy (DENERG), TEBE Research Group, BAEDA Lab, Politecnico di Torino, Corso Duca degli Abruzzi 24, Turin, 10129, Italy
+b
+    Department of Electronics and Telecommunications (DET), Politecnico di Torino, Corso Duca degli Abruzzi 24, Turin, 10129, Italy
+
+
+
+
+a r t i c l e              i n f o                            a b s t r a c t
+
+Keywords:                                                     This paper proposes a methodology for optimizing HVAC control in multi-zone buildings using Deep Reinforce-
+AHU low-level control                                         ment Learning. The study focuses on optimizing the central AHU system by controlling all low-level components
+Multi-zone building                                           within both the air and water loops, addressing the complex dynamics of multi-zone interactions. The case study
+Deep reinforcement learning
+                                                              is based on a building within the Politecnico di Torino campus. Modelica-based simulations are used to model
+ASHRAE guideline 36 (G36)
+Modelica
+                                                              both the HVAC system and building dynamics, allowing the integration and evaluation of the ASHRAE G36 con-
+                                                              trol standard as a benchmark. Two DRL strategies are developed and evaluated, Zone-Aware and Zone-Integrated,
+                                                              under both winter and summer conditions, with the goal of improving energy eﬃciency, indoor temperature con-
+                                                              trol, and indoor CO2 concentration, under varying occupancy proﬁles. The results reveal that both DRL strategies
+                                                              outperform the G36 baseline in terms of energy savings (up to 17 %), indoor temperature violations, and CO2
+                                                              concentration. Additionally, DRL controllers demonstrate strong generalizability and adapt seamlessly to unseen
+                                                              occupancy proﬁles without manual tuning. This research highlights the potential of DRL to provide scalable,
+                                                              adaptive, and energy-eﬃcient HVAC control solutions for multi-zone buildings.
+
+
+
+1. Introduction                                                                                     determining a single optimal supply air temperature for all zones is
+                                                                                                    challenging, as thermal loads and occupant preferences vary [7]. These
+    The building sector is responsible for more than a third of global                              complexities require adaptive control strategies capable of dynamically
+energy consumption and emissions [1]. Among building systems, heat-                                 managing ventilation to optimize both energy use and occupant com-
+ing, ventilation and air conditioning (HVAC) systems account for almost                             fort.
+50 % of the total energy in oﬃce and residential buildings [2]. Venti-                                  Traditional HVAC systems rely on rule-based hierarchical con-
+lation plays a crucial role in maintaining thermal comfort and indoor                               trol frameworks, where a supervisory controller adjusts setpoints for
+air quality (IAQ) by providing and distributing conditioned outdoor air                             lower-level controllers that regulate actuators (e.g., valves, dampers,
+across diﬀerent building zones. However, this process requires signiﬁ-                              and fans). ASHRAE Guideline 36 (G36) [8] provides a structured ap-
+cant energy input due to the operation of complex networks of fans and                              proach for optimizing Variable Air Volume (VAV) systems in multi-zone
+ducts. Although proper ventilation prevents air stagnation and mitigates                            buildings. Incorporates supply air temperature reset, duct static pres-
+indoor pollutant accumulation, excessive airﬂow leads to unnecessary                                sure reset, and zone airﬂow control strategies to improve energy eﬃ-
+energy consumption, whereas inadequate ventilation compromises air                                  ciency. Simulation-based studies indicate that G36 can achieve 31 %
+quality and may pose health risks [3,4]. The balance of energy eﬃciency                             HVAC energy savings in medium-sized commercial buildings com-
+and occupant well-being remains a critical challenge in the management                              pared to conventional rule-based methods [9]. Despite these advan-
+and control of the HVAC system.                                                                     tages, rule-based controllers remain static and struggle to adapt to
+    This challenge is further ampliﬁed in multi-zone HVAC systems,                                  dynamic environmental conditions. Additionally, tuning Proportional-
+where nonlinear airﬂow dynamics and inter-zone interactions make the                                Integral-Derivative (PID) controllers in multi-zone systems is labor-
+control problem highly complex. Due to shared ductwork and ventila-                                 intensive, requiring expert calibration to maintain optimal performance
+tion networks, adjustments in one zone can unintentionally aﬀect air-                               under varying occupancy patterns, weather conditions, and system
+ﬂow and temperature conditions in adjacent spaces [5,6]. Furthermore,                               loads.
+
+    ∗ Corresponding author.
+
+      E-mail address: alfonso.capozzoli@polito.it (A. Capozzoli).
+
+https://doi.org/10.1016/j.enbuild.2025.116456
+Received 1 July 2025; Received in revised form 26 August 2025; Accepted 14 September 2025
+Available online 16 September 2025
+0378-7788/© 2025 The Author(s). Published by Elsevier B.V. This is an open access article under the CC BY-NC-ND license (http://creativecommons.org/licenses/by-
+nc-nd/4.0/).
+S. Savino et al.                                                                                                         Energy & Buildings 348 (2025) 116456
+
+
+    To address these limitations, Model Predictive Control (MPC) and                To address these challenges, several studies have explored hybrid
+Deep Reinforcement Learning (DRL) have emerged as promising alterna-            control strategies that integrate supervisory and low-level control ac-
+tives for HVAC optimization. MPC uses predictive modeling to optimize           tions [28,29]. However, these approaches typically optimize a multi-
+control actions over a given time horizon [10]. It has been successfully        objective function while focusing only on a subset of key factors–such
+implemented in single-zone systems [11,12] and multizone buildings              as energy consumption, zone temperature violations, or indoor air qual-
+with independent HVAC units per zone [13]. However, its application             ity (e.g., CO2 levels)–without achieving full integration with low-level
+in fully interconnected multi-zone HVAC systems is challenging due to           control.
+the need for detailed, calibrated models that capture complex inter-zone            Recent eﬀorts have begun addressing this gap. For instance, the au-
+airﬂow interactions. This requires high computational resources and             thors in [30] optimizes energy consumption, thermal comfort, and in-
+continuous model updates, making large-scale deployment cumbersome              door air quality (CO2 and humidity levels) by jointly controlling the
+[14], especially for multi-agent network systems [15].                          supply temperature setpoint, fan speed, outdoor damper position, and
+    In contrast, DRL provides a model-free, data-driven approach that           ventilation air operation in a single-zone oﬃce building. In the multi-
+learns optimal control policies through direct system interaction. Unlike       zone context, [31] introduces an imitation-interaction learning method
+MPC, DRL does not require an explicit system model, instead leveraging          to directly control low-level components, such as fan speed and VAV
+empirical observations and reward signals to adapt control strategies in        dampers, improving ventilation eﬃciency to enhance energy savings.
+real time. This makes DRL particularly well-suited for scenarios where              However, comprehensive low-level control optimization for full
+system modeling is complex or impractical and in dynamic HVAC envi-             multi-zone HVAC systems remains an underexplored area, and the rel-
+ronments with changing occupancy, weather conditions, and equipment             evant literature is rather limited. An alternative, yet unexplored ap-
+performance. However, training DRL models presents challenges, as it            proach, is to optimize only the AHU-level control, while maintaining
+requires extensive data and must carefully balance exploration and ex-          existing operational settings and control strategies for VAV controllers.
+ploitation to prevent suboptimal or unsafe actions [16]. To mitigate the        Since each VAV typically serves a single zone, this strategy reduces the
+potential risks associated with unsafe actions, advanced co-simulation          number of control actions required, oﬀering a scalable and eﬃcient path
+environments have been developed, enabling realistic testing of con-            to multi-zone HVAC optimization without the complexity of modifying
+trol strategies before deployment [17,18]. Integrating multiple simula-         individual VAVs.
+tion platforms within a co-simulation framework eﬀectively captures                 Furthermore, few studies employ high-ﬁdelity simulation models to
+the dynamic interactions between HVAC components, thus improving                accurately represent the dynamics of the HVAC system and evaluate ad-
+the evaluation of complex control strategies [19]. For instance, inte-          vanced control strategies. OpenModelica [32], an equation-based sim-
+grating Modelica models as Functional Mock-up Units (FMUs) within               ulation environment, provides a more detailed representation of HVAC
+co-simulation frameworks allows for high-ﬁdelity HVAC modeling and              systems, enabling seamless integration of both mechanical and control
+seamless tool interoperability [20]. Despite these challenges, DRL and          components in a single framework. Moreover, OpenModelica enables
+co-simulation environments complement each other by combining adap-             a straightforward implementation of the ASHRAE Guideline 36 logic,
+tive learning with detailed simulation-based testing, enabling safer and        which is challenging to achieve in other simulation environments such
+more eﬀective deployment. This synergy exhibits strong potential for            as EnergyPlus [33]. This capability enables a direct, high-ﬁdelity bench-
+solving complex multi-objective optimization problems, making DRL a             marking of advanced control strategies [34], including DRL, against
+promising approach for HVAC control.                                            widely recognized standards. However, only a limited number of stud-
+    This paper explores the role of DRL in multi-zone HVAC control, ex-         ies (see, e.g., [25,35,36]) adopt the Modelica language [37] as a high-
+amining its state-of-the-art applications, limitations, and benchmarking        ﬁdelity plant to test advanced control law in multi-zone HVAC systems,
+against existing standards like ASHRAE G36.                                     leaving a signiﬁcant gap in assessing an adequate methodology to com-
+                                                                                pare the performance of advanced strategies with respect to those of
+1.1. Related works and contributions                                            G36.
+                                                                                    This study aims to bridge these gaps by developing DRL-based con-
+    HVAC system control operates at two primary levels: low-level con-          trol strategies for a multi-zone Air Handling Unit (AHU) system, evalu-
+trol, which directly manages actuators (e.g., dampers, fans, valves),           ated in a Modelica-based high-ﬁdelity environment. The key contribu-
+and supervisory control, which sets target values (setpoints) that guide        tions are the following:
+low-level controllers, typically PID-based. Research eﬀorts have focused
+on improving supervisory control through advanced optimization tech-
+                                                                                 • Centralized AHU-based Multi-Zone Control: instead of directly con-
+niques, mainly by dynamically adjusting temperature and pressure set-
+points to improve energy eﬃciency and occupant comfort [21–26].                    trolling individual VAV actuators, the proposed methods act on low-
+    Despite these advancements, a key study [25] directly compares the             level components within the centralised AHU, allowing the VAVs to
+performance of advanced controllers, including DRL, against the G36                continue operating under the G36 control logic. This setup enables
+control strategy in a multi-zone setting. Their ﬁndings suggest that DRL           an evaluation of centralized control performance and its scalability
+at the supervisory level does not provide a clear advantage over G36               to larger multi-zone systems.
+                                                                                 • Direct low-level Control of AHU actuators: unlike supervisory ap-
+in terms of energy savings and thermal comfort. Both methods yield
+comparable results, indicating that optimizing set points alone may not            proaches that adjust setpoints, this study directly acts with a DRL-
+be suﬃcient for superior HVAC performance.                                         based controller on AHU components (e.g., dampers, valves, and
+    One fundamental limitation of supervisory control is its reliance              fan speed) to optimize energy consumption, temperature deviations
+on predeﬁned or dynamically adjusted setpoints, which do not always                across zones, and indoor CO2 levels.
+                                                                                 • Development and Comparison of two DRL strategies:
+translate to optimal low-level control actions. Dynamic setpoint changes
+often require the corresponding PID tuning to ensure a proper system re-             - The Zone-Aware DRL strategy leverages full observability of each
+sponse. This challenge is further intensiﬁed by the non-linear and time-               zone’s temperature to make zone-speciﬁc control decisions.
+varying nature of building and HVAC systems, which require frequent                  - The Zone-Integrated DRL strategy replaces individual zone tem-
+adjustments to PID parameters in response to weather ﬂuctuations, oc-                  perature measurements with two engineered variables represent-
+cupancy shifts, and equipment performance variations. Furthermore,                     ing the aggregated thermal violations above the upper bound and
+even with robust control-oriented building models, supervisory control                 below the lower bound of the desired indoor temperature band.
+remains a complex nonlinear optimization problem where eﬀectiveness                    This approach mimics G36’s voting mechanism and simpliﬁes the
+depends on solver tuning and initialization [27].                                      observation space.
+
+                                                                            2
+S. Savino et al.                                                                                                                   Energy & Buildings 348 (2025) 116456
+
+
+
+
+                                              Fig. 1. Educational building of Politecnico di Torino campus [38].
+
+
+ • Adaptability to Diverse Occupancy Proﬁles: the proposed low-level                  Table 1
+   DRL controllers acting directly on AHU actuators were tested under                 Description of building features.
+   diﬀerent occupancy patterns. The results demonstrate robust perfor-                 Building feature                                     Value       Unit
+   mance and adaptability without requiring additional ﬁne-tuning of
+                                                                                       N◦ of thermal zones                                  5           [-]
+   the learned policy.                                                                 Conditioned Room Volume                              948.50      [m3 ]
+ • High-ﬁdelity Benchmarking with Modelica: by leveraging Model-                       Conditioned Corridor volume                          1361.09     [m3 ]
+   ica’s advanced modeling capabilities, the proposed DRL strategies                   Transparent/opaque envelope vertical surface ratio   0.65        [-]
+   are compared directly with the G36 standard to assess its eﬀective-                 Opaque envelope vertical surface                     197.2       [m2 ]
+                                                                                       U-Value Exterior Wall                                0.15        [W/m2 K]
+   ness in improving energy eﬃciency, indoor temperature control, and                  U-Value Interior Wall                                0.21        [W/m2 K]
+   𝐶𝑂2 levels.                                                                         U-Value Floor                                        0.57        [W/m2 K]
+                                                                                       U-Value Roof                                         0.15        [W/m2 K]
+                                                                                       U-Value Window                                       1.6         [W/m2 K]
+2. Case study: building and AHU system conﬁgurations
+
+    The selected case study is an educational building situated within the         ensures that the mixed air temperature (𝑇mix ) within the AHU is prop-
+Politecnico di Torino campus. The building consists of ﬁve distinct ther-          erly maintained in response to variations in outdoor air temperature
+mal zones: four classrooms and a central corridor, as depicted in Fig. 1.          (𝑇out ) and return air temperature (𝑇ret ). Additionally, fan speed is ad-
+Detailed thermo-physical and geometrical properties are summarized in              justed through a fan RPM control signal, determining the total supply
+Table 1.                                                                           air mass ﬂow rate (𝑚̇ tot ) delivered to the zones, thus balancing ventila-
+    The building operates according to a ﬁxed occupancy schedule, with             tion and comfort requirements.
+active occupancy from 08:00 to 19:45, Monday through Friday. Dur-                       During the cooling season, the system maintains a ﬁxed chilled water
+ing weekends, speciﬁcally Saturdays and Sundays, the building remains              temperature at 6 ◦ C. The cooling coil valve control signal continuously
+unoccupied. The setpoints of indoor air temperature vary depending                 modulates the chilled water mass ﬂow rate (𝑚̇ water ) through the cooling
+on occupancy and operational mode. During occupied hours, the set-                 coil, thereby precisely regulating cooling capacity. Conditioned air leav-
+point temperature (𝑇sp ) is maintained at 21 ◦ C for heating and 26 ◦ C for        ing the AHU is distributed to the individual zones, where VAV dampers
+cooling. Outside occupied periods, setpoint temperatures are relaxed to            adjust the discharge airﬂow rates (𝑚̇ dis ) to each zone, maintaining in-
+15 ◦ C for heating and increased to 30 ◦ C for cooling, allowing energy            door temperature conditions according to the deﬁned cooling setpoints.
+savings when spaces are unoccupied.                                                     During the heating season, hot water is supplied to support zone-
+    While the building geometry and thermo-physical properties of the              level heating, which is delivered via post-heating coils integrated into
+envelope are derived from the actual case study, the HVAC conﬁgura-                each of the VAV boxes. These post-heating coils, which operate using
+tion in the simulation does not correspond to the real system, which is            electrical resistance heating, provide supplementary heating directly at
+equipped with ﬁve independent rooftop units (RTUs). To enable coordi-              the zone level. The hot water mass ﬂow rates through these coils are
+nated multi-zone control strategies, the model instead assumes a central-          regulated by a dedicated post-heating coil valve control signal, ensuring
+ized AHU with local VAV terminal boxes. This setup also facilitates com-           accurate and responsive temperature control within each zone. Simul-
+parison with standardized baselines such as ASHRAE Guideline 36 and                taneously, the VAV dampers modulate the supply air mass ﬂow rates
+accounts for both heating and cooling operation. A scheme of the HVAC              (𝑚̇ dis ), allowing the HVAC system to consistently achieve the speciﬁed
+conﬁguration considered in this study is illustrated in Fig. 2. The sys-           heating setpoints in each thermal zone.
+tem comprises a central air handling unit (AHU) serving all ﬁve thermal
+zones, equipped with an economizer system for eﬃcient use of outdoor               3. Methodology
+air, integrated heating and cooling coils, a supply fan, and ﬁve Vari-
+able Air Volume (VAV) boxes. Airﬂow regulation is managed through                     This section outlines the methodology employed in the study, detail-
+dedicated VAV dampers. Cooling is provided by a central chiller, while             ing the modeling of the building and HVAC system, the co-simulation
+heating is primarily delivered by a heat pump. Zone-level heating ad-              framework that enables interaction with external controllers, and the
+justments are handled by electric resistance reheat coils integrated into          Deep Reinforcement Learning (DRL) control strategies. A schematic
+the variable air volume (VAV) terminals.                                           overview of the methodology is illustrated in Fig. 3.
+    The AHU operates through six primary control signals, which vary
+based on the current operation mode, either heating or cooling. Re-                3.1. Building and HVAC system modeling
+gardless of the mode, an economizer damper control signal modulates
+outdoor and return air damper positions, thus adjusting the intake of                The simulation environment models both the building and the Air
+outdoor air (𝑚̇ out ) and recirculated return air (𝑚̇ ret ). This modulation       Handling Unit (AHU) system, along with its associated components,
+
+                                                                               3
+S. Savino et al.                                                                                                            Energy & Buildings 348 (2025) 116456
+
+
+
+
+                                                Fig. 2. Schematic representation of the AHU system [39].
+
+
+
+
+                                                           Fig. 3. Methodological framework.
+
+
+using the Modelica language within the OpenModelica open source plat-           between diﬀerent envelope elements, thereby capturing their speciﬁc
+form [32], in combination with the Buildings Library [40]. In this study,       heat transfer characteristics while preserving computational eﬃciency.
+we employed a reduced-order formulation that represents the opaque              Users can adjust the complexity of the model by selecting the number of
+envelope components, such as exterior walls and roof, through a net-            wall elements and the level of spatial discretization based on the thermal
+work of thermal resistances and capacitances. Compared to simpler               properties of the walls and external excitations. In this study, the stratig-
+lumped approaches, the FourElements model in the Buildings Library              raphy of the building envelope was derived from available architectural
+[40] provides a ﬁner resolution of building dynamics by distinguishing          documentation to ensure a realistic representation of thermal behavior.
+
+
+                                                                            4
+S. Savino et al.                                                                                                         Energy & Buildings 348 (2025) 116456
+
+
+
+
+                                      Fig. 4. Lumped-parameter representation of thermal dynamics in a single zone.
+
+
+
+
+                                                          Fig. 5. AHU model in OpenModelica.
+
+
+In the proposed conﬁguration, ﬁve thermal zones are modeled and in-            3.2. Co-simulation framework
+terconnected. The RC circuit representation of a single thermal zone is
+shown in Fig. 4.                                                                   To ensure seamless integration between the building model, HVAC
+    The HVAC system introduced in Section 2 is implemented in Open-            system, and DRL control algorithms, a co-simulation approach is
+Modelica, allowing for high-ﬁdelity simulation of its dynamic behav-           adopted. The Modelica-based model is exported as a Functional Mock-
+ior and control strategies. The implementation includes detailed repre-        up Unit (FMU) using the Functional Mock-up Interface (FMI) standard
+sentations of key AHU components–such as heating and cooling coils,            [20]. This facilitates interaction with external software tools while pre-
+economizer dampers, supply fans, and VAV boxes with reheat coils–              serving the integrity of the physical system model.
+capturing both thermal and airﬂow dynamics. Components and actu-                   Python is employed as the central coordination framework, manag-
+ators are modeled to reﬂect realistic operational responses (Fig. 5). To       ing simulation execution, data exchange, and real-time interactions be-
+establish a performance benchmark, the ASHRAE Guideline 36 standard            tween system components. The pyfmi package [41] is used to facilitate
+is implemented within the Buildings Library to model the operation of          eﬃcient communication between the FMU, encapsulating the building
+the AHU and the VAVs’ components. This provides a standardized ref-            thermal model, the AHU system, and the control algorithm, responsible
+erence framework, ensuring that advanced control strategies, such as           for generating actuator control signals. This framework enables highly
+DRL-based approaches, can be eﬀectively evaluated.                             ﬂexible system integration, allowing for dynamic interactions between
+
+
+                                                                           5
+S. Savino et al.                                                                                                                  Energy & Buildings 348 (2025) 116456
+
+
+
+
+Fig. 6. Convergence of DRL agents during training. In summer (blue), the cumulative penalty rapidly stabilizes within the ﬁrst three episodes, while in winter (red),
+it converges more gradually and plateaus after about nine episodes. The ﬁrst episode excluded as it corresponds to the warm-up phase without policy updates. (For
+interpretation of the references to colour in this ﬁgure legend, the reader is referred to the web version of this article.)
+
+
+
+
+                                                         Fig. 7. Supply air temperature reset diagram [8].
+
+
+building physics, HVAC operation, and advanced control methodolo-                    Actor-Critic (SAC) algorithm implemented in Stable-Baseline3 [43]. The
+gies.                                                                                main hyperparameters are: multilayer perceptron policy with four hid-
+                                                                                     den layers of 64 units (ReLU activations), discount factor 𝛾 = 0.99,
+3.3. DRL control strategies and training setup                                       Adam optimizer with learning rate 𝑙𝑟 = 10−3 , batch size 128, replay
+                                                                                     buﬀer size of 106 , entropy coeﬃcient set to auto, soft target update co-
+    Deep Reinforcement Learning (DRL) controllers are integrated into                eﬃcient 𝜏 = 0.005, and training starting after 10,000 warm-up steps.
+the simulation framework using the OpenAI Gym environment [42],                         To evaluate the proposed methodology under realistic conditions of
+enabling an adaptive control strategy that continuously interacts with               the case study, climate data from Turin, Italy, were sourced from [44].
+the environment, learns from system dynamics, and iteratively reﬁnes                 The DRL training phase is conducted separately for each season, span-
+its policy to optimize HVAC operations.                                              ning one month each. Speciﬁcally, training for the heating season takes
+    Two DRL control strategies are implemented: Zone-Aware DRL and                   place from January 1, to January 31, while training for the cooling sea-
+Zone-Integrated DRL, diﬀering in their observation spaces. Further de-               son occurs from July 1, to July 31, to ensure season-speciﬁc adaptation.
+tails are provided in Section 4.2. Both agents are trained using the Soft            The use of separate DRL training for the diﬀerent seasons is motivated by
+
+                                                                                 6
+S. Savino et al.                                                                                                         Energy & Buildings 348 (2025) 116456
+
+
+
+
+                                                        Fig. 8. Static pressure reset diagram [8].
+
+
+diﬀerences in system conﬁguration given by the presence of post-heating         ine their ability to maintaining energy eﬃciency, thermal comfort, and
+in the VAV boxes during the heating season. Each training episode cor-          indoor CO2 levels in comparison to ASHRAE Guideline 36.
+responds to a full month of simulation, and the agents were trained for
+13 episodes. The learning curves in Fig. 6 show the cumulative reward
+                                                                                4. Methods
+per episode for both DRL strategies in summer and winter conditions.
+                                                                                   This section presents a comprehensive overview of the control strate-
+                                                                                gies implemented in the case study. It details the control sequences gov-
+3.4. Controllers comparison
+                                                                                erning the HVAC system, which adhere to the G36 standard, and pro-
+                                                                                vides an in-depth discussion of the DRL algorithms employed for opti-
+    Following the training phase, the DRL controllers are deployed for an
+                                                                                mizing system performance.
+extended seasonal period to assess their performance in realistic build-
+ing operation scenarios. The cooling season deployment runs from June
+20, to August 20, whereas the heating season deployment extends from            4.1. ASHRAE guideline 36
+January 1, to February 28. This deployment phase enables a comprehen-
+sive evaluation of the controllers’ ability to regulate indoor conditions           ASHRAE Guideline 36–2021 [8] provides standardized sequences
+dynamically across varying climatic scenarios.                                  of operation for air-handling units (AHUs) serving variable air volume
+    To assess the robustness and generalization of the DRL controllers          (VAV) terminal systems, optimizing energy eﬃciency, indoor air quality
+under unseen conditions, additional test cases with varying occupancy           (IAQ), and control stability. These sequences ensure that HVAC systems
+proﬁles are evaluated (see Section 5 for further details). The DRL poli-        dynamically adjust to real-time demand, reducing energy consumption
+cies are deployed statically, without retraining or ﬁne-tuning, to exam-        while maintaining thermal comfort. A key feature of G36 is the Trim
+
+                                                                            7
+S. Savino et al.                                                                                                                 Energy & Buildings 348 (2025) 116456
+
+
+                                                                                   •   Heating mode: Airﬂow is maintained at its minimum setpoint to en-
+                                                                                       sure ventilation, while the heating coil is modulated as needed to
+                                                                                       meet the zone heating demand. Heating is enabled only when the
+                                                                                       zone temperature drops below the setpoint.
+
+
+                                                                                  4.2. DRL control strategies
+
+                                                                                      In this study, two Deep Reinforcement Learning (DRL) strategies
+                                                                                  based on the Soft Actor-Critic (SAC) framework are employed: Zone-
+                                                                                  Aware DRL and Zone-Integrated DRL. A scheme of the DRL control loop
+                                                                                  is provided in Fig. 10, illustrating the ﬂow of information between the
+                                                                                  building environment, the DRL agents, and the reward signal. The two
+                                                                                  strategies diﬀer in their observation space, as summarized in Table 2.
+                                                                                  Zone-Aware DRL monitors each zone temperature at every timestep,
+Fig. 9. Mapping of economizer damper positions and coil valve modulation as       while Zone-Integrated DRL uses engineered variables representing the
+a function of the Supply Air Temperature (SAT) loop signal [8].
+                                                                                  total deviation of all zones from the indoor temperature band Eqs. (3)
+                                                                                  and (4). During occupied periods, the indoor temperature band is de-
+and Respond (T&R) control logic, which enables adaptive, demand-                  ﬁned as a temperature range of ±1 ◦ C around the setpoint temperature
+based setpoint adjustments. Unlike static setpoints, this strategy con-           (𝑇sp ) which is set to 21 ◦ C in the winter season and 26 ◦ C in the summer
+tinuously monitors terminal unit performance and dynamically adjusts              season. This study examines the impact of the observation granularity
+supply temperature and duct static pressure setpoints according to the            on system performance, assessing whether an aggregated approach can
+system parameters.                                                                achieve comparable eﬃciency to a zone-speciﬁc strategy.
+    The central AHU operation is characterized by the foolowing control               Despite these diﬀerences in the observation space, both approaches
+variables:                                                                        control the following actuators with a control timestep of 15 minutes.
+
+ • Supply air temperature (SAT) Reset: the SAT setpoint is dynamically             • Fan speed (𝑓 𝑎𝑛speed ): Adjusting the speed of the supply fan to regu-
+   modulated, starting from the minimum cooling value (Min ClgSAT)                   late airﬂow.
+                                                                                   • Outdoor air damper position (dam
+   when the outdoor air temperature (OAT) is at its maximum (OAT                                                             out ): Modulating the outdoor air
+   Max) and gradually increasing to a deﬁned upper limit (T-max) when                intake damper to control fresh air intake.
+   the OAT drops to its minimum (OAT Min) Fig. 7. This upper limit,                • Return air damper position (dam ): Adjusting the return air damper
+                                                                                                                         ret
+   T-max, is further adjusted by T&R logic, which responds to zone                   to balance recirculated and fresh air.
+                                                                                   • Coil valve opening (𝑐𝑜𝑖𝑙
+   reset signals. These are triggered when there is a signiﬁcant tem-                                         valve ): Regulating the heating or cooling coil
+   perature mismatch or prolonged activity in the cooling circuit. If a              valve to manage the supply air temperature.
+   zone remains above its target temperature for a prolonged period,
+   the system generates additional reset requests that continue until                 Instead, the Variable Air Volume (VAV) box controls follow the G36
+   the cooling demand decreases, promoting both temperature control               guideline as described in Section 4.1. The reward function diﬀers be-
+   and energy eﬃciency.                                                           tween the cooling and heating seasons, as outlined in Eqs. (1) and (2).
+ • Duct static pressure reset: the static pressure setpoint is dynamically        Speciﬁcally, the term related to energy consumption changes during
+   modulated using the T&R approach, incrementally reducing pres-                 the heating season, where the total energy cost must account for the
+   sure when all terminal units receive adequate airﬂow Fig. 8. The               post-heating demand across all ﬁve VAV boxes. This additional term
+   system monitors airﬂow deviations and damper openings, increas-                was introduced to prevent biased and unrealistic control strategies, en-
+   ing the setpoint when dampers are nearly fully open and airﬂow is              suring that the agent does not minimize AHU energy use by shifting
+   insuﬃcient. The number of reset requests decreases as the deviation            heating loads to the VAV boxes. Representing the post-heating demand
+   lessens, allowing the system to maintain minimum static pressure               through a single aggregated term also keeps the reward formulation fair
+   while meeting zone demand eﬃciently.                                           and as simple as possible, given its multi-objective nature. The weights
+ • Economizer control: The economizer damper control system is de-                of the reward terms (𝜆𝑓 𝑎𝑛 , 𝜆𝐻𝑃 , 𝜆𝑢𝑝 , 𝜆𝑑𝑜𝑤𝑛 , 𝜆𝐶𝑂2 , and 𝜆𝑉 𝐴𝑉 ) were se-
+   signed to adjust damper positions to optimise the use of outdoor air           lected to balance the relative inﬂuence of comfort and energy objec-
+   for cooling purposes while also ensuring that proper ventilation is            tives. They were initially set according to the order of magnitude of
+   maintained. The determination of minimum and maximum damper                    the corresponding variables and subsequently reﬁned through iterative
+   positions is achieved through the utilisation of airﬂow and/or pres-           trial-and-error testing. The tuning process has stopped once the DRL con-
+   sure sensing mechanisms Fig. 9. The economizer’s operation is inﬂu-            trollers achieved a reasonable trade-oﬀ, yielding about a 17 % reduction
+   enced by various factors, including outdoor temperature, enthalpy,             in energy consumption compared to the baseline, while maintaining ac-
+   supply fan status, frost protection, and zone conditions. The modu-            ceptable indoor temperature violations and CO2 levels.
+   lation of dampers is ultimately governed by the SAT setpoint loop.
+ • Coil valve control: The heating and cooling coil valves are regulated
+                                                                                   𝑟cooling
+   by the SAT control loop, which is governed by a PI controller tracking                 ⎧     2           2              2             2
+   the SAT setpoint. When the fan is oﬀ, the control signal is zero Fig. 9.               ⎪𝜆𝐻𝑃 𝐸𝐻𝑃 + 𝜆𝑓(𝑎𝑛 𝐸𝑓 𝑎𝑛 + 𝜆𝑢𝑝 𝑍𝐴𝑇)𝑢𝑝 + 𝜆down 𝑍𝐴𝑇𝑑𝑜𝑤𝑛
+                                                                                          ⎪                                 2
+                                                                                       = −⎨ +𝜆CO2 max 0, CO2 − CO2max , if occupied                              (1)
+   The control logic for a VAV reheat terminal unit adjusts damper and                    ⎪                      (                )2
+                                                                                                2
+                                                                                          ⎪𝜆𝐻𝑃 𝐸𝐻𝑃 + 𝜆CO2 max 0, CO2 − CO2max , if unoccupied
+valve positions to maintain desired airﬂow and zone temperature based                     ⎩
+on the current operating mode.
+                                                                                                                𝑁zones
+ •   Cooling mode: Airﬂow is modulated between minimum and max-                                                  ∑
+     imum setpoints to meet cooling demand. The heating coil remains              𝑟heating = 𝑟cooling − 𝜆𝑉 𝐴𝑉            𝐸𝑉 𝐴𝑉                                   (2)
+                                                                                                                𝑣𝑎𝑣=1
+     disabled unless the discharge air temperature drops below 10°C, pre-
+     venting overcooling.                                                         where:
+
+                                                                              8
+S. Savino et al.                                                                                                                      Energy & Buildings 348 (2025) 116456
+
+
+
+
+Fig. 10. Structural visualization of the DRL control framework. The agent interacts with the building environment by observing occupancy, outdoor, and HVAC
+states together with zone information, and selecting AHU-level actions (fan speed, outdoor/return damper positions, coil valve opening). The environment responds
+with the next state and a scalar reward reﬂecting energy use, indoor temperature violations, and 𝐶𝑂2 levels, enabling the agent to iteratively improve its control
+policy. The observation space diﬀers between Zone-Aware and Zone-Integrated strategies as detailed in Table 2.
+
+
+
+
+                                Table 2
+                                Observation space comparison of zone-aware and zone-integrated DRL agents.
+                                  Variable             Description                                     Zone-Aware   Zone-Integrated
+
+                                  𝑇𝑜𝑢𝑡                 Outdoor air temperature                         ✓            ✓
+                                  𝑇𝑟𝑒𝑡                 Return air temperature                          ✓            ✓
+                                  𝑇𝑚𝑖𝑥                 Mixed air temperature                           ✓            ✓
+                                  𝑇𝑠𝑢𝑝                 Supply air temperature                          ✓            ✓
+                                  Solar gain           Solar radiation gain                            ✓            ✓
+                                  𝑇𝑧𝑜𝑛𝑒 , zone = 1.5   Zone temperatures                               ✓            ×
+                                  𝑍𝐴𝑇𝑢𝑝                Total zones’ violation above upper bound        ×            ✓
+                                  𝑍𝐴𝑇𝑑𝑜𝑤𝑛              Total zones’ violation below lower bound        ×            ✓
+                                  𝑉𝑇 𝑂𝑇                Total ventilation ﬂow rate                      ✓            ✓
+                                  𝑉𝑜𝑢𝑡                 Outdoor airﬂow rate                             ✓            ✓
+                                  CO2                  Indoor CO2 concentration                        ✓            ✓
+                                  𝐸𝑓 𝑎𝑛                Electric energy used by the fan                 ✓            ✓
+                                  𝐸𝐻𝑃                  Electric energy used by heat pump/chiller       ✓            ✓
+                                  𝐶𝑂𝑃𝐻𝑃                Coeﬃcient of performance of heat pump/chiller   ✓            ✓
+                                  𝑡start_occupied      Time until occupancy starts                     ✓            ✓
+                                  𝑡end_occupied        Time until occupancy ends                       ✓            ✓
+                                  𝑇out_1h              Forecasted outdoor temperature (1h)             ✓            ✓
+                                  𝑇out_3h              Forecasted outdoor temperature (3h)             ✓            ✓
+                                  𝑇out_6h              Forecasted outdoor temperature (6h)             ✓            ✓
+
+
+
+
+                                                                                    9
+S. Savino et al.                                                                                                                  Energy & Buildings 348 (2025) 116456
+
+
+
+
+                      Fig. 11. Occupancy proﬁles representing percentage of rooms occupation throughout a typical working day (Monday to Friday).
+
+
+ •   𝑍𝐴𝑇𝑢𝑝 represent the zone air temperature violation from the upper                     scenario is not seen during training and provides additional insight
+     bound of the band (𝑇𝑠𝑝 + 1) and is given by the relation                              into controller adaptability.
+                   𝑁zones
+                    ∑                                                                   For both winter and summer scenarios, the training was carried out
+     𝑍𝐴𝑇𝑢𝑝 =                max(0, 𝑇𝑧𝑜𝑛𝑒 − (𝑇𝑠𝑝 + 1))                        (3)
+                   𝑧𝑜𝑛𝑒=1
+                                                                                        exclusively in the Occupancy 0 proﬁle, representing the full-day occu-
+                                                                                        pancy condition (08:00-19:45). Winter training used data from January
+ •   𝑍𝐴𝑇𝑑𝑜𝑤𝑛 represent the zone air temperature violation from the lower
+                                                                                        1, to January 31, with an evaluation that spanned January 1, to Febru-
+     bound of the band (𝑇𝑠𝑝 − 1) and is given by the relation
+                                                                                        ary 28. Similarly, summer training was conducted from 1 July to 31
+                     𝑁zones
+                       ∑                                                                July, with evaluation covering the period from 20 June to 20 August.
+     𝑍𝐴𝑇𝑑𝑜𝑤𝑛 =                max(0, (𝑇𝑠𝑝 − 1) − 𝑇𝑧𝑜𝑛𝑒 )                     (4)             The analysis of Occupancy 1 and 2 focuses on the controllers’ ability
+                     𝑧𝑜𝑛𝑒=1                                                             to adapt their AHU control strategies–particularly in terms of scheduling
+ • 𝐸𝐻𝑃 is the energy consumption of the heat pump/chiller.                              and operational eﬃciency–in response to previously unseen occupancy
+ • 𝐸𝑉 𝐴𝑉 accounts for the additional heating demand in all ﬁve VAV                      dynamics. This provides critical insight into the robustness, ﬂexibility,
+   boxes.                                                                               and real-world applicability of the learned control policies under realis-
+ • 𝐸
+     𝑓 𝑎𝑛 is the energy consumption of the fan.                                         tic, time-varying building usage.
+ • CO
+       2max is the maximum allowed value of CO2 set to 1000 ppm.                             Performance is assessed using three key metrics aligned with the re-
+                                                                                        ward functions design (Eqs. (1) and (2)): (i) total energy consumption,
+                                                                                        (ii) indoor temperature violations at the zone level, and (iii) average in-
+5. Results                                                                              door CO2 concentration. These indicators jointly reﬂect the controllers’
+                                                                                        ability to balance energy eﬃciency, occupant comfort, and indoor air
+    This section presents a comprehensive performance evaluation of                     quality.
+the Zone-Aware DRL and Zone-Integrated DRL controllers, compared
+to the ASHRAE G36 baseline, under varying boundary conditions such
+as weather and occupancy proﬁles. The analysis focuses on the follow-                   5.1. Performance under nominal occupancy proﬁle (occupancy 0)
+ing distinct occupancy patterns (see also Fig. 11), evaluated during both
+winter and summer periods to assess performance under typical condi-                        During winter, DRL-based controllers signiﬁcantly improve energy
+tions and to test the controllers’ ability to adapt to previously unseen                performance by shifting the heating strategy away from ineﬃcient ter-
+scenarios.                                                                              minal VAV reheating and toward centralized heating provided by the
+                                                                                        AHU heat pump. Compared to G36, both the Zone-Aware and Zone-
+ • Occupancy 0 (Base case): this proﬁle represents the nominal train-                   Integrated DRLs reduce VAV energy consumption by approximately
+   ing condition, characterized by continuous occupancy from 08:00 to                   24 % by decreasing the reliance on local terminal reheating and instead
+   19:45, Monday through Friday. This proﬁle reﬂects standard cam-                      meeting a larger share of the heating demand through the central AHU
+   pus operating hours and serves as the baseline for evaluating model                  system. This redistribution is reﬂected in the increased heat pump usage,
+   performance under seen conditions.                                                   with DRLs consuming up to 40 % more central heating energy. However,
+ • Occupancy 1: this proﬁle simulates partial afternoon occupancy                       this increase is oﬀset by overall eﬃciency gains, producing net reduc-
+   from 14:00 to 19:00, Monday through Friday. This proﬁle is not in-                   tions in total winter energy use - 16 % for the Zone-Aware controller
+   cluded in the training dataset and it is used to evaluate generalization             and 14.4 % for Zone-Integrated Table 3.
+   to unseen temporal patterns.                                                             Further insight into heating behavior is revealed through thermal
+ • Occupancy 2: this proﬁle represents partial morning occupancy                        energy and heat pump-hour analysis Fig. 12(a). Although DRLs achieve
+   from 08:00 to 13:00, Monday through Friday. Like Occupancy 1, this                   lower total thermal energy demand than G36, their heat pumps are
+
+                                                                                   10
+S. Savino et al.                                                                                                                 Energy & Buildings 348 (2025) 116456
+
+
+
+
+Fig. 12. Total thermal energy delivered and heat pump operating hours during (a) the winter season (January 1st to February 28th) and (b) the summer season
+(June 20th to August 20th).
+
+
+
+
+Fig. 13. Supply temperature (𝑇sup ) by control strategy: (a) boxplot distribution during the winter season (January 1st to February 28th), and (b) temporal pattern
+over a representative winter week (dashed lines indicate periods of system inactivity).
+
+
+
+
+                   Fig. 14. Hourly fan electricity consumption and activation patterns for diﬀerent control strategies during the winter season.
+
+
+                                                                                11
+S. Savino et al.                                                                                                                Energy & Buildings 348 (2025) 116456
+
+
+
+
+Fig. 15. Total hours of pre-conditioning under each control strategy: (a) pre-heating during the winter season (January 1st to February 28th), and (b) pre-cooling
+during the summer season (June 20th to August 20th).
+
+
+
+
+Fig. 16. Indoor temperature band violations during the winter period (January 1st to February 28th) for each zone and control strategy (left), and temperature
+patterns over a representative winter week for each zone and strategy (right).
+
+
+active for nearly twice as long. The Zone-Aware and Zone-Integrated                 while G36 maintains a nearly ﬁxed 𝑇sup , DRLs exhibit broader and more
+controllers reach around 860 and 820 heat pump operation hours, re-                 dynamic ranges. Notably, the Zone-Aware DRL demonstrates more an-
+spectively, compared to just 440 hours for G36. This suggests that                  ticipatory behavior, often ramping up supply temperatures earlier to
+DRLs prefer longer-duration, low-intensity heating–a strategy enabled               precondition spaces ahead of occupancy, while the Zone-Integrated DRL
+by more precise coordination between central delivery and airﬂow. This              exhibits a slightly more reactive pattern, in accordance with the to-
+behavior is consistent with supply air temperature patterns Fig. 13:                tal hours of pre-heating of the diﬀerent strategies Fig. 15(a). These
+
+
+                                                                               12
+S. Savino et al.                                                                                                             Energy & Buildings 348 (2025) 116456
+
+
+
+
+Fig. 17. Boxplot distribution of indoor CO2 concentrations during (a) the winter period (January 1st to February 28th) and (b) the summer period (June 20th to
+August 20th).
+
+
+
+
+Fig. 18. Temporal pattern of supply temperature (𝑇sup ) over a representative summer week for each control strategy (dashed lines indicate periods of system
+inactivity).
+
+
+approaches allow both DRLs to leverage the heat pump’s higher coef-               these operational shifts, both DRL strategies maintain thermal com-
+ﬁcient of performance (COP) instead of relying on less eﬃcient VAV                fort within acceptable ranges Fig. 16. Regarding indoor CO2 concentra-
+reheating.                                                                        tions Fig. 17(a), the Zone-Aware DRL exhibits the narrowest distribution
+   Fan operation is also adapted to support this shift: DRLs operate              with minimal high-end outliers, indicating more consistent and respon-
+fans for longer durations but at lower speeds, exploiting the cubic fan           sive ventilation aligned with occupancy. The Zone-Integrated DRL also
+power curve to maintain eﬃciency. This distributed and modulated air-             maintains acceptable air quality, though with slightly greater variability
+ﬂow is visible in the fan energy heatmaps, where DRLs contrast sharply            across the distribution. In contrast, the baseline G36, although having a
+with G36’s rigid, time-constrained daytime operation Fig. 14. Despite             slightly lower median, shows a wider spread and several high outliers,
+
+
+                                                                             13
+S. Savino et al.                                                                                                                       Energy & Buildings 348 (2025) 116456
+
+
+
+
+Fig. 19. Indoor temperature band violations during the summer period (June 20th to August 20th) for each zone and control strategy (left), and temperature patterns
+over a representative summer week for each zone and strategy (right).
+
+
+
+with concentrations occasionally exceeding 1600 ppm. These peaks oc-                   Table 3
+cur primarily during early occupancy periods, likely due to delayed ven-               Electrical energy consumption breakdown (kWh) for each controller in
+tilation activation caused by the ﬁxed control schedule of G36. Consid-                winter and summer.
+ering a CO2 generation rate of 20 L/h per person, and referencing the                   Control Strategy      Winter                              Summer
+thresholds outlined in [45], all control strategies fall within Category III                                  HP       Fan    VAVs       Tot.     HP      Fan    Tot.
+air quality.
+                                                                                        G36                   3521     1963   24,665     30,149   2016    2031   4047
+    In the summer period, DRLs continue to outperform G36 by reduc-
+                                                                                        Zone-Aware DRL        4505     2009   18,834     25,348   1701    1640   3341
+ing fan and cooling energy through more adaptive, demand-responsive                     Zone-Integrated DRL   4929     2143   18,741     25,813   1761    1586   3347
+operation. Both DRLs achieve approximately 17 % total energy savings
+Table 3, with the Zone-Aware controller again demonstrating the lowest
+cooling load with the fewest heat pump activation hours Fig. 12(b). G36              smoothly during occupancy periods with minor frequent adjustments
+delivers 8,158 kWh of thermal energy through the cooling coil, while                 that suggest demand tracking. On the other hand, the Zone-Integrated
+the DRLs reduce this to 7,512 kWh (Zone-Integrated) and 6,997 kWh                    DRL exhibits sharp drops in 𝑇sup –particularly in early morning hours–
+(Zone-Aware). These reductions, when considered alongside chiller run-               even before occupancy begins, a behavior indicative of proactive pre-
+time, reveal deeper eﬃciency gains: the Zone-Integrated DRL operates                 cooling. These early intense cooling, followed by higher and more vari-
+the chiller for the longest duration (∼395 hours) but still consumes less            able values of 𝑇sup during peak hours, suggest a strategy that cools the
+energy than G36, indicating lower cooling intensity per hour and sug-                building in advance to reduce the need for cooling later in the day.
+gesting partial load coverage through early activation and free cooling.                Although indoor temperature violations slightly increase under DRL
+This is further supported by the pre-conditioning analysis Fig. 15(b),               control, they remain localized in secondary spaces (e.g., corridors) and
+which shows the Zone-Integrated controller performing over 38 hours of               within acceptable thresholds Fig. 19. Meanwhile, CO2 concentrations
+pre-cooling–substantially more than both G36 (1.6 hours) and the Zone-               are consistently maintained within target limits, ensuring adequate in-
+Aware controller (0 hours). Conversely, the Zone-Aware DRL achieves                  door air quality Fig. 17(b).
+similar savings with even fewer coil hours (∼335), highlighting a strat-
+egy that combines passive cooling and load tracking.                                 5.2. Unseen occupancy proﬁles
+    This adaptive behavior is further reﬂected in the supply air temper-
+ature (𝑇sup ) proﬁles Fig. 18. While G36 maintains 𝑇sup within a nar-                5.2.1. Heating season
+row, mostly static range throughout the day, both DRL strategies adapt                  Unlike the DRL-based strategies, which were trained under the
+𝑇sup with much greater ﬂexibility. The Zone-Aware DRL modulates 𝑇sup                 Base Occupancy proﬁle and maintained good performance under both
+
+                                                                                14
+S. Savino et al.                                                                                                                Energy & Buildings 348 (2025) 116456
+
+
+
+
+Fig. 20. Indoor temperature band violations during the winter period (January 1st to February 28th) for each zone and control strategy (left), and temperature
+proﬁles over a representative winter week (right), under Occupancy Proﬁle 1 (14:00-19:00).
+
+
+
+
+modiﬁed winter schedules (Occupancy 1 and Occupancy 2) without the                  Table 4
+need for further ﬁne-tuning, the G36 baseline required manual recali-               Electrical energy consumption breakdown (kWh) for each control strategy
+bration to accommodate each new occupancy conﬁguration. This high-                  and occupancy proﬁle during the winter period (January 1st to February
+                                                                                    28th).
+lights the ability of DRL methods to adapt autonomously to changing
+operating conditions.                                                                Control Strategy   Occupancy 1                  Occupancy 2
+    Focusing ﬁrst on the Zone-Aware DRL, its anticipatory heating be-                                   HP    Fan     VAVs   Tot.    HP    Fan     VAVs   Tot.
+havior plays a central role in both schedules. Under Occupancy 1
+                                                                                     G36                 2072 1002 11,741 14,815 2543 1023 13,319 16885
+(14:00-19:00), this results in a modest increase in energy consumption
+                                                                                     Zone-Aware DRL      2705 1035 11,652 15,392 2255 1112 12,871 16,238
+(+3.8 %) compared to G36, driven by early activation to precondition                 Zone-Integrated DRL 2660 1207 10,889 14,756 3170 1348 12,484 17,002
+spaces before occupancy begins. It is important to note, however, that
+all controllers–including G36–are subject to system-level requirements
+that allow heating during unoccupied periods if zone temperatures fall            G36 under Occupancy 1 and outperforms it under Occupancy 2, while
+below 15 ◦ C. This condition contributes to early heating, particularly           Zone-Integrated shows slightly more frequent deviations due to its de-
+in the afternoon schedule where extended unoccupied periods coincide              layed response behavior.
+with lower temperatures. However, this behavior aligns well with ther-                Regarding indoor air quality, all strategies keep CO2 concentrations
+mal demand under Occupancy 2 (08:00-13:00), where the controller                  within acceptable bounds Fig. 22. However, both DRL controllers exhibit
+achieves the lowest total energy use among all strategies while main-             tighter distributions and lower peak values than G36, particularly under
+taining thermal comfort equivalent to G36 Table 4.                                Occupancy 2, suggesting more eﬀective and demand-driven ventilation
+    The Zone-Integrated DRL adopts a more reactive control pattern. Un-           control even as energy consumption is reduced.
+der Occupancy 1, this allows a slight improvement with respect to G36
+in energy consumption (-0.4 %) by avoiding early heating, though at the           5.2.2. Cooling season
+cost of increased temperature violations during transitional periods. Un-             In the summer scenario, both DRL-based strategies demonstrate
+der Occupancy 2,while not as eﬃcient as Zone-Aware, it matches G36 in             adaptability and good performance compared to the G36 baseline,
+energy use and adapts to the new schedule without manual adjustment–              which, as done in the winter scenario, has been recalibrated to adapt
+demonstrating robustness and generalizability Table 4.                            to the new occupancy schedules.
+    In terms of indoor temperature control, both DRL strategies main-                 The Zone-Aware DRL demonstrates consistently strong performance
+tain acceptable conditions across thermal zones under both schedules              across both summer occupancy scenarios Table 5. Under Occupancy
+Figs. 20 and 21. Zone-Aware achieves violation levels comparable to               1 (14:00-19:00), where cooling demand aligns with peak afternoon
+
+                                                                             15
+S. Savino et al.                                                                                                               Energy & Buildings 348 (2025) 116456
+
+
+
+
+Fig. 21. Indoor temperature band violations during the winter period (January 1st to February 28th) for each zone and control strategy (left), and temperature
+proﬁles over a representative winter week (right), under Occupancy Proﬁle 2 (8:00-13:00).
+
+
+
+
+Fig. 22. Boxplot distribution of indoor CO2 concentrations during the winter period (January 1st to February 28th) under (a) occupancy proﬁle 1 (14:00-19:00) and
+(b) occupancy proﬁle 2 (8:00-13:00).
+
+
+outdoor temperatures, it emerges as the most energy-eﬃcient strategy,               during the cooler morning hours, the Zone-Aware DRL reduces energy
+with around 19 % reduction compared to the G36 baseline. This eﬃ-                   by approximately 16 % improvement over G36. The controller’s ability
+ciency is driven by its context-aware control policy that dynamically ad-           to dynamically modulate 𝑇sup aligns well with lower morning loads and
+justs system operation based on real-time thermal demand. Zone-Aware                milder ambient temperatures, allowing for comfort to be maintained.
+minimizes unnecessary activations and ﬁnely tunes the supply air tem-                   In contrast, the Zone-Integrated DRL, which incorporates pre-cooling
+perature (𝑇sup ) throughout the day–resulting in a strategy that is both            as a core behavioral feature, shows more variable performance Table 5.
+responsive and resource-conscious, as also observed in the fan energy               In Occupancy 1, it performs poorly due to its rigid pre-conditioning
+heatmaps Fig. 23. Under Occupancy 2 (08:00-13:00), which takes place                schedule. The controller activates the system signiﬁcantly ahead of
+
+                                                                               16
+S. Savino et al.                                                                                                                Energy & Buildings 348 (2025) 116456
+
+
+
+
+            Fig. 23. Fan energy usage during the summer period (June 20th to August 20th) for Occupancy Proﬁle 1 (left) and Occupancy Proﬁle 2 (right).
+
+
+
+
+Fig. 24. Indoor temperature band violations during the summer period (June 20th to August 20th) for each zone and control strategy (left), and temperature proﬁles
+over a representative summer week (right), under Occupancy Proﬁle 1 (14:00-19:00).
+
+
+                                                                                17
+S. Savino et al.                                                                                                                Energy & Buildings 348 (2025) 116456
+
+
+
+
+Fig. 25. Indoor temperature band violations during the summer period (June 20th to August 20th) for each zone and control strategy (left), and temperature proﬁles
+over a representative summer week (right), under Occupancy Proﬁle 2 (8:00-13:00).
+
+
+
+
+Fig. 26. Boxplot distribution of indoor CO2 concentrations during the summer period (June 20th to August 20th) under (a) Occupancy Proﬁle 1 (14:00-19:00) and
+(b) Occupancy Proﬁle 2 (8:00-13:00).
+
+
+occupancy, accumulating over 74 hours of pre-cooling time. This                     underperforms relative to the more ﬂexible and context-aware Zone-
+early operation is ineﬀective under high late morning/early after-                  Aware DRL.
+noon outdoor temperatures and leads to excessive use of the chiller                     Despite diﬀerences in control behavior, both DRL strategies main-
+(1254 kWh), ultimately yielding the highest total energy consump-                   tain acceptable levels of thermal comfort. Under Occupancy 1, the Zone-
+tion among the strategies at 2186 kWh. However, under Occupancy                     Aware DRL delivers comfort performance comparable to G36, with only
+2, the same pre-cooling behavior becomes more suitable, given the                   minor increases in upper temperature violations. The Zone-Integrated
+cooler morning hours. In this case, the controller reduces energy                   DRL exhibits more frequent and severe comfort violations, particularly
+use to 1024 kWh–approximately 10 % less than G36–though it still                    during late-day transitions when pre-cooling is less eﬀective Fig. 24.
+
+                                                                               18
+S. Savino et al.                                                                                                             Energy & Buildings 348 (2025) 116456
+
+
+      Table 5                                                                     7. Conclusion
+      Electrical energy consumption breakdown (kWh) for each controller
+      and occupancy proﬁles in summer.                                                This study investigated the use of Deep Reinforcement Learning for
+         Control Strategy      Occupancy 1          Occupancy 2                   optimizing HVAC operations in a multi-zone educational building, us-
+                               HP     Fan    Tot.   HP    Fan     Tot.
+                                                                                  ing a high-ﬁdelity Modelica simulation environment. Two low-level DRL
+                                                                                  controllers–Zone-Aware and Zone-Integrated–were developed and eval-
+         G36                   1168   823    1991   328   815     1143
+                                                                                  uated against the ASHRAE G36 control standard. The controllers directly
+         Zone-Aware DRL        831    784    1615   223   734     957
+         Zone-Integrated DRL   1254   932    2186   241   783     1024            act on full low-level Air Handling Unit (AHU) components, such as fan
+                                                                                  speed, damper positions, and coil valves, while leaving zone-level VAV
+                                                                                  control unaltered.
+                                                                                      The proposed DRL strategies were assessed under both heating and
+Under Occupancy 2, comfort metrics improve across all strategies. Nev-            cooling conditions, as well as across diﬀerent occupancy proﬁles. Per-
+ertheless, Zone-Aware remains the most consistent performer, minimiz-             formance was evaluated in terms of energy consumption, indoor tem-
+ing both the frequency and magnitude of violations. Zone-Integrated,              perature control, and 𝐶𝑂2 levels.
+while improved, still displays slightly greater variability in maintaining            The results demonstrate that DRL-based controllers eﬀectively man-
+setpoint conditions across zones Fig. 25.                                         age HVAC operations under trained and previously unseen conditions,
+   Indoor air quality, as assessed through CO2 concentration, fur-                showcasing their ability to optimize energy use while maintaining in-
+ther illustrates the strengths of learning-based control Fig. 26. Zone-           door temperature tracking and 𝐶𝑂2 concentration. The Zone-Aware con-
+Aware achieves the lowest median CO2 levels and the narrow-                       troller emerged as the most eﬀective, highlighting the beneﬁt of zone-
+est distribution across both occupancy scenarios, indicating precise              speciﬁc feedback. However, the Zone-Integrated DRL also proved to be
+and timely ventilation aligned with real occupancy patterns. The                  a viable alternative, with similar performance in most scenarios and the
+Zone-Integrated DRL also maintains CO2 within acceptable thresh-                  added advantage of being potentially more scalable for large zone build-
+olds, although with broader variability–especially under Occupancy                ings.
+1–reﬂecting less consistent ventilation timing. In contrast, the G36                  While the heating season presented some limitations due to the con-
+baseline shows the highest CO2 variability and more frequent excur-               straints of the VAVs’ reheating system, the cooling season revealed
+sions above recommended limits, a consequence of its rigid, schedule-             the full potential of DRL controllers–particularly the Zone-Aware strat-
+based ventilation strategy that lacks responsiveness to dynamic indoor            egy, which adapted eﬀectively to varying occupancy and load condi-
+conditions.                                                                       tions. The Zone-Integrated DRL, though slightly less responsive, also
+                                                                                  performed competitively, although its rigid control behavior under cer-
+                                                                                  tain conditions suggests areas for reﬁnement.
+6. Discussion                                                                         Overall, the ﬁndings suggest that DRL-based controllers oﬀer a
+                                                                                  promising approach to improve HVAC eﬃciency, with signiﬁcant po-
+    The results show the eﬀectiveness of DRL-based controllers in op-             tential for adaptation across dynamic building environments. The suc-
+timizing HVAC performance relative to the ASHRAE G36 baseline.                    cess of the Zone-Integrated controller further indicates that less granu-
+When evaluated under the same occupancy schedule used for train-                  lar control strategies may oﬀer practical, scalable solutions for large or
+ing, both DRL strategies outperform the G36 guideline across winter               resource-constrained applications. The study highlights the potential of
+and summer seasons. The Zone-Aware controller consistently achieves               DRL as a technology for energy-eﬃcient building operation, capable of
+the highest energy savings while maintaining thermal comfort and                  adapting to real-time conditions without the need for manual interven-
+indoor CO2 level. However, the Zone-Integrated DRL also performs                  tion.
+competitively, with only marginally lower eﬃciency in most metrics.
+This suggests that a controller which leverages global system-level               8. Limitations and future work
+variables, rather than zone-speciﬁc feedback, can still yield eﬀective
+performance.                                                                          While the results demonstrate the strong performance and gener-
+    When tested under unseen occupancy proﬁles the G36 base-                      alization capabilities of DRL-based HVAC controllers, some limitations
+line required manual retuning to adapt to the modiﬁed schedules,                  should be acknowledged.
+while both DRL controllers adapted autonomously–without any pol-                      First, the evaluation primarily focuses on changes in occupancy
+icy adjustment. This underscores the ﬂexibility of learned control                schedules, while other critical boundary conditions–such as outdoor
+strategies.                                                                       temperature, solar radiation, and outdoor CO2 levels–remain constant
+    In the heating season, the generalization capabilities of both DRLs           across training and testing. Yet, these factors play a crucial role in real-
+remain within the performance range of G36. However, the margin for               world HVAC performance and may challenge the adaptability of learned
+optimization is inherently narrower in winter due to the dominant role            policies. Although preliminary tests with alternative weather datasets
+of the VAV terminals, which tightly track zone-level temperature set-             have shown that DRL performance remains promising, future work will
+points regardless of occupancy variability. As a result, the DRLs’ ﬂexi-          systematically extend the evaluation to more diverse climatic proﬁles, as
+bility is somewhat constrained, and their improvements over the base-             well as dynamic external CO2 levels, to more comprehensively demon-
+line are more modest. In contrast, the cooling season reveals a more ro-          strate the adaptability of the proposed DRL strategies.
+bust and consistent generalization of the DRL policies–particularly for               Second, the study is conducted within a relatively homogeneous zone
+the Zone-Aware controller. Under both unseen occupancy proﬁles, it                context, using classroom spaces that usually have similar thermal loads
+adapts eﬀectively by modulating supply air temperature and ventilation            and occupancy patterns. While this provides a simpliﬁed yet consistent
+to match dynamic load conditions. Its context-aware operation enables             context to evaluate the core behavior of the proposed DRL strategies, it
+signiﬁcant energy savings without compromising occupant comfort or                may also limit the exploration of more complex dynamics–particularly
+air quality. The Zone-Integrated DRL, though somewhat less responsive,            for the Zone-Integrated DRL, which relies on aggregated, global obser-
+also shows generalization across scenarios. However, its more rigid con-          vations. To address these limitations, future experiments should con-
+trol behaviors–such as aggressive pre-cooling–can result in ineﬃciencies          sider case studies including a wider variety of functional areas, such
+under certain conditions (e.g., when occupancy begins late on hot days).          as oﬃces, conference rooms, corridors, and circulation spaces, which
+Despite this, it generally performs on par with G36 in terms of comfort           are characterized by more heterogeneous thermal and occupancy pro-
+and CO2 levels.                                                                   ﬁles. Such diversity could signiﬁcantly inﬂuence the balance between
+
+                                                                             19
+S. Savino et al.                                                                                                                        Energy & Buildings 348 (2025) 116456
+
+
+comfort and energy trade-oﬀs in DRL control of a VAV multi-zone AHU                 NAZIONALE DI RIPRESA E RESILIENZA (PNRR)-MISSIONE 4 COMPO-
+system. Therefore, extending the evaluation to mixed-use buildings with             NENTE 2, INVESTIMENTO 1.3-D.D. 1555 11/10/2022, PE00000013).
+diverse load characteristics will allow a more rigorous assessment of the           This manuscript reﬂects only the authors’ views and opinions, neither
+proposed DRL framework.                                                             the European Union nor the European Commission can be considered
+    Future work could include a comparative study evaluating the low-               responsible for them.
+level DRL approach presented in this work against DRL strategies that
+operate at a higher level by selecting setpoints for supply air tempera-
+ture and duct static pressure. Such a comparison would help quantify                References
+the advantages and trade-oﬀs between direct low-level control and su-
+                                                                                     [1] I.E. Agency, Buildings - Topics - IEA, 2025. Accessed: 2025-02-05, https://www.iea.
+pervisory control approaches.
+                                                                                         org/energy-system/buildings.
+    Further investigation could also focus on applying transfer learning             [2] E.K. Simpeh, J.P.G. Pillay, R. Ndihokubwayo, D.J. Nalumu, Improving energy ef-
+techniques to enhance the adaptability of DRL controllers under varying                  ﬁciency of HVAC systems in buildings: a review of best practices, 2022. https:
+boundary conditions [46–49]. In addition, extending these methods to                     //doi.org/10.1108/IJBPA-02-2021-0019
+                                                                                     [3] P. Wargocki, J. Sundell, W. Bischof, G. Brundrett, P.O. Fanger, F. Gyntelberg, S.O.
+scenarios with more diverse thermal demand proﬁles across zones would                    Hanssen, P. Harrison, A.C. Pickering, O. Seppänen, P. Wouters, Ventilation and
+provide deeper insights into policy generalization and control accuracy–                 health in non-industrial indoor environments: report from a european multidisci-
+particularly for zone-integrated strategies.                                             plinary scientiﬁc consensus meeting (EUROVEN), Indoor Air 12 (2) (2002) 113–128.
+                                                                                         https://api.semanticscholar.org/CorpusID:9440736t.
+    Finally, a promising direction lies in the interpretation and extraction         [4] O. Seppänen, W.J. Fisk, M.J. Mendell, Association of ventilation rates and CO2 con-
+of human-readable rules from trained DRL policies [39,50–52]. While                      centrations with health and other responses in commercial and institutional build-
+qualitative patterns in DRL control policies can be observed, translating                ings, Indoor Air 9 (4) (1999) 226–252. https://api.semanticscholar.org/CorpusID:
+                                                                                         14264134.
+them into quantitative rules with explicit thresholds (e.g., for supply              [5] M. Eydner, B. Toufek, T. Henzler, K. Stergiaropoulos, Investigation of a multizone
+air temperature or fan speed) is not straightforward. Automated rule-                    building with HVAC system using a coupled thermal and airﬂow model, E3S Web
+extraction techniques can overcome this limitation by systematically                     Conf. (2019). https://api.semanticscholar.org/CorpusID:202191401.
+                                                                                     [6] L. Yang, P. Xu, Y. Li, Nonlinear dynamic analysis of natural ventilation in a two-
+identifying the most relevant features, their critical ranges, and the cor-              zone building: Part A–theoretical analysis, HVAC&R Res. 12 (2006) 231–255. https:
+responding control actions, thus enabling the derivation of interpretable                //api.semanticscholar.org/CorpusID:121140965.
+control rules.                                                                       [7] J.P. Koeln, B.D. Keating, A.G. Alleyne, C.R. Price, B.P. Rasmussen, Multi-Zone Tem-
+                                                                                         perature Modeling and Control, 2018. https://api.semanticscholar.org/CorpusID:
+    Beyond these technical aspects, it is essential to acknowledge that
+                                                                                         139141664.
+real-world buildings present additional sources of uncertainty and prac-             [8] ASHRAE, ASHRAE Guideline 36–2021: High-Performance Sequences of Operation
+tical constraints not captured by simulation models. Future work should                  for HVAC Systems, American Society of Heating, Refrigerating, and Air-Conditioning
+therefore focus on ﬁeld experiments to validate the applicability and ro-                Engineers, 2021.
+                                                                                     [9] K. Zhang, D. Blum, H. Cheng, G. Paliaga, M. Wetter, J. Granderson, Estimating
+bustness of low-level DRL-based control strategies. Particular attention                 ASHRAE guideline 36 energy savings for multi-zone variable air volume systems
+should be paid to discrepancies between simulated and actual AHU con-                    using spawn of energyplus, J. Build. Perform. Simul. 15 (2022) 215–236. https:
+ﬁgurations, variations in operating conditions, deployment and mainte-                   //doi.org/10.1080/19401493.2021.2021286
+                                                                                    [10] E.F. Camacho, C. Bordons, Model Predictive Control, Springer, London, UK, 2013.
+nance costs, and challenges related to data communication and com-                  [11] D. Kim, J.E. Braun, Development, implementation and performance of a model pre-
+mand response. Considering these factors will be critical to rigorously                  dictive controller for packaged air conditioners in small and medium-sized com-
+assess the feasibility of deploying DRL-based HVAC controllers in real                   mercial building applications, Energy Build. 178 (2018) 49–60. https://doi.org/10.
+                                                                                         1016/j.enbuild.2018.08.019
+building environments.                                                              [12] M. Tanaskovic, D. Sturzenegger, R. Smith, M. Morari, Robust adaptive model pre-
+                                                                                         dictive building climate control, in: IFAC-PapersOnLine, 50, Elsevier B.V., 2017,
+                                                                                         pp. 1871–1876. https://doi.org/10.1016/j.ifacol.2017.08.257
+CRediT authorship contribution statement                                            [13] S.w. Ham, D. Kim, T. Barham, K. Ramseyer, The ﬁrst ﬁeld application of a low-
+                                                                                         cost MPC for grid-interactive K-12 schools: lessons-learned and savings assessment,
+    Sabrina Savino: Writing – original draft, Visualization, Software,                   Energy Build. 296 (2023). https://doi.org/10.1016/j.enbuild.2023.113351
+                                                                                    [14] H. Zhang, S. Seal, D. Wu, F. Bouﬀard, B. Boulet, Building energy management
+Methodology, Investigation, Formal analysis, Data curation, Concep-
+                                                                                         with reinforcement learning and model predictive control: a survey, IEEE Access
+tualization; Giuseppe Razzano: Writing – original draft, Software,                       10 (2022) 27853–27862. https://doi.org/10.1109/ACCESS.2022.3156581
+Methodology, Investigation, Data curation; Michele Pagone: Writing                  [15] M. Mork, N. Materzok, A. Xhonneux, D. Müller, Nonlinear hybrid model predictive
+                                                                                         control for building energy systems, Energy Build. 270 (2022) 112298. https://doi.
+– review & editing, Validation; Carlo Novara: Writing – review & edit-
+                                                                                         org/10.1016/j.enbuild.2022.112298
+ing, Validation, Supervision, Methodology, Conceptualization; Alfonso               [16] S. Sharma, A. Srinivas, B. Ravindran, Deep reinforcement learning, 2023 14th Inter-
+Capozzoli: Writing – review & editing, Validation, Supervision, Project                  national Conference on Computing Communication and Networking Technologies
+administration, Methodology.                                                             (ICCCNT) (2023) 1–7. https://api.semanticscholar.org/CorpusID:15294098t.
+                                                                                    [17] M. Wetter, Co-simulation of building energy and control systems with the building
+                                                                                         controls virtual test bed, J. Build. Perform. Simul. 4 (3) (2011) 185–203. https:
+Data availability                                                                        //doi.org/10.1080/19401493.2010.518631
+                                                                                    [18] K. Kurte, J. Munk, O. Kotevska, K. Amasyali, R. Smith, E. McKee, Y. Du, B. Cui, T.
+                                                                                         Kuruganti, H. Zandi, Evaluating the adaptability of reinforcement learning based
+    Data will be made available on request.                                              HVAC control for residential houses, Sustainability 12 (18) (2020). https://doi.org/
+                                                                                         10.3390/su12187727
+                                                                                    [19] Q. Alfalouji, T. Schranz, B. Falay, S. Wilﬂing, J. Exenberger, T. Mattausch, C. Gomes,
+Declaration of competing interest                                                        G. Schweiger, Co-simulation for buildings and smart energy systems – A taxonomic
+                                                                                         review, 2023. https://doi.org/10.1016/j.simpat.2023.102770
+                                                                                    [20] T. Blockwitz, M. Otter, J. Akesson, M. Arnold, C. Clauss, H. Elmqvist, M. Friedrich,
+    The authors declare that they have no known competing ﬁnancial                       A. Junghanns, J. Mauss, D. Neumerkel, H. Olsson, A. Viel, Functional Mockup Inter-
+interests or personal relationships that could have appeared to inﬂuence                 face 2.0: The Standard for Tool Independent Exchange of Simulation Models, 76,
+the work reported in this paper.                                                         Linköping University Electronic Press, 2012, pp. 173–184. https://doi.org/10.3384/
+                                                                                         ecp12076173
+                                                                                    [21] Y. Du, F. Li, J. Munk, K. Kurte, O. Kotevska, K. Amasyali, H. Zandi, Multi-task deep
+Acknowledgment                                                                           reinforcement learning for intelligent multi-zone residential HVAC control, Electr.
+                                                                                         Power Syst. Res. 192 (2021). https://doi.org/10.1016/j.epsr.2020.106959
+                                                                                    [22] Y. Du, H. Zandi, O. Kotevska, K. Kurte, J. Munk, K. Amasyali, E. Mckee, F. Li,
+   The work of Sabrina Savino is part of the project PNRR-NGEU- CUP:                     Intelligent multi-zone residential HVAC control strategy based on deep reinforce-
+E14D23001820006 which has received funding from the MUR - DM                             ment learning, Appl. Energy 281 (2021). https://doi.org/10.1016/j.apenergy.2020.
+118/2023. The work of Alfonso Capozzoli and Giuseppe Razzano was                         116117
+                                                                                    [23] G. Gao, J. Li, Y. Wen, Deepcomfort: energy-eﬃcient thermal comfort control in
+carried out within the FAIR - Future Artiﬁcial Intelligence Research and                 buildings via reinforcement learning, IEEE Internet Things J. 7 (2020) 8472–8484.
+received funding from the European Union Next-GenerationEU (PIANO                        https://doi.org/10.1109/JIOT.2020.2992117
+
+                                                                               20
+S. Savino et al.                                                                                                                                     Energy & Buildings 348 (2025) 116456
+
+
+[24] X. Deng, Y. Zhang, H. Qi, Towards optimal HVAC control in non-stationary building           [39] G. Razzano, S. Brandi, M.S. Piscitelli, A. Capozzoli, Rule extraction from deep re-
+     environments combining active change detection and deep reinforcement learning,                  inforcement learning controller and comparative analysis with ASHRAE control se-
+     Build. Environ. 211 (2022). https://doi.org/10.1016/j.buildenv.2021.108680                       quences for the optimal management of heating, ventilation, and air conditioning
+[25] X. Lu, Y. Fu, Z. O’Neill, Benchmarking high performance HVAC rule-based controls                 (HVAC) systems in multizone buildings, Appl. Energy 381 (2025). https://doi.org/
+     with advanced intelligent controllers: a case study in a multi-zone system in model-             10.1016/j.apenergy.2024.125046
+     ica, Energy Build. 284 (2023). https://doi.org/10.1016/j.enbuild.2023.112854                [40] M. Wetter, W. Zuo, T.S. Nouidui, X. Pang, Modelica buildings library, J. Build.
+[26] C. Cui, J. Xue, Energy and comfort aware operation of multi-zone HVAC system                     Perform. Simul. 7 (4) (2014) 253–270. https://doi.org/10.1080/19401493.2013.
+     through preference-inspired deep reinforcement learning, Energy 292 (2024). https:               765506
+     //doi.org/10.1016/j.energy.2024.130505                                                      [41] C. Andersson, J. Åkesson, C. Führer, PyFMI: A Python Package for Simulation of
+[27] E. Zanetti, D. Kim, D. Blum, R. Scoccia, M. Aprile, Performance comparison of                    Coupled Dynamic Models with the Functional Mock-up Interface, 2016. https://api.
+     quadratic, nonlinear, and mixed integer nonlinear MPC formulations and solvers                   semanticscholar.org/CorpusID:218002023.
+     on an air source heat pump hydronic ﬂoor heating system, J. Build. Perform. Simul.          [42] G. Brockman, V. Cheung, L. Pettersson, J. Schneider, J. Schulman, J. Tang, W.
+     16 (2023) 144–162. https://doi.org/10.1080/19401493.2022.2120631                                 Zaremba, OpenAI gym (2016). http://arxiv.org/abs/1606.01540.
+[28] K.U. Ahn, C.S. Park, Application of deep Q-networks for model-free optimal control          [43] A. Raﬃn, A. Hill, A. Gleave, A. Kanervisto, M. Ernestus, N. Dormann, Stable-
+     balancing between diﬀerent HVAC systems, Sci. Technol. Built Environ. 26 (2020)                  baselines3: reliable reinforcement learning implementations, J. Mach. Learn. Res.
+     61–74. https://doi.org/10.1080/23744731.2019.1680234                                             22 (268) (2021) 1–8. http://jmlr.org/papers/v22/20-1364.html.
+[29] M. Biemann, F. Scheller, X. Liu, L. Huang, Experimental evaluation of model-free            [44] OneBuilding.org, Climate Data for Building Simulation, 2023. Accessed: 2024-04-
+     reinforcement learning algorithms for continuous HVAC control, Appl. Energy 298                  10, https://climate.onebuilding.org/.
+     (2021). https://doi.org/10.1016/j.apenergy.2021.117164                                      [45] Energy Performance of Buildings-Ventilation for Buildings, 2019.
+[30] F. Guo, S.w. Ham, D. Kim, H.J. Moon, Deep reinforcement learning control for co-            [46] K. Kadamala, D. Chambers, E. Barrett, Enhancing HVAC control systems through
+     optimizing energy consumption, thermal comfort, and indoor air quality in an of-                 transfer learning with deep reinforcement learning agents, Smart Energy 13 (2024).
+     ﬁce building, Appl. Energy 377 (2025). https://doi.org/10.1016/j.apenergy.2024.                  https://doi.org/10.1016/j.segy.2024.100131
+     124467                                                                                      [47] M. Esraﬁlian-Najafabadi, F. Haghighat, Transfer learning for occupancy-based
+[31] Y. Liu, Y. Song, C. Cui, Towards smart control and energy eﬃciency for multi-zone                HVAC control: a data-driven approach using unsupervised learning of occupancy
+     ventilation systems via an imitation-interaction learning method in energy-aware                 proﬁles and deep reinforcement learning, Energy Build. 300 (2023) 113637. https:
+     buildings, Energy 314 (2025). https://doi.org/10.1016/j.energy.2024.134220                       //doi.org/10.1016/j.enbuild.2023.113637
+[32] P. Fritzson, P. Aronsson, H. Lundvall, K. Nyström, A. Pop, L. Saldamli, D. Broman,          [48] D. Coraci, A. Silvestri, G. Razzano, D. Fop, S. Brandi, E. Borkowski, T. Hong, A.
+     The openmodelica modeling, simulation, and development environmentSimulation                     Schlueter, A. Capozzoli, A scalable approach for real-world implementation of deep
+     News Europe (2005).                                                                              reinforcement learning controllers in buildings based on online transfer learning:
+[33] U. S. Department of Energy, EnergyPlus™ Energy Simulation Software, 2023, https:                 the hilo case study, Energy Build. 329 (2025) 115254. https://doi.org/10.1016/j.
+     //energyplus.net. Version 23.1.0.                                                                enbuild.2024.115254
+[34] D. Blum, J. Arroyo, S. Huang, J. Drgoňa, F. Jorissen, H.T. Walnum, Y. Chen, K.             [49] P. Lissa, M. Schukat, E. Barrett, Transfer learning applied to reinforcement learning-
+     Benne, D. Vrabie, M. Wetter, L. Helsen, Building optimization testing framework                  Based HVAC control, SN Comput. Sci. 1 (3) (2020) 127. https://doi.org/10.1007/
+     (BOPTEST) for simulation-based benchmarking of control strategies in buildings,                  s42979-020-00146-7
+     J. Build. Perform. Simul. 14 (2021) 586–610. https://doi.org/10.1080/19401493.              [50] Y. Choi, X. Lu, Z. O’Neill, F. Feng, T. Yang, Optimization-informed rule extraction
+     2021.1986574                                                                                     for HVAC system: a case study of dedicated outdoor air system control in a mixed-
+[35] C. Blad, S. Bøgh, C.S. Kallesøe, Data-driven oﬄine reinforcement learning for HVAC-              humid climate zone, Energy Build. 295 (2023). https://doi.org/10.1016/j.enbuild.
+     systems, Energy 261 (2022). https://doi.org/10.1016/j.energy.2022.125290                         2023.113295
+[36] Y. Zhang, Q. Zhao, Energy saving algorithm of HVAC system based on deep re-                 [51] S. Cho, C.S.P. and, Rule reduction for control of a building cooling system using
+     inforcement learning with modelica model, Proceedings of the 2022 41st Chinese                   explainable AI, J. Build. Perform. Simul. 15 (6) (2022) 832–847 https://doi.org/10.
+     Control Conference (CCC) (2022).                                                                 1080/19401493.2022.2103586
+[37] Modelica Association, Modelica - A Uniﬁed Object-Oriented Language for Systems              [52] B. Gunay, M. Ouf, G. Newsham, W. O’Brien, Building performance optimization
+     Modeling, 2021. https://www.modelica.org.                                                        for operational rule extraction, in: Proceedings of Building Simulation 2019: 16th
+[38] S. Brandi, A. Pizza, G. Buscemi, G. Raz-Zano, A. Capozzoli, Enhancing Energy Ef-                 Conference of IBPSA, 16 of Building Simulation, IBPSA, Rome, Italy, 2019, pp.
+     ﬁciency and Flexibility in Educa-tional Buildings through a Deep Reinforcement                   2819–2826. https://doi.org/10.26868/25222708.2019.210271
+     Learn-ing-Based Controller for Rooftop Units, Technical Report, (2024)
+
+
+
+
+                                                                                            21
+

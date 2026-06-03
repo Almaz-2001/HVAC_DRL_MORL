@@ -1,0 +1,1115 @@
+nature machine intelligence
+
+Article                                                                                            https://doi.org/10.1038/s42256-025-00983-2
+
+
+Preserving and combining knowledge in
+robotic lifelong reinforcement learning
+
+Received: 1 May 2024                              Yuan Meng        1,5
+                                                                      , Zhenshan Bing 1,2,5 , Xiangtong Yao 1,5, Kejia Chen1,
+                                                  Kai Huang3       , Yang Gao2 , Fuchun Sun4 & Alois Knoll1
+Accepted: 5 January 2025
+
+Published online: 5 February 2025
+                                                  Humans can continually accumulate knowledge and develop increasingly
+    Check for updates                             complex behaviours and skills throughout their lives, which is a capability
+                                                  known as ‘lifelong learning’. Although this lifelong learning capability is
+                                                  considered an essential mechanism that makes up general intelligence,
+                                                  recent advancements in artificial intelligence predominantly excel in
+                                                  narrow, specialized domains and generally lack this lifelong learning
+                                                  capability. Here we introduce a robotic lifelong reinforcement learning
+                                                  framework that addresses this gap by developing a knowledge space
+                                                  inspired by the Bayesian non-parametric domain. In addition, we enhance
+                                                  the agent’s semantic understanding of tasks by integrating language
+                                                  embeddings into the framework. Our proposed embodied agent can
+                                                  consistently accumulate knowledge from a continuous stream of one-time
+                                                  feeding tasks. Furthermore, our agent can tackle challenging real-world
+                                                  long-horizon tasks by combining and reapplying its acquired knowledge
+                                                  from the original tasks stream. The proposed framework advances our
+                                                  understanding of the robotic lifelong learning process and may inspire the
+                                                  development of more broadly applicable intelligence.
+
+Humans show a remarkable ability for lifelong learning by consistently      learning5–7, addresses the challenge of asynchronously acquiring knowl-
+acquiring knowledge and adapting to new task scenarios throughout           edge from a continuous stream of tasks while mitigating forgetting. Its
+their lives. This involves the constant and incremental development of      primary goal is to gradually extend the accumulated knowledge and
+increasingly complex behaviours, recognized as a crucial mechanism          use it for ongoing learning tasks, thereby building more complicated
+for achieving general intelligence. Recent advancements in artificial       behaviours by knowledge combination and reapplication. This study
+intelligence have showcased agents achieving remarkable perfor-             focuses on robotic lifelong reinforcement learning (LRL), a domain
+mance across a wide range of tasks1, such as image generation2, article     where reinforcement learning provides an agent–environment inter­
+writing3 and autonomous driving4. However, even though current              action framework that is well suited for exploring the learning process
+methodologies yield impressive outcomes, they primarily focus on            in a sequential manner. Figure 1a illustrates the training process for a
+agents specialized in narrowly distributed tasks. In contrast, untrained    general LRL agent in the robotic context. Given an infinite stream of
+agents generally require more game-play experiences throughout their        robotic tasks, the agent continually masters the tasks one after another,
+lifespan than humans and struggle to generalize effectively to new          consistently accumulating knowledge and skills.
+variations. One notable gap between machine-intelligent agents and                For deep learning-based algorithms, the primary challenge when
+humans is the lack of lifelong learning capability in current intelligent   facing a stream of tasks is balancing the stability and plasticity1 of
+agents. Lifelong learning, also referred to as incremental or continual     the neural networks. A common issue in this context is ‘catastrophic
+
+
+1
+ School of Computation, Information and Technology, Technical University of Munich, Garching, Germany. 2State Key Laboratory for Novel Software
+Technology, Nanjing University, Nanjing, China. 3Key Laboratory of Machine Intelligence and Advanced Computing, School of Computer Science and
+Engineering, Sun Yat-sen University, Guangzhou, China. 4Department of Computer Science and Technology, Tsinghua University, Beijing, China.
+5
+ These authors contributed equally: Yuan Meng, Zhenshan Bing, Xiangtong Yao.       e-mail: zhenshan.bing@tum.de; huangk36@mail.sysu.edu.cn;
+gaoy@nju.edu.cn; fcsun@tsinghua.edu.cn
+
+
+Nature Machine Intelligence | Volume 7 | February 2025 | 256–269                                                                                256
+Article                                                                                                                             https://doi.org/10.1038/s42256-025-00983-2
+
+
+                    a                                            Sequential task: one-time feeding stream of tasks
+
+
+
+                                                                                                                                                                      ...   ∞
+
+
+                           Reach         Push       Pick–place      Door open   Faucet open   Drawer close   Button press   Peg unplug   Window open   Window close
+
+
+
+
+                                                                                Knowledge accumulation
+
+                                                                                                              ∞
+                                                   State observations                                                Actions
+
+
+
+
+                                                                                                              0
+
+                                                                          Embodied lifelong learning agent
+
+
+                    b
+                                                                                                                                                 Long-horizon tasks
+                                   “Press the button,”                                    Task encoder
+                                                                                                                  States
+                                   “Push the bottle,”...
+                                                                                                                                                          Subtask 1:
+                                                                                                                                                          Bottle push
+                                                                                                   Bottle push
+                                                                                                 Button press
+                                                                                                              Knowledge
+                                        LLM                                                                     space
+
+
+
+                                                  Embodied
+                                                    agent                                                      Actions
+                                                                                               Policy
+                                                                                                                                Subtask 2: Button press
+
+
+
+Fig. 1 | Concept illustration of robotic LRL process. a, Overview illustration                    human learning process. b, Our proposed framework under the lifelong learning
+of the general LRL process. Unlike the conventional multi-task approaches,                        concept. We instruct the deployed embodied agent to perform long-horizon
+where agents have simultaneous access to all tasks, an LRL agent can master                       tasks using language commands. The agent accomplishes these tasks through
+tasks sequentially, one after another. Moreover, the agent should continually                     the combination and reapplication of acquired knowledge.
+accumulate knowledge throughout the process. This concept emulates the
+
+
+
+
+forgetting’1,8. This refers to the phenomenon where the neural net-                               various tasks simultaneously, this problem still persists in the sequen-
+work parameters associated with previously learned skills are rapidly                             tial learning process. Furthermore, it relies on a predefined range of
+overwritten when the agent learns new incoming tasks. Consequently,                               task distributions, which are often limited in scope and struggle to
+the agent’s performance substantially deteriorates when revisiting                                generalize when encountering novel non-parametric task variability18.
+previously mastered tasks. Recent lifelong machine learning studies                               Such variability shows qualitative distinction and cannot be adequa­
+have introduced various approaches, including regularization5,9,10,                               tely described by continuous parameters, as they require models
+structure modularity11–13 and experience replay14–16. These methods,                              to learn entirely new sets of rules and interactions, thus challenging
+however, have primarily been applied to static datasets in conventional                           their generalization capabilities18. Motivated by MTRL, another set
+machine learning domains such as vision task classification8,17, leaving                          of approaches to tackle the stability–plasticity dilemma is known as
+their effectiveness in robotic learning unclear. Regularization can                               ‘learning to learn’ or meta reinforcement learning1. Recent studies
+lead to improper parameter shifting and error accumulation, while                                 have provided diverse approaches that enable agents to acquire knowl-
+structure modularity may struggle with dynamic adaptation when                                    edge across various task distributions while adapting to new tasks
+facing an unknown number of tasks. Without replay, both regulariza-                               based on acquired knowledge in few-shot or zero-shot manner25–29.
+tion and structure modularity methods tend to overfit on predefined                               One notable example is continuous environment meta-reinforcement
+tasks, lacking the flexibility to adapt to new ones in lifelong learning.                         learning25, which incorporates a Gaussian mixture model in its prior
+Our approach does not strictly belong to any of these categories but                              space of task encoder, which can infer and cluster the task latent repre­
+instead draws inspiration from these methods, aiming to overcome                                  sentation at a meta level. However, the Gaussian mixture model faces
+their limitations while leveraging their strengths.                                               limitations due to its reliance on a predetermined task amount, an
+      In the context of deep reinforcement learning, a common idea to                             assumption incompatible with the typically unknown or infinite task
+avoid ‘catastrophic forgetting’ is through multi-task reinforcement                               amounts in LRL.
+learning (MTRL)18–21. In MTRL, the agent has simultaneous access to                                     Our study aims to develop a deep reinforcement learning frame-
+all tasks during training, avoiding the forgetting problem inherent in                            work for robotic lifelong learning. The focus is on continually learning
+deep neural networks. Recent works in this domain include contex-                                 and preserving knowledge from a stream of one-time feeding task
+tual attention-based representation learning22, soft modularization21,                            scenarios. The proposed agent shall not forget the knowledge it
+feature-wise linear modulation23 and other baselines19,20,24. However, the                        acquired and can consistently perform stably on corresponding tasks
+MTRL deviates from actual human learning patterns. While MTRL tries                               throughout its lifespan. Moreover, our framework is designed to handle
+to avoid the issue of catastrophic forgetting by providing data from                              more complex long-horizon tasks by effectively combining and
+
+
+Nature Machine Intelligence | Volume 7 | February 2025 | 256–269                                                                                                                257
+Article                                                                                               https://doi.org/10.1038/s42256-025-00983-2
+
+reapplying the underlying knowledge acquired from the ongoing task            subtask conditions as a subset, we also demonstrate how our agent
+stream. This highlights its capability for incremental development of         solves a conventional strictly conditioned long-horizon task, ‘make
+progressively sophisticated behaviours. To achieve the objective, we          the coffee’ (Supplementary Section 3.2).
+develop a framework inspired by the Dirichlet process mixture model
+(DPMM), a prominent model in the Bayesian non-parametric domain,              Stream of tasks. Given a stream of one-time feeding tasks, our pro-
+with a memoized variational Bayes inference method (memoVB)30. This           posed LRL agent can master the task continually, one after the other,
+combination enables simultaneous task inference and asynchronous              without forgetting previously acquired knowledge. This incremental
+knowledge preservation at the upstream level. Moreover, our frame-            learning approach mimics the natural human learning process and has
+work utilizes natural language-based side information to assist in task       the potential to replace, and eventually surpass, inefficient manual
+inference. This information is encoded by a pre-trained large language        services in real-world applications. To assess the lifelong learning
+model (LLM)31. The resulting language embedding offers the agent              capability of our proposed agent, we implement ten distinct robotic
+richer contextual insights into the current task scenario, contributing       manipulation tasks to build up a task stream. Our agent can gain knowl-
+to more precise and disentangled representations in the knowledge             edge asynchronously from this stream and eventually achieve the
+space. As a result, the collaborative efforts of DPMM and language            given long-horizon task (Supplementary Video 1). The agent under-
+embeddings contribute to more accurate downstream action pattern              goes training on each task for 1 million steps before switching to the
+learning. Furthermore, our embodied agent shows the ability to solve          next task. The task sequence follows an easy-to-hard task ordering
+challenging, long-horizon manipulation tasks in the real world by             (Supple­mentary Section 3.1): ‘reach → push → pick–place → door open →
+combining and reapplying knowledge acquired throughout its lifelong           faucet open → drawer close → button press → peg unplug → window
+learning. This showcases its potential for achieving general intelligence     open → window close’.
+and may inspire the development of more broadly applicable intelligent              To demonstrate the performance of our proposed framework on
+agents. We name our proposed framework as LEGION: a Language                  its original sequence task distributions, we showcase the snapshots
+Embedding-based Generative Incremental Off-policy Reinforcement               of its real-world tasks in Fig. 2, and we provide Supplementary Video 3
+Learning Framework with Non-parametric Bayes.                                 of all tasks. As observed in the snapshots and video, our proposed
+                                                                              embodied agent completes all tasks within the given time steps. In addi-
+Results                                                                       tion, in each real-world task, we conduct at least three trials, varying the
+In this section, we present the test results of our LEGION framework.         initial object positions and goal positions. The average success rates
+We begin by demonstrating its performance in real-world manipula-             for these trials are presented in Extended Data Table 1. To demonstrate
+tion tasks, covering both long-horizon tasks and the original sequence        stability and robustness within the given base task distributions, our
+of single-task training. Next, we assess how knowledge is preserved           embodied agent consistently accomplishes various manipulation
+in the prior space. In addition, we provide quantitative data to evalu-       tasks, including ‘reach’, ‘faucet open’, ‘drawer close’, ‘button press’ and
+ate key aspects of LRL within our framework. Finally, we highlight            ‘window open/close’, leveraging asynchronously acquired knowledge.
+the contribution of our non-parametric knowledge space in few-shot            For some more challenging tasks such as ‘push’, ‘pick–place’ and ‘door
+knowledge recall. The experimental set-up for both simulation                 open’, our agent can also maintain a high success rate with a score of
+and real-world experiments is detailed in ‘Training and deployment’           at least 0.67.
+in Methods and Supplementary Section 5.
+                                                                              Knowledge preservation
+Manipulation performance                                                      We evaluate knowledge preservation through t-distributed stochastic
+Long-horizon tasks. The deployment set-up of our framework is                 neighbor embedding (t-SNE) visualizations for intuitive understanding
+illustrated in Fig. 1b. To provide human commands of the task descrip-        and statistical analysis for quantitative performance assessment
+tions, we use a speech-recognition device and a pre-trained LLM. The          during training. Furthermore, a detailed ablation study highlighting
+trained embodied agent receives the state observations conditioned            the contributions of our Bayesian non-parametric knowledge space
+with language embeddings as inputs. After receiving the observations,         and language embeddings is provided in Supplementary Section 3.3.
+the task encoder infers the knowledge to which it should apply. Sub-
+sequently, the downstream policy generates corresponding actions              Visualization. In our framework, the task encoder initially infers the
+to accomplish the task. In the real-world scenario, we employ a KUKA          state inputs and generates the latent samples as inference results. Sub-
+iiwa robot arm as our embodiment and use a global RealSense camera            sequently, the inferred task results are fitted into the non-parametric
+to acquire vision information. A real-world video demonstration               knowledge space. To assess how the acquired knowledge is preserved
+(Supplementary Video 1) showcases our embodied agent successfully             and managed in its space, we use t-SNE to visualize our knowledge
+completing the long-horizon task ‘clean the table’, which consists of         space in a two-dimensional plane. Figure 3a–e shows the projections of
+seven sequential subtasks. Our agent accomplishes this by recom-              knowledge space after training on two, four, six, eight and all ten tasks,
+bining the underlying knowledge gained from the one-time feeding              respectively. Each coloured group signifies a complete task trajectory
+task stream (Fig. 2), illustrating its effective generalization in the face   and is assigned to a cluster component in our non-parametric knowl-
+of diverse and challenging task distributions. This ability mirrors           edge space. In addition, the order of these samples is represented by
+the human learning process over a lifetime and is regarded as a key           corresponding colour opacity, progressing from light to dark. Notably,
+mechanism underlying general intelligence. Conventional approaches            our proposed DPMM module in the knowledge space can generate
+to such long-horizon tasks involve relying on human demonstrations            new components to store new task inference results when switch-
+for direct imitation. However, these approaches often result in limited       ing environments, facilitating the capability to infer and store new
+generalization and flexibility when confronting varied task distribu-         knowledge. In addition, to evaluate how our knowledge space handles
+tions and sequences. In contrast, our framework offers flexibility            acquired knowledge, we make the agent undertake the training loop
+in task execution order, allowing the agent to complete the entire            twice. During the second loop, the agent revisits previously mastered
+task in any sequence through the combination and reapplication of             tasks, whose knowledge has been preserved in the agent’s knowledge
+acquired knowledge. To highlight the generalization and flexibility           space. In this phase, the agent is expected to directly utilize the exist-
+of our proposed framework, we reorder the subtasks randomly and               ing knowledge to complete the tasks, rather than inferring a new task
+present two additional demonstrations in Supplementary Video 2.               knowledge cluster in its prior space. We present the results after the
+As our broad task assumption includes long-horizon tasks with strict          first loop (circle markers) and after the second loop (cross markers)
+
+
+Nature Machine Intelligence | Volume 7 | February 2025 | 256–269                                                                                     258
+Article                                                                                                      https://doi.org/10.1038/s42256-025-00983-2
+
+
+
+            0s                       1.75 s                    3.50 s                           0s                         3.75 s          7.50 s
+
+
+
+
+                                    Reach                                                                                  Push
+
+
+
+            0s                       3.75 s                    7.50 s                           0s                         3.75 s          7.50 s
+
+
+
+
+                                   Pick–place                                                                         Door open
+
+
+
+            0s                       3.75 s                    7.50 s                           0s                         2.50 s          5.00 s
+
+
+
+
+                                  Faucet open                                                                        Drawer close
+
+
+
+            0s                       3.75 s                    7.50 s                           0s                         3.75 s          7.50 s
+
+
+
+
+                                  Button press                                                                        Peg unplug
+
+
+
+            0s                       3.75 s                    7.50 s                           0s                         3.75 s          7.50 s
+
+
+
+
+                                  Window open                                                                       Window close
+
+
+Fig. 2 | Performance on real-world single tasks. Snapshots of embodied agent on individual manipulation tasks after LRL.
+
+
+
+
+in Fig. 3f. The t-SNE results demonstrate that our proposed LEGION                 Statistics. For a quantitative assessment of our proposed framework,
+framework can infer and identify earlier acquired knowledge and merge              we present the performance results in Table 1 of each task in both con-
+it into existing cluster components associated with individual tasks.              ventional multi-task and lifelong training processes. The evaluation for
+
+
+Nature Machine Intelligence | Volume 7 | February 2025 | 256–269                                                                                       259
+Article                                                                                                                 https://doi.org/10.1038/s42256-025-00983-2
+
+
+             a                                    b                                      e
+
+
+
+                                                                                                        Push                              Door open
+
+
+                                                                                                                                                        Pick–place
+                                                                                             Reach
+
+
+
+
+             c                                    d
+
+
+                                                                                                                                                      Drawer close
+                                                                                         Peg unplug
+
+
+
+
+                                                                                                                                                 Window close
+                                                                                         Button press     Window open             Faucet open
+
+
+
+             f                                                               Cluster 0, 1st loop (push)                    Cluster 5, 1st loop (peg unplug)
+
+                                                                             Cluster 0, 2nd loop (push)                    Cluster 5, 2nd loop (peg unplug)
+
+                                                                             Cluster 1, 1st loop (reach)                   Cluster 6, 1st loop (drawer close)
+
+                                                                             Cluster 1, 2nd loop (reach)                   Cluster 6, 2nd loop (drawer close)
+
+                                                                             Cluster 2, 1st loop (pick–place)              Cluster 7, 1st loop (button press)
+
+                                                                             Cluster 2, 2nd loop (pick–place)              Cluster 7, 2nd loop (button press)
+
+                                                                             Cluster 3, 1st loop (door open)               Cluster 8, 1st loop (window open)
+
+                                                                             Cluster 3, 2nd loop (door open)               Cluster 8, 1st loop (window open)
+
+                                                                             Cluster 4, 1st loop (faucet open)             Cluster 9, 1st loop (window close)
+
+                                                                             Cluster 4, 2nd loop (faucet open)             Cluster 9, 2nd loop (window close)
+
+Fig. 3 | t-SNE snapshots of knowledge space. a–e, t-SNE projection of knowledge              after the second loop (cross). Notably, the inference results of the second training
+space after training on two tasks (a), four tasks (b), six tasks (c), eight tasks (d)        loop are merged into corresponding knowledge groups that are preserved
+and all ten tasks (e). f, t-SNE projections after the first training loop (circle) and       during the first loop.
+
+
+
+MTRL can lead to an in-depth understanding of our framework in terms                         with subsequent tasks. This implies that the acquired knowledge is
+of synchronized knowledge acquisition and preservation. In the context                       effectively preserved within the model. The average success rate gradu-
+of lifelong learning, we utilize an easy-to-hard task ordering strategy,                     ally increases, reaching 0.84. Furthermore, our proposed framework’s
+where the agent begins by learning fundamental tasks that serve as                           overall average forgetting score is 0.0, showcasing its robust knowledge
+milestones for mastering more complex action patterns in subsequent                          preservation capability. We observe that negative scores occur on tasks
+tasks. For more details on other task ordering variations, refer to Supple-                  such as ‘door open’; this is because the subsequent learning process
+mentary Section 3.1. We report the success rates for each task (row-wise)                    enhances performance on previously learned tasks. For instance, after
+after the agent trained on a one-time feeding task stream (column-wise).                     training on ‘door open’, the agent initially achieves a success rate of 0.4
+For example, the first column from the left side represents the agent’s                      on this task. However, after training on ‘faucet open’, the success rate
+performance on all tasks after it has trained on the task ‘reach’. Further-                  for ‘door open’ improves to 0.8. This improvement is probably because
+more, we incorporate two additional metrics to evaluate the specific                         the knowledge gained in understanding how to open a faucet (whether
+characteristics of our lifelong learnable agent, namely, ‘forgetting’ and                    clockwise or anticlockwise) contributes positively to the door-opening
+‘forward transfer’. ‘Forgetting’ is a scalar metric in the range [−1, 1], repre-             task. In addition, positive forward transfer phenomena are observed in
+senting how much knowledge our proposed agent may forget at the end                          our agent’s lifelong learning process. Specifically, for the task ‘drawer
+of its lifespan. A lower value in this metric signifies better performance.                  close’, earlier acquired knowledge from tasks such as ‘push’, ‘pick–place’
+‘Forward transfer’, in contrast, has a range of [0, 1] that considers how                    and ‘door open’ contributes to the success of ‘drawer close’. For instance,
+much the earlier tasks knowledge aids the subsequent tasks, where a                          the push and pull motions learned from previous tasks aid the agent in
+larger value indicates better performance. For more details of these met-                    completing the drawer close task. The final average score of this metric
+rics, refer to equations (2) and (3). We also report our agent’s multi-task                  is 0.10. In the context of a multi-task learning process, where the agent
+performance of each task listed in the right column of the table. Each                       has simultaneous access to all tasks, our framework attains superior per-
+datum in the table is based on trials with five random seeds. The last                       formance with a final success of 0.94 (Supplementary Sections 1 and 2).
+row calculates the average value of the data alongside column-wise.
+As indicated in the table, after being trained on earlier tasks, the agent                   Few-shot knowledge recall. Knowledge rehearsal is a critical com-
+maintains its performance on corresponding tasks even when trained                           ponent of lifelong learning. Recent studies, particularly in computer
+
+
+Nature Machine Intelligence | Volume 7 | February 2025 | 256–269                                                                                                            260
+Article                                                                                                                              https://doi.org/10.1038/s42256-025-00983-2
+
+
+Table 1 | Statistics of individual task success rate with easy-to-hard task ordering
+
+                                                                                             Train after
+ Evaluation                                                                                 Lifelong learning                                                                            Multi-task
+                       Reach       Push       Pick       Door       Faucet       Drawer       Button       Peg          Window         Window          Forgetting        Forward
+                                              place      open       open         close        press        unplug       open           close                             transfer
+
+ Reach                 1.00         1.00      0.80       0.80       0.80          1.00        1.00         1.00          1.00           1.00           0.00              NA              1.00
+ Push                  0.00         1.00      1.00       1.00       1.00          1.00        1.00         0.80          0.80           0.80           0.20              0.00            0.80
+ Pick–place            0.00         0.00      0.80       1.00       0.80          0.80        1.00         0.60          1.00           0.80           0.00              0.00            0.80
+ Door open             0.00         0.00      0.00       0.40       0.80          0.80        0.60         0.40          0.80           0.60           −0.20             0.00            1.00
+ Faucet open           0.00         0.00      0.00       0.00       1.00          1.00        1.00         1.00          1.00           1.00           0.00              0.00            1.00
+ Drawer close          0.00         1.00      0.80       0.80       0.00          0.60        0.80         0.80          1.00           1.00           −0.40             0.52            1.00
+ Button press          0.00         0.00      0.00       0.00       0.40          0.00        0.80         0.60          0.80           0.60           0.20              0.07            1.00
+ Peg unplug            0.00         0.00      0.00       0.00       0.00          0.20        0.00         1.00          0.60           0.60           0.40              0.03            0.80
+ Window open           0.00         0.00      0.40       0.00       0.60          0.00        0.20         0.00          0.80           1.00           −0.20             0.15            1.00
+ Window close          0.00         0.00      0.00       0.00       0.00          0.40        0.00         0.40          0.40           1.00           NA                0.13            1.00
+ Average               0.10         0.30      0.38       0.40       0.54          0.58        0.64         0.66          0.82           0.84           0.00              0.10            0.94
+In LRL, we assess the performance of all tasks (row-wise) once the agent completes training on each one-time feeding task (column-wise). In multi-task reinforcement learning, the agent
+is evaluated after simultaneous training on all tasks (row-wise). Each datum is based on at least five trials, with average values reported for evaluation. The metrics ‘forgetting’ and ‘forward
+transfer’ are used to assess the specific characteristics of the LRL agent. ‘Forgetting’, in the range [−1, 1] (equation (2)), measures the extent of knowledge retention, with lower values indicating
+better performance. ‘Forward transfer’, in the range [0, 1] (equation (3)), evaluates how well earlier task knowledge supports subsequent tasks, where higher values denote better performance.
+NA, not available.
+
+
+
+vision14,16,32,33, have shown that rehearsal effectively mitigates forgetting                         a full buffer, its success rate reaches around 0.2 throughout train-
+during the learning process. However, it remains unclear whether this                                 ing, showing no obvious improvement, highlighting its limitations
+technique performs as well in the robotic domain, where data are con-                                 in adapting or generalizing as the task stream progresses. Similarly,
+tinuous and time sequential. In addition, recent biological research34–41                             reservoir shows a flat performance curve with no notable gains, and
+suggests that knowledge rehearsal aids in consolidating long-term                                     A-GEM also underperforms in our benchmark. To further illustrate the
+memory and improves performance through deep memory recall,                                           limitations of replay-based methods in robotic LRL, Fig. 4b visualizes
+even after extended pauses (Supplementary Section 9). Building on                                     the data ratio in the training batch. For instance, after training on the
+these insights, we explore how our proposed agent performs during                                     second task ‘push’, the data ratio for ‘push’ initially remains at around
+few-shot knowledge recall with only intermittent replay.                                              50%. However, as the agent moves through subsequent tasks, this ratio
+     To demonstrate the application and potential limitations of                                      gradually decreases, eventually dropping to around 10% by the end
+existing replay-based lifelong learning methods in robotic reinforce-                                 of training. In contrast, in MTRL, the agent trains on individual tasks
+ment learning, we conduct comparison experiments against these                                        with a constant data ratio in the batch, ensuring stable learning condi-
+baseline methods. All models use the same soft-actor–critic (SAC)                                     tions. This gap in the data sampling process during lifelong learning
+policy, including the neural network backbone and shared hyper-                                       may weaken knowledge retention and lead to overall performance
+parameters. Each experiment is repeated at least five times, and the                                  degradation over time. Our framework addresses this challenge by
+average success rate and standard deviation during evaluation are                                     utilizing a Bayesian non-parametric knowledge inference and cluster-
+used as metrics to ensure fairness. The following baseline models are                                 ing module, which ensures consistent knowledge preservation and
+employed for comparison. (1) Reservoir. This baseline uses the ‘res-                                  stable performance throughout the lifelong learning process despite
+ervoir’ sampling method in the buffer to approximate the empirical                                    fluctuating data ratios.
+distribution of observed samples. The buffer is designed to maintain a                                      To assess our agent’s knowledge-recall performance after pausing
+maximum data ratio of 50%. Unlike our framework, this model does not                                  on tasks for a while, we selected 5 tasks from our original sequence,
+include an upstream inference and knowledge preservation module,                                      ordered from easy to hard, and trained the agent on them sequentially
+so its policy network inputs consist of only the raw task observa-                                    (1 million steps for each task) across 3 repeat loops: ‘reach → push →
+tions without the upstream inference representations. This allows                                     faucet open → button press → window close’. In the replay buffer, we
+us to assess the strengths of our proposed Bayesian non-parametric                                    allocated space for data from only three tasks at a time. This set-up
+knowledge space in task inference, knowledge preservation and its                                     means that while training on the fourth task, data from the first task are
+impact on overall task performance. (2) Perfect memory. Based on                                      gradually replaced by data from the fourth, and by the time the fifth task
+the ‘reservoir’ baseline, we extend the buffer size to match the total                                is reached, replay data from the first task are no longer available. In the
+training steps, meaning that all past trajectories are stored without                                 second loop, we revisit the first task and compare its performance in
+being forgotten or overwritten. (3) Averaged gradient episodic memory                                 the second loop to that in the first. This process is repeated similarly for
+(A-GEM)14 is a rehearsal-based method that treats lifelong learning                                   the other tasks during the second and third loops. Extended Data Fig. 1
+as a constrained optimization problem. It constructs a global loss                                    shows the t-SNE projections of the knowledge space after each task
+based on old training samples to ensure no loss of performance on                                     learning for all three loops. Figure 4c–g shows the average success rates
+previous tasks, projecting new sample gradients to avoid interference.                                for each task during the first loop (orange) and the subsequent second
+Here for each base task, we maintain an episode memory of 10,000.                                     (green) and third (blue) loops. As illustrated, despite a 1 million-step
+     Figure 4a shows the average success rate during evaluation. As                                   pause for each task, the agent quickly re-masters them in the second
+seen in the figure, our proposed LEGION framework consistently out-                                   and third loops, surpassing its initial performance. Our framework
+performs other methods, demonstrating a steady increase in success                                    demonstrates faster convergence on all tasks during subsequent loops,
+rate as new tasks are introduced. While perfect memory maintains                                      following few-shot attempts, emphasizing the benefits of few-shot
+
+
+Nature Machine Intelligence | Volume 7 | February 2025 | 256–269                                                                                                                                   261
+Article                                                                                                                                                                                                                    https://doi.org/10.1038/s42256-025-00983-2
+
+
+                        a
+                                           1.0
+                                                               Perfect memory
+                                                               Reservoir
+                                           0.8                 A-GEM
+                                                               LEGION (ours)
+
+
+
+                           Success rate
+                                           0.6
+
+
+                                           0.4
+
+
+                                           0.2
+
+
+                                                0
+                                                    0         0.1                           0.2              0.3                       0.4                  0.5                        0.6              0.7                     0.8              0.9          1.0
+                                                                                                                                                   Steps (×107)
+                        b
+
+
+
+
+                                                               Push                                                           Push                                                 Push                                          Push                              Push
+                                                              <50%                                                           <25%                                                  <17%                                          <13%                              <10%
+
+                                          After 2 tasks                                     After 4 tasks                                      After 6 tasks                                      After 8 tasks                                   After 10 tasks
+
+                        c                                            Reach                                      d                                                 Push                                  e                                 Faucet open
+                                          1.0                                                                                1.0                                                                                     1.0
+                                                                                                                             0.8
+                      Success rate
+
+
+
+
+                                                                                                              Success rate
+
+
+
+
+                                                                                                                                                                                                      Success rate
+                                      0.8                                                                                                                                                                            0.8
+                                     0.6                                                                                     0.6                                                                                     0.6
+                                     0.4                                                          1st loop                   0.4                                                       1st loop                      0.4                                     1st loop
+                                                                                                  2nd loop                   0.2                                                       2nd loop                                                              2nd loop
+                                      0.2                                                                                                                                                                            0.2
+                                                                                                  3rd loop                                                                             3rd loop                                                              3rd loop
+                                           0                                                                                  0                                                                                       0
+                                                0       0.2    0.4              0.6               0.8    1.0                       0         0.2     0.4                   0.6          0.8     1.0                        0     0.2       0.4         0.6   0.8     1.0
+                                                                                        6                                                                                          6
+                                                              Steps (×10 )                                                                          Steps (×10 )                                                                          Steps (×106)
+
+                                                                 f                                      Button press                                       g                                  Window close
+                                                                              1.0                                                                                        1.0
+                                                                              0.8
+                                                                                                                                                         Success rate
+
+
+
+
+                                                                                                                                                                        0.8
+                                                               Success rate
+
+
+
+
+                                                                              0.6                                                                                       0.6
+                                                                              0.4                                                       1st loop                        0.4                                                    1st loop
+                                                                                                                                        2nd loop                        0.2                                                    2nd loop
+                                                                              0.2
+                                                                                                                                        3rd loop                          0                                                    3rd loop
+                                                                               0
+                                                                                    0             0.2    0.4                 0.6        0.8        1.0                         0        0.2     0.4                  0.6       0.8     1.0
+                                                                                                        Steps (×106)                                                                           Steps (×106)
+
+Fig. 4 | Evaluation of replay’s contribution in knowledge recall. a, The average                                                                                        from an initial maximum of 50% to 10% after learning 10 tasks. c–g, Few-shot
+success rates from five runs of the LEGION framework compared with three                                                                                                knowledge-recall performance on reach (c), push (d), faucet open (e), button
+replay-based lifelong learning methods: perfect memory, reservoir and A-GEM.                                                                                            press (f) and window close (g). The agent is trained sequentially on five selected
+The figure shows that LEGION consistently outperforms these methods,                                                                                                    tasks over three repeated loops, with buffer capacity limited to three tasks at a
+demonstrating a steady increase in success rate throughout the task sequence.                                                                                           time. This configuration forces the agent to pause on each base task for 1 million
+b, Evolution of the ‘push’ task data ratio within the training batch. While the                                                                                         steps without replay. For a and c–g, the data are calculated based on at least five
+batch size remains constant, the data ratio for the ‘push’ task gradually decreases                                                                                     trials, presented as mean ± standard deviation (μ ± σ).
+
+
+memory recall. This mirrors the biological theory of mnemonics,                                                                                                         loop. These findings highlight our framework’s strong capability for
+where knowledge retention supports task re-mastery. Specifically,                                                                                                       effective knowledge recall, rapid adaptation and improved task per-
+in the ‘reach’ task, despite the enforced pause, the agent consistently                                                                                                 formance through few-shot exploration. The consistent improvement
+maintains knowledge, achieving a success rate of 0.3–0.4 at the initial                                                                                                 across multiple tasks underscores its robustness in re-mastering tasks
+evaluation checkpoint. Moreover, the agent shows an average success-                                                                                                    and maintaining high success rates, showcasing the potential of our
+rate improvement of 0.2 in the final loop compared with its initial                                                                                                     framework, especially the DPMM knowledge space for advancing LRL.
+attempts. After few-shot knowledge recalls in the third loop, the frame-
+work reaches the maximum success rate on most tasks. This improve-                                                                                                      Discussion
+ment is attributed to effective deep memory recall enabled by our                                                                                                       Robotic lifelong learning focuses on acquiring and retaining knowledge
+framework leveraging the DPMM.                                                                                                                                          from a continuous stream of tasks, enabling agents to progressively
+     To quantify the improvement in few-shot knowledge recall, we                                                                                                       build more complex behaviours through knowledge integration and
+calculate the improvement percentage for each task (Extended Data                                                                                                       reuse. Our study presents a deep reinforcement learning framework
+Table 2) using equation (4). The results show that the improvement                                                                                                      that continuously accumulates knowledge from a stream of tasks,
+varies across tasks: 19.63% for ‘reach’, 6.66% for ‘push’, 16.77% for ‘faucet                                                                                           demonstrating human-like lifelong learning capability. In addition,
+open’, 9.94% for ‘button press’ and 6.78% for ‘window close’ between                                                                                                    it solves complex long-horizon tasks by combining and reapplying
+the first and second loops. Moreover, comparing the first and third                                                                                                     acquired skills, a key step towards achieving general intelligence.
+loops reveals even greater success-rate enhancements. On average, our                                                                                                        In our real-world experiment with a KUKA robot arm, our agent,
+framework shows an 11.96% improvement between the first and second                                                                                                      aided by real-time vision from a RealSense camera and language
+loops and a substantial 21.36% improvement from the first to the third                                                                                                  embeddings from an LLM, successfully completes a sequence of
+
+
+Nature Machine Intelligence | Volume 7 | February 2025 | 256–269                                                                                                                                                                                                           262
+Article                                                                                                                                         https://doi.org/10.1038/s42256-025-00983-2
+
+
+               a                                                                                                                                                                            Training
+
+
+
+                                                                                                                                                                                ...
+
+
+                            Reach         Push       Pick–place         Door open   Faucet open    Drawer close   Button press   Peg unplug    Window open     Window close
+
+                                                                        Sequential task: one-time feeding stream
+                     State observation st                                                of tasks                                                                                 Action at
+
+                       Upstream task inference and knowledge preservation
+
+                                                                                                                                                 Language
+                                                                   Task encoder                         KL                                      embedding               embed
+                                                                                                                                              reconstruction
+                          Side information                                                 z
+                                                                                                                                                Dynamics
+                                                                    Language                                                                                              dyn
+                                             Pretrained                                                           K→∞                           prediction
+                                                LLM                embeddings
+                                                                                                         Dirichlet process mixture             Generative
+                                                                                                             knowledge space                    module
+
+
+
+
+                                                                    critics              Critics                    Actor                 actor
+                                       Update
+
+                             Buffer
+                                                              Downstream policy
+
+
+
+               b                                                                                                                                                                      Deployment
+                                      Side information
+
+
+
+                                                      State observations
+                          Pretrained
+                                                                                          Real2Sim
+                             LLM
+                                                                                                                   End effector positions             Object positions
+
+
+                         Language
+                                                 Task encoder
+                        embeddings
+
+
+                                                                                    • Coordinate transformation                                                                 RealSense
+                                                          z
+                                                                                    • Camera offset
+
+                                                                                    • Safety check
+                         K→∞
+                    Dirichlet process mixture        Actor
+                        knowledge space                                                                                                                                 AprilTags
+
+                   Embodied agent                             Actions                                         Control inputs                                 Real-world environment
+                                                                                           Sim2Real
+
+
+
+Fig. 5 | LEGION framework overview for training and deployment. a, Training.                                 demonstration, the agent parameters remain frozen, the agent receives input
+The framework receives language semantic information and environment                                         signal from real-world hardware and outputs corresponding action signals, both
+observations as input to make policy decisions and output action patterns, it                                ‘Sim2Real’ and ‘Real2Sim’ modules process the data to align the gap between the
+trains on only one task at a time. ℒ represents the loss functions and is explained                          simulation and real world.
+in ‘Upstream task inference’ in Methods. b, Deployment. In the real-world
+
+
+tasks, efficiently accumulating knowledge and demonstrating flexible,                                        undertake long-horizon tasks, showcasing flexibility in addressing
+autonomous skill reapplication for long-horizon tasks without relying                                        complex tasks based on accumulated knowledge. We acknowledge
+on predefined human demonstrations. In our LRL framework, we                                                 that the replay mechanism is an inherent part of our framework due
+analyse knowledge management through both visualization and                                                  to its use of SAC as policy, which relies on data sampling from a buffer
+statis­tical perspectives. The non-parametric model in the knowledge                                         and offline parameter updates. However, the replay is not strictly tied
+space dynamically adjusts to new task inputs by creating or merging                                          to our approach using the Bayesian non-parametric knowledge space,
+components, ensuring continuous knowledge preservation without                                               but rather a feature of the SAC itself. Our framework currently shows
+prior knowledge quantity requirements. Quantitatively, the agent’s                                           substantial improvements in few-shot exploration with intermittent
+success rate improves over time, demonstrating effective knowledge                                           replay. In the future, we plan to optimize it further to better balance
+accumulation in LRL.                                                                                         stability and adaptability without relying on replay buffers, while
+     In summary, our framework LEGION (details refer to Fig. 5) excels                                       also aiming to tackle more challenging scenarios such as zero-shot
+at both preserving knowledge and inferring new tasks in its Bayesian                                         inference. Meanwhile, we acknowledge that our current framework
+non-parametric knowledge space during lifelong learning. Using lan-                                          operates in structured environments with predefined task set-ups and
+guage embeddings to aid in task inference, the agent can efficiently                                         relies on AprilTags for perception. In future work, we aim to expand our
+
+
+Nature Machine Intelligence | Volume 7 | February 2025 | 256–269                                                                                                                                       263
+Article                                                                                               https://doi.org/10.1038/s42256-025-00983-2
+
+framework to unstructured, dynamic environments featuring diverse              task results are conditioned as part of downstream inputs, contribut-
+object arrangements and unseen objects, with the goal of enhancing             ing to more precise action pattern learning. The detailed structures
+the generalization and robustness of lifelong learning systems. In             of individual modules are introduced in Supplementary Section 4.
+addition, we plan to explore applying our non-parametric knowledge
+space to robot learning involving multiple agents or heterogeneous             Deployment. After training in simulation environments, we imple-
+embodiments (Supplementary Section 3.5), intending to achieve                  ment our trained agent onto a real-world KUKA manipulator to build
+clustered and transferable general intelligence. As our current work           up an embodied lifelong learning agent. The real-world deployment
+assumes the reward function to be an inherent and static property of           overview is illustrated in Fig. 5b, where the framework includes two
+the environment, another promising future direction involves using             primary components: the embodied agent software side and the
+LLMs42–44 for continuous reward refinement during the lifelong learn-          real-world hardware side. On the software side, we deploy the trained
+ing process. This would enable agents to quickly adapt to entirely new         task encoder, DPMM and downstream actor to create the embodied
+control tasks. Moreover, the ability to continuously learn and preserve        agent. In the real-world demonstration, we utilize an online encoding
+skills from a stream of tasks using a non-parametric knowledge space,          approach, where human commands are processed and encoded as lan-
+combined with smooth and stable downstream action outputs from                 guage embeddings to execute each task. This set-up reflects real-world
+the diffusion model, holds potential for the development of broadly            usage, allowing users to issue verbal commands directly to the robot.
+applicable large behaviour models.                                             For the hardware side, our agent’s physical body comprises a KUKA iiwa
+                                                                               with a Robotiq 2F85 gripper. In addition, we utilize a global RealSense
+Methods                                                                        camera at the table edge to capture object positions via AprilTags.
+Training and deployment                                                        Later, the task-related goal position is determined by the initial posi-
+Training. Figure 5 a illustrates the concept overview of our proposed          tion of the detected object and the corresponding side information
+LEGION framework. Unlike the typical multi-task approaches, where              context. Python-based robot operating system controls the movement
+the agent learns all tasks at once, our proposed framework can conti­          of the KUKA, with a system frequency of 20 Hz. We limit the total work
+nuously gain knowledge from a stream of one-time feeding tasks.                steps of a single-task trajectory to 150, maintaining consistency with
+This implies that our agent can imitate the real human learning pro-           simulation environments. To ensure smooth communication between
+cess, tackling each manipulation task one after another throughout             the software and hardware control, we employ two transformation
+its lifespan.                                                                  modules, namely, ‘Sim2Real’ and ‘Real2Sim’. These modules serve
+       During training, we let the agent learn tasks one by one, allowing      similar purposes, including safety control checks, coordinate frame
+the agent to undergo 1 million training steps for each task. Importantly,      transformation between simulation and the real world, hand-to-eye
+we evaluate the agent’s performance on all tasks every 10,000 steps by         calibration, and camera offset set-up. A detailed experiment set-up
+following the conventional multi-task fashion, irrespective of whether         for both simulation and deployment can be found in Supplementary
+it has undergone training for these tasks or not. In our framework,            Section 5. Moreover, we provide Supplementary Video 4 to introduce
+we follow the off-policy training mode as it has more sampling effi-           the implementation details of our framework for both training and
+ciency. To achieve both preserving existing knowledge and inferring            deployment processes.
+new tasks simultaneously, our proposed framework is structured
+hierar­chically into two parts, namely, the upstream task inference and        Language embedding. The manipulation tasks performed by a robot
+knowledge preservation module and the downstream policy learn-                 arm show a natural tendency towards a limited set of action patterns.
+ing module. The upstream module consists of the following compo-               On the one hand, tasks like ‘push the teacup from left to right’ and
+nents: the pre-trained language embedding module, the task encoder,            ‘open the window in a horizontal direction’ may differ in their language
+the Dirichlet process mixture knowledge space, and the generative              description, but their actual action patterns might share similar trajec-
+modules. In the simulation, we employ an offline approach where lan-           tories. This similarity can pose challenges during agent training, lead-
+guage embeddings are pre-encoded using an LLM combined with an                 ing to inaccurate action patterns and/or misoperations in real-world
+audio recognition device and stored for training. This pre-processing          performance. On the other hand, although such task-related contex-
+step accelerates training by eliminating the need for real-time encod-         tual information (or side information) is often available in real-world
+ing, which is computationally intensive. For specific details regarding        scenarios (for example, between human communication), it is fre-
+the content of the language side information, refer to Supplementary           quently overlooked in conventional reinforcement learning methods
+Section 7. Subsequently, the task state observations s, which include          and is difficult to provide to the embodied agent without encoding
+positions of end-effector, objects and goals, are combined with the            of a LLM. By leveraging advancements in LLMs3,31, our embodied LRL
+current task’s language embedding I and sent to the task inference             agent becomes more adept at utilizing this side information, like
+encoder. Following that, the generated inference results z are fitted by       natural language-based task descriptions, to acquire generalizable
+the DPMM within the knowledge space. The inferred results from the             skills and facilitate knowledge transfer among tasks22. In this study,
+same task are clustered and stored within the same components in the           we capture natural language side information through an external
+DPMM, enabling knowledge preservation in our framework. When deal-             speech-recognition device. We adopt a human-in-the-loop approach
+ing with data samples from new task distributions, the DPMM can create         to guide the embodied agent in real-world tasks. In our case, we
+new components to accommodate them, thereby separating them from               employ one of the state-of-the-art pre-trained LLMs, RoBERTa31, to
+existing clusters and supporting continual knowledge accumulation              encode the side information about manipulation tasks into language
+during agent lifelong learning. Simultaneously, the generative module          embeddings. Subsequently, these embeddings are conditioned with
+reconstructs the language embeddings and predicts the dynamic                  state observations and provided to the agent, aiding in accurate
+function of the current task. This enables disentangled parameter              task inference and improving its execution of corresponding action
+updates between upstream and downstream modules. Moreover, an                  patterns.
+ablation study in Supplementary Section 3.4 demonstrates that the
+generative module plays a crucial role in stabilizing the lifelong learning    Observation space. The state observation space includes the
+process. For the downstream policy module defined in Fig. 5a, we utilize       end-effector position (three dimensions), the object pose (six dimen-
+the SAC45 as a concrete policy learning module, where the critics              sions) and the goal positions (three dimensions). We encode the
+calculate the action value function Q(st, at, zt) and the actor provides the   language side information related to the task context with a pre-trained
+corresponding action patterns at to accomplish the tasks. The inferred         RoBERTa model, whose output has 768 dimensions.
+
+
+Nature Machine Intelligence | Volume 7 | February 2025 | 256–269                                                                                   264
+Article                                                                                                 https://doi.org/10.1038/s42256-025-00983-2
+
+Action space. The action space contains four dimensions, including             Notably, evaluating the forgetting of the most recently encountered
+the movement of the end-effector tip (units expressed in metres) and           task carries limited significance. Therefore, we consider only the first
+the open distance of the gripper. The upper and lower bounds for each          N − 1 tasks for this calculation. The forgetting metric is constrained
+dimension of action space are limited within the range [−1.00, +1.00].         within the range F ∈ [−1, 1]. When F > 0 represents that the agent may
+                                                                               have lost knowledge of prior tasks. Conversely, when F < 0, the back-
+Reward. Our designed scenarios involve goal-based manipulation                 wards transfer occurs, signifying that training on subsequent tasks j
+tasks where success is determined by bringing the target object                (with i < j ⩽ N) has led to an improvement in performance on prior
+within a specified goal range. To comprehensively evaluate action              tasks i. For the F, a lower value indicates superior performance.
+patterns, the global reward for tasks is divided into distinct compo-
+nents. These components include rewards for reaching, grasping,                Forward transfer. Forward transfer (FT) assesses the extent to which
+pushing, pulling and pressing objects to achieve the specified targets         previous tasks contribute to the learning of new ones. Inspired by
+or poses. For more details, refer to Supplementary Section 8.                  recent works1,6, we define the zero-shot forward transfer metric as
+                                                                               follows:
+Optimization. Both the upstream task inference module and down-
+                                                                                                                           i−1
+stream policy learning module are trained using Adam optimizers,                                           FTi =
+                                                                                                                       1
+                                                                                                                           ∑ Pk (∆k),
+                                                                                                                   i−1
+and we reset the intrinsic parameters of optimizers before initiating                                                      k=1
+                                                                                                                                                       (3)
+the training on every new incoming task.                                                                               1
+                                                                                                                            N
+                                                                                                            FT =           ∑ FTi .
+                                                                                                                   N−1 i=2
+Metrics
+Recent works in the conventional multi-task or meta-learning-                  Here, the metric range is constrained to FT ∈ [0, 1], where the forward
+based approaches often rely on metrics based on reward and/or                  transfer for the 𝑖-th task is calculated as the average performance across
+success rate to evaluate agent performance. However, in the context            tasks from 𝑘 = 1 to 𝑘 = 𝑖− 1. It is important to emphasize that evaluating
+of LRL, typical questions still remain unclear, including how much the         the first task holds no meaningful significance. Thus, we consider a
+agent may forget the previously acquired knowledge after training              total of N − 1 subsequent tasks for this assessment. A higher value in
+on subsequent tasks, or to what extent the previously acquired                 this metric indicates that knowledge acquired from earlier tasks aids
+knowledge can aid the subsequent ones. Therefore, it becomes                   the agent in enhancing its performance on subsequent tasks, reflecting
+necessary to employ additional metrics that capture the unique                 better performance.
+characteristics of lifelong learning fashion. In our study, in addition
+to the success rate, we adopt two well-used metrics to access our              Improvement of few-shot knowledge recall. To quantify the improve-
+proposed LRL framework, namely, ‘forgetting’ and ‘forward transfer’.           ment statistics in few-shot knowledge recall, we calculate the improve-
+To further evaluate the performance of few-shot knowledge recall, we           ment percentage for each task as follows. First, we computed the integral
+employ a normalized ‘improvement’ metric to quantify the agent’s per-          of the agent’s success rate of selected two loops for each task. We then
+formance. Assuming a total of N tasks, and considering that the agent          subtracted the integral from the earlier loop from the subsequent loop
+undergoes training for each task over a span of Δ steps, the cumulative        and normalized the difference. This normalized value, denoted as f (in
+global training duration across all N tasks amounts to T = N × Δ steps.        the range [−1, 1]), serves as our evaluation metric for few-shot improve-
+                                                                               ment. A higher value indicates better performance during the subse-
+Average success rate. In our study, as all our environments are                quent loops compared with the earlier access, whereas a lower value
+goal-based manipulation tasks, we select the task’s success rate as            suggests the opposite. The specific calculation is detailed in equation (4):
+one of the evaluation metrics. Here, Pi(t) signifies the success rate of
+                                                                                                                   T                 T
+task i at time step t. The values Pi(Δ(i − 1)) and Pi(Δi) denote the success                              1         j           i
+
+                                                                                                 f=            (∫ P(t) dt − ∫ P(t) dt) ,               (4)
+rates of task i before and after training on the same task, respectively.                             T × Pmax   tj          ti
+
+The overall average performance on all N tasks is calculated as follows:
+                                                                               where Pmax indicates the best performance value that the agent can
+                                             N
+                                    1                                          acquire (in our case, the success rate with 1.0), P(t) denotes the per-
+                              P(t) ∶ ∑ Pi (t).                           (1)
+                                    N i=1                                      formance value over time, and t and T are the lower and upper bounds,
+                                                                               respectively, of training steps with j > i.
+Notably, P is constrained within the range [0, 1]. We also employ P(T)
+for the final evaluation, particularly for the purpose of hyperparameter       Non-parametric knowledge space
+optimization and ablation study. A higher value of P corresponds to            In this section, we present our non-parametric knowledge space from
+an improved performance. Moreover, we also consider the episode                two aspects. First, we introduce the mathematical theory behind the
+rewards as one of our metrics, for more details related to the rewards         Dirichlet process mixture model. Following that, we introduce an
+comparison, refer to Supplementary Sections 1 and 2.                           online variational inference method of DPMM that is used to update
+                                                                               the model parameters.
+Forgetting. This metric quantifies how much knowledge is forgotten
+after the agent is trained on subsequent tasks. Drawing upon recent            Dirichlet process mixtures. Bayesian non-parametric models are a
+research contributions6,46, we introduce the forgetting (F) to assess the      class of models that allow for flexible modelling of complex data struc-
+agent’s capacity to preserve knowledge within a continuous stream of           tures without making strict assumptions about the underlying distribu-
+tasks. Specifically, Fi is calculated by subtracting the final success rate    tion of the data. Unlike Bayesian parametric models (for example,
+of task i, denoted as Pi(T), from the success rate of task i after training    Gaussian mixtures), which have a fixed number of parameters, Bayesian
+on the task itself, represented as Pi(Δi). The overall forgetting metric       non-parametric models have a potentially infinite number of param-
+is computed as follows:                                                        eters that are determined by the data. Bayesian non-parametric models
+                           Fi = (Pi (∆ i) − Pi (T )) ,
+                                                                               are typically based on probabilistic models that involve prior distri­
+                                                                               butions over model parameters. Such prior distributions are often
+                                       N−1                              (2)
+                           F=
+                                   1
+                                       ∑ Fi .
+                                                                               chosen to be flexible and allow for infinite-dimensional parameter
+                                 N−1 i=1                                       spaces. This allows the model to adapt to the underlying structure of
+
+
+Nature Machine Intelligence | Volume 7 | February 2025 | 256–269                                                                                      265
+Article                                                                                                        https://doi.org/10.1038/s42256-025-00983-2
+
+the data, whether it is simple or complex. One of the typical non-                 In the context of DPMM, grounded in the concept of variational infer-
+parametric models is the Dirichlet process mixture model, whose                    ence, we formulate the variational distribution q under the mean-field
+parameters are determined through the Dirichlet process. The Dirichlet             assumption, where each latent variable possesses its variational fac-
+process is a probability distribution over probability distributions. It           tor, and these factors are considered independent from one another.
+is used in Bayesian non-parametric to model data when the number of                Specifically, we have:
+groups or clusters is not known a priori. Let G be a random probability
+                                                                                                               N                      K
+measure, ℋ be a base probability distribution from a parameter space                          q(v, θ, β) = ∏ q(vn |rn̂ ) ∏ q(βk |α̂ k1 , α̂ k0 )q(θk |λ̂k ),
+Θ, and α be a positive real-valued scalar named concentration param-                                         n=1                     k=1
+
+eter. Then, G is said to be drawn from a Dirichlet process (DP) with α                                         N                             K
+                                                                                                                                                                               (9)
+and ℋ , denoted as G ∼ DP (α, ℋ) . To generate the samples from a                                         = ∏ Cat(v
+                                                                                                              ⏟⎵⎵⎵⏟⎵   ̂⎵
+                                                                                                                   n |rn   ⎵⏟
+                                                                                                                         1 ∶nK
+                                                                                                                               ) ∏ ℬ(β |α̂ k1 ,⎵α⎵⏟
+                                                                                                                                   ⏟⎵⎵k⎵⏟⎵              ℋ(θk |λ̂k ),
+                                                                                                                                                 ̂ k0 ) ⏟⎵⏟⎵⏟
+                                                                                                             n=1                            k=1
+                                                                                                                             qvn                       qβk          qθk
+Dirichlet process, a method called the stick-breaking process is
+employed (Supplementary Section 10).
+     DPMM serves as a prominent model in the Bayesian non-parametric               where qvn is a categorical factor with variational parameters rnk ̂ , qβk is a
+domain that is used to capture an infinite mixture of clusters for model-          factor for stick-breaking proportion with parameters α̂ k0 , α̂ k1 , and qθk
+ling a set of observations x = x1:N. Unlike finite mixture models in the           is a base distribution factor with parameters λ̂k . In the context of vari-
+Bayesian parametric domain, the number of components in DPMM is                    ational inference, it is fundamental to recognize that the true posterior
+not predefined, but rather determined by the observations in an online             distribution is inherently infinite, and obtaining an exact representa-
+fashion. In DPMM, each data xi is sampled from a distribution ℱ(θi ),              tion is unfeasible, hence necessitating approximations. However, by
+where θi represents a latent variable independently drawn from a Dir-              augmenting the number of components K within the categorical factor,
+ichlet process prior G-based base distribution. A Dirichlet process prior          we can enhance the optimization of the ELBO objective, leading to a
+introduces discreteness and clustering properties by allowing θi to take           variational distribution that closely approximates the infinite
+on repeated values. Consequently, all data points drawn with the same              posterior. To maintain computational tractability, we restrict the cat-
+value of θi form a cluster, resulting in the natural clustering of observa-        egorical factor to a finite set with K components (q(vn = k) = 0 for k > K),
+tions. The active number of cluster components is determined by the                ensuring that K is sufficiently large to encompass all potential features.
+number of unique values of θi, which can be dynamically inferred based             Furthermore, we explore a specific scenario in which both the base
+on the observed data. To assign data points to clusters, each point is             distribution ℋ and the cluster component distribution ℱ come from
+associated with an assignment variable vi. This variable takes on the              the exponential family. Hughes and Sudderth30 illustrated that in this
+value k with probability πk, which is drawn from a categorical distribu-           context, it is possible to formulate the ELBO in terms of the expected
+tion (Cat). The generative process of DPMM can be expressed using                  mass Nk̂ and the expected sufficient statistic sk(x) associated with each
+the stick-breaking process (Supplementary Section 10.1), where the                 component k:
+mixing proportions π can also be equivalently expressed as sampled
+                                                                                                   K                                                                      N
+from a generalized Ewens distribution (GEM). Specifically, the genera-                                             ⊤
+                                                                                     ELBO (q) = ∑ [𝔼𝔼q 𝔼θk ] sk (x) − Nk̂ 𝔼a(θk )] + Nk̂ 𝔼log πk ( β)] − ∑ rnk     ̂
+                                                                                                                                                            ̂ log rnk
+tive process of DPMM can be represented as follows:                                               k=1                                                                 n=1
+
+                                                                                                                   ℬ(βk |1,α)                      ℋ(θk |λ)
+                               θ∗k |λ ∼ ℋ(λ),                                                      +𝔼𝔼q [log                          ] + 𝔼𝔼q [log           ]] .
+                                                                                                               q(βk |α̂ k1 ,α̂ k0   )              q(θ |λ̂ )
+                                                                                                                                                       k   k
+
+                                π|α ∼ GEM (α),                                                                                                                                (10)
+                                                                             (5)
+                                vi |π ∼ Cat (π),
+                                                                                   Subsequently, each variational factor can be iteratively updated inde-
+                               xi |vi ∼ ℱ(θ∗vi ).                                  pendently. In the initial stage, we perform updates on the local vari-
+                                                                                   ational parameters rnk  ̂ within qvn for each clustering assignment.
+Variational inference. In this study, we focus on a variational                    Following this step, we advance to the update of the global parameters
+inference-based method to estimate the true posterior of data, as                  within the stick-breaking factor qβk and the base distribution factor
+they tend to offer faster and more scalable solutions compared with                qθk . We employ this coordinate ascent method to iteratively optimize
+sampling-based methods. The fundamental concept behind variational                 the local and global parameters with the objective of maximizing the
+inference is to transform the inference problem into an optimization               ELBO. The computation of the summary statistics Nk̂ and sk(x) requires
+problem. Subsequently, the aim is to uncover the underlying joint prob-            accessing the complete dataset. In the case of large datasets, a
+ability distribution of the unknown parameters, allowing us to explore             batch-based approach known as memoVB 30 is employed. This
+their implicit relationships. In the case of the DPMM, as described in             approach breaks down the summary statistics of the full data into a
+equation (5), the joint probability distribution of its parameters can             summation of the summary statistics of each batch. The
+be expressed as follows:                                                           non-parametric nature of the DPMM allows for flexibility in adapting
+                                                                                   to varying numbers of clusters. This characteristic enables the devel-
+                       N                            ∞
+       p(x, v, θ, β) = ∏ ℱ(xn |θvn ) Cat (vn |π(β)) ∏ ℬ(βk |1, α)ℋ(θk |λ),   (7)   opment of heuristics for dynamically adding or removing clusters,
+                      n=1                           k=1                            which proves beneficial in avoiding local optima when utilizing
+                                                                                   batch-based variational inference methods. For detailed derivations,
+where ℬ is stick-breaking process probability and βk are corresponding             refer to Supplementary Section 10.2.
+random variables. As the true posterior p(v, θ, β∣x) is intractable, the                 MemoVB incorporates birth and merge moves to facilitate
+objective is to identify the optimal variational distribution q*(v, θ, β)          dynamic cluster adjustment. To create new clusters, poorly described
+that minimizes the Kullback–Leibler (KL) divergence from the exact                 subsamples x′ from one existing cluster are collected as they pass
+conditional distribution. Instead of directly minimizing the KL diver-             through each batch, and a separate DPMM model with K′ initial clus-
+gence, we maximize the evidence lower bound (ELBO) which includes                  ters is fitted. Assuming that the active number of clusters before the
+the expected log-likelihood of the data 𝔼𝔼𝔼log p(x|v, θ, β)] and the KL            birth move is K, the acceptance or rejection of new cluster proposals
+divergence between two priors 𝕂𝕂𝕂𝕂(q(v, θ, β)||p(v, θ, β)) . Here, we have         is determined by comparing the result of assigning x′ to K + K′ with
+(Supplementary Section 10.2):                                                      that of assigning x′ to K. In addition to the birth move, a merge move
+                                                                                   can potentially combine a pair of clusters into one. The decision to
+          ELBO (q) = 𝔼𝔼𝔼log p(x|v, θ, β)] − 𝕂𝕂𝕂𝕂𝕂q(v, θ, β)||p(v, θ, β)).    (8)   merge two clusters is based on whether the merge improves the ELBO
+
+
+Nature Machine Intelligence | Volume 7 | February 2025 | 256–269                                                                                                              266
+Article                                                                                                 https://doi.org/10.1038/s42256-025-00983-2
+
+objective, resulting in K − 1 clusters after the merge30. By integrating         where ℒKLik indicates the KL divergence between the distribution of
+with this online inference method, the DPMM can consistently preserve            task encoder output and component k in DPMM, and pik represents
+the gained knowledge in the knowledge space from a theoretically                 the probability of zi assigned to cluster component k. While more
+endless stream of data, where the features or knowledge within it may            sophisticated weighting strategies can be employed, our empirical
+steadily grow. For more details, refer to Supplementary Section 10.3.            findings suggest that simple weighting based on probabilities is effec-
+                                                                                 tive. For detailed derivations, refer to Supplementary Section 11.1.
+Upstream task inference
+In this section, we introduce the derivations behind our upstream                Generative process. In our framework, we employ a generative module
+task inference module (Fig. 5a). We start with the knowledge inference           at the upstream level to facilitate a disentangled and stabilized learning
+and preservation process of our knowledge space. Subsequently, we                process. The generative module includes two distinct components:
+introduce the generative process of upstream modules that enable the             the language embedding generation, denoted as p θ(I t∣z t), and
+disentangled and stabilized learning process.                                    the dynamic prediction model for corresponding manipulation task,
+                                                                                 represented as pθ(st+1∣st, at, zt). Each component is interpreted by a
+Knowledge inference and preservation. To enable simulta­neous                    separate multilayer perception module with general parameters θ
+knowledge inference and preservation in the knowledge space, we                  ∈ {θembed, θdynamics}. The detailed structures of our proposed generative
+employ a DPMM + memoVB that was introduced in the previous                       modules are presented in Supplementary Figs. 18 and 19. During the
+section. The DPMM + memoVB has the advantage of being able to                    training process, the language embedding decoder takes only the
+cluster a potentially infinite number of features based on the obser-            task inference results z t as inputs and generates the language
+vations, while dynamically adapting to fit the number, shape and                 embedding tokens, donate as I*. These tokens are then combined with
+density of individual components. This dynamic adaptability holds                the original inputs I to compute the overall similarity using the sum
+great potential for preserving knowledge in a continuous stream                  of mean squared error as the side information loss function, denoted
+of tasks.                                                                        as ℒembed. Furthermore, the dynamics prediction module models the
+       Our framework employs an alternating optimization scheme                  state transition function by taking the current state observation st,
+to eliminate the necessity of fitting a new DPMM from scratch every              normalized action vector at, and latent variables as inputs to generate
+time. First, we update the DPMM module using the inference result zi,            the expected state observation at the next step, denoted as s∗t+1 .
+which are sampled from the task encoder. Each update of the DPMM                 By comparing this prediction with the actual next observation st+1,
+module takes place after certain training steps of the task encoder and          we obtain the loss function for dynamic prediction, which is
+generative module. Then, with the DPMM module fixed, we update                   represented by ℒdyn . Meanwhile, with normalization in each input
+the task encoder by minimizing the KL divergence, using the assigned             dimension, we can stabilize the overall training process. Following that,
+clusters to each zi.                                                             the total loss of the upstream task inference module is calculated
+       When updating the parameters of the DPMM, we perform fitting              as follows:
+on the task inference result zi obtained from the task encoder. Consider
+                            n                                                                                ζℒdyn + ηℒembed +ξℒKL .
+                                                                                                         ℒ = ⏟⎵⎵⎵⎵⏟⎵⎵⎵⎵⏟                              (12)
+a set of state inputs {xxi }i=1 ∈ X with xi = (si, Ii), the DPMM module in the
+                                                                                                                   ℒgen
+knowledge space learns: (1) the inference results zi and corresponding
+mapping between xi and zi; (2) the number of K active components and
+their parameters {μk , Σk }k=1∶K ; and (3) the cluster assignment vi of each     with ζ and η representing the weighting factors for each loss function
+input, where vi ∈ {1, …, K}. The cluster assignments of inference results        term, which regulate the importance of each generative module. ξ
+are determined jointly by the latent representation and the DPMM                 represents the disentangled factor of the KL divergence term. In sum-
+components. In each update, we initialize the DPMM with the param-               mary, the generation module facilitates a disentangled learning process
+eters learned from the previous updates and apply it to new samples              unaffected by downstream policy training. This set-up stabilizes the
+generated by the updated task encoder. This enables us to update the             exploration process of the downstream policy module, particularly
+same DPMM while incorporating the latest changes in the knowledge                during the initial steps of each task where noise is inevitable. Simulta-
+space mappings.                                                                  neously, regenerating language embeddings and modelling the state
+       During the training of the task inference module, we aim to mini-         transition function contribute to the agent learning more accurate
+mize both the generative loss ℒgen and the KL divergence loss ℒKL in a           action patterns for individual manipulation tasks. For detailed deriva-
+joint manner. ℒgen measures the error between the original inputs x              tions of the loss functions related to the generative process, refer to
+and the generated samples x*. Meanwhile, ℒKL represents the KL diver-            Supplementary Section 11.2.
+gence between task encoder distribution and knowledge clustering
+components. To compute ℒKL, we first obtain the cluster assignment               Reporting summary
+vi = k of each task inference results zi from the current DPMM. Using            Further information on research design is available in the Nature
+the DPMM, we determine the mean and covariance of the assigned                   Portfolio Reporting Summary linked to this article.
+cluster k, denoted as μk and Σk respectively. Following that, the ith
+inference result assigned to the component k, which is represented as            Data availability
+zik, is generated through the reparametric trick47. Notably, the hard            All data needed to evaluate the conclusions are present in the article
+assignment between the inference result and corresponding cluster                and the Supplementary Information. Microsoft Excel (Version 2405,
+component in knowledge space may lead to incorrect assignments for               Build 17628.20110, 64-bit) was utilized to analyse, interpret and sum-
+certain samples, resulting in errors when calculating the KL divergence.         marize the statistical results. The source data used to present this work
+To address this issue, we propose the use of a soft assignment, in which         are available on Zenodo at https://doi.org/10.5281/zenodo.14265089
+we compute the probability pik of assigning the zi to cluster k using the        (ref. 48) or via GitHub at https://github.com/Ghiara/LEGION.
+DPMM, considering all possible components k ∈ {1, 2, …, K}. As a result,
+the KL divergence is defined as a weighted sum, taking into account              Code availability
+the probabilities of each cluster assignment:                                    The code used for training and evaluation, which supports the conclu-
+                                                                                 sions of this study, is publicly available via Zenodo at https://doi.org/
+                                      K
+                              ℒKLi = ∑ pik ℒKLik ,                       (11)    10.5281/zenodo.14265089 (ref. 48) or via GitHub at https://github.
+                                     k=1                                         com/Ghiara/LEGION.
+
+
+Nature Machine Intelligence | Volume 7 | February 2025 | 256–269                                                                                       267
+Article                                                                                               https://doi.org/10.1038/s42256-025-00983-2
+
+References                                                                    23. Perez, E., Strub, F., De Vries, H., Dumoulin, V. & Courville, A. FiLM:
+1.  Khetarpal, K., Riemer, M., Rish, I. & Precup, D. Towards continual            visual reasoning with a general conditioning layer. In Proc. AAAI
+    reinforcement learning: a review and perspectives. J. Artif. Intell.          Conference on Artificial Intelligence 32 (AAAI, 2018).
+    Res. 75, 1401–1476 (2022).                                                24. Borsa, D., Graepel, T. & Shawe-Taylor, J. Learning shared
+2. Croitoru, F.-A., Hondru, V., Ionescu, R. T. & Shah, M. Diffusion               representations in multi-task reinforcement learning. Preprint at
+    models in vision: a survey. IEEE Trans. Pattern Anal. Mach. Intell.           https://arxiv.org/abs/1603.02041 (2016).
+    45, 10850–10869 (2023).                                                   25. Bing, Z., Lerch, D., Huang, K. & Knoll, A. Meta-reinforcement
+3. Achiam, J. et al. GPT-4 technical report. Preprint at https://arxiv.           learning in non-stationary and dynamic environments. IEEE Trans.
+    org/abs/2303.08774 (2023).                                                    Pattern Anal. Mach. Intell. 45, 3476–3491 (2022).
+4. Zhao, J. et al. Autonomous driving system: a comprehensive                 26. Rakelly, K., Zhou, A., Finn, C., Levine, S. & Quillen, D. Efficient
+    survey. Expert Syst. Appl. 242, 122836 (2024).                                off-policy meta-reinforcement learning via probabilistic
+5. Aljundi, R., Babiloni, F., Elhoseiny, M., Rohrbach, M. & Tuytelaars,           context variables. In Proc. 36th International Conference on
+    T. Memory aware synapses: learning what (not) to forget. In Proc.             Machine Learning, Proc. Machine Learning Research Vol. 97 (eds
+    European Conference on Computer Vision (ECCV) 139–154 (2018).                 Chaudhuri, K. & Salakhutdinov, R.) 5331–5340 (PMLR, 2019).
+6. Chaudhry, A., Dokania, P. K., Ajanthan, T. & Torr, P. H. Riemannian        27. Finn, C., Abbeel, P. & Levine, S. Model-agnostic meta-learning for
+    walk for incremental learning: understanding forgetting and                   fast adaptation of deep networks. In International Conference on
+    intransigence. In Proc. European Conference on Computer Vision                Machine Learning 1126–1135 (PMLR, 2017).
+    (ECCV) 532–547 (2018).                                                    28. Melo, L. C. Transformers are meta-reinforcement learners In Proc.
+7. Chen, Z. & Liu, B. Lifelong Machine Learning Vol. 1 (Springer                  39th International Conference on Machine Learning, Proc.
+    Nature, 2022).                                                                Machine Learning Research Vol. 162 (eds Chaudhuriet, K. et al.)
+8. Delange, M. et al. A continual learning survey: sefying forgetting             15340–15359 (PMLR, 2022).
+    in classification tasks. In IEEE Transactions on Pattern Analysis and     29. Nam, T., Sun, S.-H., Pertsch, K., Hwang, S. J. & Lim, J. J. Skill-based
+    Machine Intelligence 1–1 (IEEE, 2021).                                        meta-reinforcement learning. In Proc. 10th International
+9. Kirkpatrick, J. et al. Overcoming catastrophic forgetting in neural            Conference on Learning Representations (OpenReview.net, 2022).
+    networks. Proc. Natl Acad. Sci. USA 114, 3521–3526 (2017).                30. Hughes, M. C. & Sudderth, E. Memoized online variational
+10. Nguyen, C. V., Li, Y., Bui, T. D. & Turner, R. E. Variational continual       inference for dirichlet process mixture models. Adv. Neural Inf.
+    learning. In Proc. 6th International Conference on Learning                   Process. Syst. 26, (2013).
+    Representations (OpenReview.net, 2018).                                   31. Liu, Y. RoBERTa: a robustly optimized bert pretraining approach.
+11. Mallya, A. & Lazebnik, S. PackNet: adding multiple tasks to a                 Preprint at https://arxiv.org/abs/1907.11692 (2019).
+    single network by iterative pruning. In Proc. IEEE Conference on          32. Chaudhry, A., Gordo, A., Dokania, P., Torr, P. & Lopez-Paz, D. Using
+    Computer Vision and Pattern Recognition 7765–7773 (IEEE, 2018).               hindsight to anchor past knowledge in continual learning. Proc.
+12. Fernando, C. et al. PathNet: evolution channels gradient                      AAAI Conf. Artif. Intell. 35, 6993–7001 (2021).
+    descent in super neural networks. Preprint at https://arxiv.org/          33. Rolnick, D., Ahuja, A., Schwarz, J., Lillicrap, T. & Wayne,
+    abs/1701.08734 (2017).                                                        G. Experience replay for continual learning. In Proc. 33rd
+13. Rosenfeld, A. & Tsotsos, J. K. Incremental learning through deep              International Conference on Neural Information Processing
+    adaptation. IEEE Trans. Pattern Anal. Mach. Intell. 42, 651–663               Systems 350–360 (Curran Associates Inc., 2019).
+    (2018).                                                                   34. Kudithipudi, D. et al. Biological underpinnings for lifelong learning
+14. Chaudhry, A., Ranzato, M., Rohrbach, M. & Elhoseiny, M. Efficient             machines. Nat. Mach. Intell. 4, 196–210 (2022).
+    lifelong learning with A-GEM. In Proc. 7th International Conference       35. Hadsell, R., Rao, D., Rusu, A. A. & Pascanu, R. Embracing change:
+    on Learning Representations (OpenReview.net, 2019).                           continual learning in deep neural networks. Trends Cogn. Sci. 24,
+15. Lopez-Paz, D. & Ranzato, M. Gradient episodic memory for                      1028–1040 (2020).
+    continual learning. In Advances in neural information processing          36. Wilson, M. A. & McNaughton, B. L. Reactivation of hippocampal
+    systems (eds Guyon, I. et al.) Vol. 30 (Curran Associates, Inc.,              ensemble memories during sleep. Science 265, 676–679 (1994).
+    2017).                                                                    37. Ji, D. & Wilson, M. Coordinated memory replay in the visual cortex
+16. Rebuffi, S.-A., Kolesnikov, A., Sperl, G. & Lampert, C. H. iCaRL:             and hippocampus during sleep. Nat. Neurosci. 10, 100–107 (2007).
+    incremental classifier and representation learning. In Proc. IEEE         38. Rasch, B. & Born, J. Maintaining memories by reactivation. Curr.
+    Conference on Computer Vision and Pattern Recognition                         Opin. Neurobiol. 17, 698–703 (2007).
+    2001–2010 (IEEE, 2017).                                                   39. Lee, J. L. Memory reconsolidation mediates the strengthening
+17. Parisi, G. I., Kemker, R., Part, J. L., Kanan, C. & Wermter, S.               of memories by additional learning. Nat. Neurosci. 11, 1264–1266
+    Continual lifelong learning with neural networks: a review. Neural            (2008).
+    Netw. 113, 54–71 (2019).                                                  40. Jacoby, L. L. & Bartz, W. H. Rehearsal and transfer to LTM. J. Verbal
+18. Yu, T. et al. Meta-world: a benchmark and evaluation for multi-task           Learning Verbal Behav. 11, 561–565 (1972).
+    and meta reinforcement learning. In Proc. Conference on Robot             41. Dark, V. J. & Loftus, G. R. The role of rehearsal in long-term
+    Learning 1094–1100 (PMLR, 2020).                                              memory performance. J. Verbal Learning Verbal Behav. 15,
+19. Vithayathil Varghese, N. & Mahmoud, Q. H. A survey of multi-task              479–490 (1976).
+    deep reinforcement learning. Electronics 9, 1363 (2020).                  42. Ma, Y. J. et al. Eureka: human-level reward design via coding
+20. Yu, T. et al. Gradient surgery for multi-task learning. Adv. Neural           large language models. In Proc. 12th International Conference on
+    Inf. Process. Syst. 33, 5824–5836 (2020).                                     Learning Representations (OpenReview.net, 2024).
+21. Yang, R., Xu, H., Wu, Y. & Wang, X. Multi-task reinforcement              43. Ma, Y. J. et al. DrEureka: language model guided sim-to-real
+    learning with soft modularization. Adv. Neural Inf. Process. Syst.            transfer. In Robotics: Science and Systems (RSS) (2024).
+    33, 4767–4777 (2020).                                                     44. Yu, W. et al. Language to rewards for robotic skill synthesis. In
+22. Sodhani, S., Zhang, A. & Pineau, J. Multi-task reinforcement                  Proc. 7th Conference on Robot Learning (eds Tan, J. et al) 374–404
+    learning with context-based representations. In Proc. 38th                    (PMLR, 2023).
+    International Conference on Machine Learning 9767–9779 (PMLR,             45. Haarnoja, T. et al. Soft actor–critic algorithms and applications.
+    2021).                                                                        Preprint at https://arxiv.org/abs/1812.05905 (2018).
+
+
+Nature Machine Intelligence | Volume 7 | February 2025 | 256–269                                                                                    268
+Article                                                                                            https://doi.org/10.1038/s42256-025-00983-2
+
+46. Wołczyk, M., Zając, M., Pascanu, R., Kuciński, Ł. & Miłoś, P.           Supplementary information The online version
+    Continual world: a robotic benchmark for continual reinforce­ment       contains supplementary material available at
+    learning. Adv. Neural Inf. Process. Syst. 34, 28496–28510 (2021).       https://doi.org/10.1038/s42256-025-00983-2.
+47. Higgins, I. et al. Beta-VAE: learning basic visual concepts with a
+    constrained variational framework. In International Conference on       Correspondence and requests for materials should be addressed to
+    Learning Representations (Poster) 3, (2017).                            Zhenshan Bing, Kai Huang, Yang Gao or Fuchun Sun.
+48. Meng, Y. et al. LEGION. Zenodo https://doi.org/10.5281/
+    zenodo.14265088 (2024).                                                 Peer review information Nature Machine Intelligence thanks
+                                                                            Guangliang Li, and the other, anonymous, reviewer(s) for their
+Acknowledgements                                                            contribution to the peer review of this work.
+This study was supported in part by the financial support from the
+National Natural Science Foundation of China under grant number             Reprints and permissions information is available at
+U22B2042 (to F.S.), and the Bavarian State Ministry for Economic            www.nature.com/reprints.
+Affairs, Regional Development and Energy (StMWi) for the Lighthouse
+Initiative KI.FABRIK (Phase 1: Infrastructure as well as the research and   Publisher’s note Springer Nature remains neutral with regard
+development programme under grant number DIK0249, to A.K.).                 to jurisdictional claims in published maps and institutional
+                                                                            affiliations.
+Author contributions
+Y.M., Z.B., X.Y., K.C., K.H., Y.G., F.S. and A.K. developed the framework   Open Access This article is licensed under a Creative Commons
+and performed all experiments. Y.M., Z.B. and X.Y. completed the            Attribution 4.0 International License, which permits use, sharing,
+manipulator deployment. Y.M., Z.B., X.Y., K.C., K.H., Y.G., F.S. and A.K.   adaptation, distribution and reproduction in any medium or format,
+wrote the paper together. Y.M., X.Y. and K.C. prepared real-world           as long as you give appropriate credit to the original author(s) and the
+models. K.H., F.S. and A.K. provided funding.                               source, provide a link to the Creative Commons licence, and indicate
+                                                                            if changes were made. The images or other third party material in this
+FundingInformation                                                          article are included in the article’s Creative Commons licence, unless
+Open access funding provided by Technische Universität München.             indicated otherwise in a credit line to the material. If material is not
+                                                                            included in the article’s Creative Commons licence and your intended
+Competing interests                                                         use is not permitted by statutory regulation or exceeds the permitted
+The authors declare no competing interests.                                 use, you will need to obtain permission directly from the copyright
+                                                                            holder. To view a copy of this licence, visit http://creativecommons.
+Additional information                                                      org/licenses/by/4.0/.
+Extended data is available for this paper at
+https://doi.org/10.1038/s42256-025-00983-2.                                 © The Author(s) 2025
+
+
+
+
+Nature Machine Intelligence | Volume 7 | February 2025 | 256–269                                                                                269
+Article                                                                                                       https://doi.org/10.1038/s42256-025-00983-2
+
+
+
+
+Extended Data Fig. 1 | t-SNE projections of buffer data inference results after     loops (few-shot revisit and knowledge recall). The DPMM dynamically adjusts its
+each base task training. The data is randomly sampled from the buffer and fed       knowledge clustering components using the ‘birth’ and ‘merge’ heuristics, fitting
+into the task encoder to do the inference. In the buffer we reserve a place for     model parameters based on observed data. This approach eliminates the need to
+only three tasks, the new incoming inputs will overwrite the earliest data in the   predetermine or set any assumptions about the number of tasks the agent may
+buffer. We use this method to force the agent to pause on the corresponding task    encounter.
+for a period of time and evaluate its few-shot performance in the subsequent
+
+
+
+
+Nature Machine Intelligence
+Article                                                                                                           https://doi.org/10.1038/s42256-025-00983-2
+
+
+Extended Data Table 1 | The average success rate for each proposed manipulation task in the real-world setup
+
+
+
+
+Each data point is calculated based on three real-world trials, and we report the average value for comparison.
+
+
+
+
+Nature Machine Intelligence
+Article                                                                           https://doi.org/10.1038/s42256-025-00983-2
+
+
+Extended Data Table 2 | Improvement percentage (%) from the few-shot evaluation
+
+
+
+
+The values are computed using equation (4) from the main text.
+
+
+
+
+Nature Machine Intelligence
+

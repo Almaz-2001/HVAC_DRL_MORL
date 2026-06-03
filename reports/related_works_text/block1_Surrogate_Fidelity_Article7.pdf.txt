@@ -1,0 +1,969 @@
+                                                                       Applied Energy 377 (2025) 124328
+
+
+                                                                   Contents lists available at ScienceDirect
+
+
+                                                                           Applied Energy
+                                                       journal homepage: www.elsevier.com/locate/apenergy
+
+
+
+
+Safe deep reinforcement learning for building energy management
+Xiangwei Wang a,e , Peng Wang a ,∗, Renke Huang b , Xiuli Zhu c , Javier Arroyo d , Ning Li a
+a
+  Department of Automation, Shanghai Jiao Tong University, Shanghai, 244240, China
+b
+  Global Institute of Future Tech., Shanghai Jiao Tong University, Shanghai, 200240, China
+c
+  College of Optical-Electrical and Computer Engineering, University of Shanghai for Science and Technology, Shanghai, 200093, China
+d
+  Wedoco, Madrid, 28043, Spain
+e School of Electrical, Mechanical and Infrastructure Engineering, The University of Melbourne, Melbourne, 3010, VIC, Australia
+
+
+
+
+GRAPHICAL                ABSTRACT
+
+
+
+
+ARTICLE               INFO                                ABSTRACT
+
+Keywords:                                                 The optimization of building energy systems poses a complex challenge due to the dynamic nature of building
+Safe deep reinforcement learning                          environments and the need for ensuring both energy efficiency and system reliability. This paper proposes a
+Model predictive control                                  novel approach that synergizes deep reinforcement learning (DRL) with model predictive control (MPC) for
+Building energy management
+                                                          safe and efficient building energy management. The approach, named safe DRL, leverages the DRL to explore
+Safety metric
+                                                          optimality in uncertain environments and the MPC to dynamically ensure constraints. Off-the-shelf DRL tools
+                                                          are utilized in the safe DRL approach which avoids case-by-case and effort-intensive hyperparameter tuning.
+                                                          MPC with only an approximate building model is then adopted to efficiently filter the DRL action candidates
+                                                          to ensure the safety of the constraints. Additionally, a comprehensive safety metric is proposed considering
+                                                          the duration and severity of constraint violation. Extensive case studies with high-fidelity building models
+                                                          show that the safe DRL approach significantly enhances the constraint satisfaction and improves building
+                                                          performance at the cost of slightly more decision time of a few seconds.
+
+
+
+
+    ∗ Corresponding author.
+      E-mail address: wangpeng605@sjtu.edu.cn (P. Wang).
+
+https://doi.org/10.1016/j.apenergy.2024.124328
+Received 23 April 2024; Received in revised form 20 August 2024; Accepted 21 August 2024
+Available online 16 September 2024
+0306-2619/© 2024 Elsevier Ltd. All rights are reserved, including those for text and data mining, AI training, and similar technologies.
+X. Wang et al.                                                                                                              Applied Energy 377 (2025) 124328
+
+
+1. Introduction                                                                 field. Radaideh and Shirvan [13] initially train agents using proximal
+                                                                                policy optimization (PPO) [14] to become proficient in certain problem
+    Buildings contribute significantly to global energy consumption and         rules and constraints, after which RL is employed to introduce expe-
+carbon emissions. It is estimated that they account for more than               riences that assist in steering a range of evolutionary and stochastic
+36% of global energy usage and 37% of global carbon dioxide (CO2 )              algorithms. [15] introduced an approach leveraging the Actor–Critic
+emissions [1]. This fact highlights the pressing need to manage energy          (A2C) algorithm to enhance the uniformity of radiation temperature
+consumption in buildings, not only for cost reduction but also for              across a room through adaptive control of the HVAC system’s air-
+mitigating global climate change. Simultaneously, it is imperative to           flow direction. [16] developed a control strategy for HVAC systems
+ensure that energy management strategies do not compromise the                  based on the Deep Q-Network (DQN) algorithm, aimed at minimizing
+occupant comfort and health within buildings because people typically           energy expenses in office environments while adhering to thermal
+spend approximately 80 to 90 percent of their lives indoors, with nearly        conditions. [17] presents model-agnostic DRL strategies for residen-
+two-thirds of this time spent at home [2]. Thus, a delicate balance             tial HVAC optimization, focusing on energy efficiency and occupant
+between energy efficiency and occupant well-being is essential for              comfort using the Deep Deterministic Policy Gradient (DDPG) and
+building energy management, as it not only enhances the sustainability          DQN algorithms, respectively. [18] proposes a DDPG-based method for
+of energy policies but also ensures the well-being and productivity of          managing HVAC systems to simultaneously improve energy usage and
+the inhabitants.                                                                thermal comfort in laboratory settings by modulating both tempera-
+    Various advanced energy management and control strategies have              ture and humidity levels. The studies mentioned illustrate that DRL,
+been adopted to strike the balance. Among these, three predomi-                 with its powerful exploration and learning capabilities, is suitable for
+nant methodologies are frequently employed: rule-based control (RBC)            controlling building energy control, which are nonlinear, time-varying,
+methods, model predictive control (MPC), and control through deep               and uncertain complex systems [11]. However, applying DRL in the
+reinforcement learning (DRL) [3]. Each of these control methods offers          real world energy systems raises safety concerns due to its reliance on
+distinct advantages and challenges, and the choice of them depends on           exploring unknown policies, potentially leading to unpredictable and
+the specific requirements and constraints of the buildings.                     unsafe behaviors [19,20]. In the building energy management field, if
+    Rule-based control (RBC) methods such as proportional–integral–             the controller is unsafe, it can result in wasted energy or equipment
+derivative (PID) controller operate on a set of predefined rules or             damage.
+algorithms that trigger specific actions under certain conditions. How-             To make use of the constraints-satisfactory ability of model-based
+ever, while straightforward, these systems often lack the flexibility to        methods, integrating the constraint-satisfaction capabilities of model-
+adapt to modern complex or changing environmental conditions [4,5].             driven approaches with learning-driven methods has been extensively
+    On the contrary, MPC represents a more advanced and sophisti-               investigated in areas such as robotics, automotive, and video games
+cated model-based approach, which has been a state-of-art for building          [21,22]. However, the application of these technologies in the energy
+control [6]. MPC utilizes a mathematical model of the building and              community, particularly in building energy management, remains rela-
+its energy systems to predict future energy needs and optimize control          tively limited. Existing challenges can be categorized into the following
+                                                                                areas:
+actions accordingly. This predictive capability allows for more efficient
+energy usage, as the system can anticipate and react to changes in                 1. Data Dependence and Computational Costs: Some approaches
+occupancy, weather, and other variables. Furthermore, MPC can handle                  rely heavily on substantial data and the high computational cost
+various control objectives and safety criterion by adjusting the cost                 during the online learning process. Ceusters et al. [23] propose
+function, action and state constraints. It is precisely because of these              a safety layer based on supervised learning for DRL controllers
+explicit constraints that MPC usually shows higher security compared                  in multi-energy microgrids. However, this approach relies on
+with other control strategies [7]. In the context of sophisticated build-             extensive training data and learning convergence, which may
+ing systems characterized by uncertainties, accurately modeling the                   limit its practicality in dynamic environments. [24] introduces
+thermal dynamics of buildings poses a significant challenge. This limi-               a data-driven MPC (DDMPC) safety filter for RL-based methods
+tation can adversely impact the efficacy of MPC. In cases where precise               targeting photovoltaic battery load systems. The MPC model is
+dynamic models are difficult to obtain, some researchers adopt black-                 trained on state–action pairs derived from RL but it is often
+box and gray-box models for approximate MPC. Yang et al. [8] utilize a                challenging to acquire sufficient new data for training. Arroyo
+neural network-based black-box MPC to efficiently manage energy in an                 et al. [25] propose an algorithm called RL-MPC which com-
+office building and a lecture hall to avoid constructing explicit dynamic             bines MPC with DRL. The algorithm is tested on a standard-
+models, achieving energy savings of 58.5% and 36.7%, respectively. Lv                 ized simulation framework named the building optimization
+et al. [9] develop a gray-box MPC for a thermal zone serviced by a floor              testing (BOPTEST) environment [26], which shows the ability
+heating system and an air-handling unit. They utilize an resistance-                  of RL-MPC to meet constraints while possessing the continu-
+capacitance (RC) approach to model the system, with model parameters                  ous learning property. But due to the absence of an analytical
+being updated on a weekly basis. Since the model is obtained by                       form of the value function, the exhaustive search method is
+modeling specific objects, the portability remains an issue. Moreover,                adopted to evaluate all possible actions, which causes concerns
+influenced by environmental uncertainties, initial configurations, and                on computational efficiency and curse of dimensionality.
+the limited predictive horizon, the actions taken by MPC at each step              2. Physics and Constraint Handling: Some articles fail to inte-
+are not necessarily globally optimal [10].                                            grate physical knowledge, relying solely on data-driven methods,
+    Contrary to MPC, DRL is an emerging field that leverages the                      which lack theoretical assurance in terms of safety and perfor-
+power of artificial intelligence (AI) and machine learning (ML). These                mance. On the other hand, some articles are overly conservative.
+systems learn and adapt over time through learning without knowing                    The work by Paesschesoone et al. [24] does not adequately
+explicit dynamic models, continually refining their control strategies to             utilize physical knowledge, which complicates the theoretical
+maximize efficiency and minimize energy consumption. By designing                     assurance of closed-loop performance. Chen et al. [27] develop
+reward functions in need and processing vast amounts of data, DRL                     an algorithm named Gnu-RL, utilizing differentiable MPC for
+control systems can achieve a higher level of optimization that was                   the end-to-end planning and control specifically designed for
+previously unattainable by MPC and RBC. Moreover, the trained DRL                     HVAC systems. They impose explicit constraints across the entire
+model can be implemented to different buildings with a small amount                   prediction horizon and tuned cost function through rewards.
+of time through online learning [11,12]. Thus, the DRL approach                       However, this approach appears conservative due to its imple-
+is considered a promising technique in building energy management                     mentation of constraints throughout, limiting the operational
+
+                                                                            2
+X. Wang et al.                                                                                                                                Applied Energy 377 (2025) 124328
+
+
+
+
+Fig. 1. Safe DRL framework. DRLs in off-the-shelf tools can be applied to avoid case-wise and effort-intensive hyperparameter tuning and approximate model, e.g., a linear one,
+can be utilized in MPC to facilitate real-time decision making.
+
+
+       space and potential opportunities for performance optimization.                           The experimental outcomes reveal that safe DRL algorithm can
+       Ding et al. [28] model multi-energy system as a constrained                               significantly enhance the system’s robustness with a maximum
+       Markov Decision Process (CMDP), integrating safety constraints                            decision-making time of up to 2.67 s per step.
+       into the objective function as costs. However, this study only                         2. An open-sourced parallel training scheme is developed for
+       considers constant temperature constraints and requires careful                           BOPTEST to expedite the training of DRL algorithms for use
+       design of the penalty terms.                                                              in the safe DRL. With the parallel training scheme, this study
+    3. Dimensionality and Practical Implementation: Some methods                                 conducts a parallel training of six different DRL algorithms over
+       cannot handle high-dimensional or continuous state space data,                            10 million steps, followed by an extensive comparative analysis.
+       or have not been validated on standard test bench, leading                                This approach accelerates the training process, thereby swiftly
+       to issues with practical applicability. A hierarchical control is                         identifying optimal DRL algorithms suitable for integration into
+       adopted in [29] for HVAC control, where MPC is used for initial                           the safe DRL.
+       planning and Q-learning serves as a real-time controller. But                          3. A safety metric is proposed as an indicator to quantity the
+       it requires an additional training of a neural network for tem-                           safety performance of algorithms during test periods. This metric
+       perature prediction and the RL method of updating the Q-table                             considers both the severity and duration of unsafety, includ-
+       through Q-learning is not suitable for high-dimensional state and                         ing measures such as the degree of maximum overshoot or
+       action spaces. Some researchers have turned to learning-based                             undershoot and the duration of constraint violations.
+       MPC [30], which employs a statistical model for performance
+       optimization and a deterministic model to enforce comfort con-                          The rest of the paper is organized as follows: Section 2 introduces
+       straints. But the method focuses primarily on energy savings                        the safe DRL algorithm and the safety metric. Section 3 presents the test
+       rather than thermal comfort, and has not been tested on standard                    cases of BOPTEST. MPC and safe DRL implementation are shown in Sec-
+       test benches.                                                                       tion 4. Section 5 shows the results comparison of different algorithms.
+                                                                                           Conclusions and future work are provided in Section 6.
+    In this paper, considering the characteristic of building energy
+management, a safe DRL framework is proposed to address these                              2. Safe deep reinforcement learning framework
+issues, where safety is inherently defined by the algorithm’s consistent
+adherence to temperature constraints to ensure thermal comfort. The                            This section presents the details of the proposed safe DRL frame-
+safe DRL synergizes the learning ability of DRL under uncertainties and                    work that synergizes the ability of DRL on optimization exploration
+the reliability property of physics-based MPC under constraints. DRL is                    and that of MPC on dynamic constraint assurance and an associated
+adopted to explore optimal control decisions under uncertainties and                       safety metric that covers both the duration and severity of constraint
+MPC is utilized as a safety filter to check online whether the DRL action                  violation.
+is safe at each step. DRL action will be rejected and the conservative
+MPC action will be adopted if unsafety is detected. Thus, an explicit                      2.1. Safe deep reinforcement learning framework
+safe set is avoided which contains countless combinations of actions
+and states for building energy management.                                                     The safe DRL algorithm is proposed as a synergetic strategy com-
+    Compared with the existing MPC and DRL algorithms on the stan-                         bining MPC with DRL in this subsection. The safe DRL maintains the
+dardized testing platform BOPTEST, the proposed algorithm is more                          exploratory benefits of DRL in performance optimization with uncer-
+stable, secure, and computationally efficient. The main contributions                      tainties while leveraging the MPC as a safety filter to implicitly create
+of this paper include:                                                                     a safety set at every step online. The overall scheme is shown in Fig. 1.
+                                                                                           Unlike previous safety filters that aimed to minimize the deviation
+    1. A novel safe DRL framework is proposed, which synergizes the                        from the actions suggested by RL algorithms [31,32], our MPC filter
+       exploratory prowess of DRL in performance optimization with                         prioritizes economic efficiency and comfort due to the distinct control
+       the safety assurance of MPC, dynamically creating an implicit                       scenarios in building energy management, where longer control steps
+       safety set at each step. This leads to marked improvements in key                   justify increased computational complexity. Additionally, we do not
+       performance indicators (KPIs) embedded in BOPTEST and sys-                          presume that RL-proposed actions are inherently superior. It is unnec-
+       tem safety, underscoring the algorithm’s practical effectiveness.                   essary to adhere strictly to actions with minimal deviations from those
+
+                                                                                       3
+X. Wang et al.                                                                                                                                    Applied Energy 377 (2025) 124328
+
+
+
+
+Fig. 2. Safe set definition: (a) RL actions adopted (the predicted future states are within the safe set); (b) MPC actions adopted (the predicted future state 𝑥𝑡+3 exceeds the safe
+set).
+
+
+suggested by RL, especially since some unsafe RL actions could pose                          as formulated in the set of Eqs. (1) below.
+significant risks. In such cases, it is imperative to distance as much
+                                                                                                                ∑
+                                                                                                               𝑘+𝑁−1
+as possible from such actions, as Section 5.2 will show that reliance                        minimize 𝐽 =             [𝑥(𝑖)𝑇 𝐴𝑥(𝑖) + 𝑢(𝑖)𝑇 𝑅𝑢(𝑖)] + 𝑥(𝑘 + 𝑁)𝑇 𝐵𝑥(𝑘 + 𝑁),
+solely on RL control can lead to detrimental outcomes. The DRL part                                             𝑖=𝑘
+enables the system to learn optimal behaviors through trial-and-error                                                                                                         (1a)
+interactions with the environment and the predictive power of MPC                            subject to 𝑥(𝑘 + 1) = 𝑓 (𝑥(𝑘), 𝑢(𝑘)) ,                                           (1b)
+can assess and ensure the dynamic safety of operations proposed by
+the DRL agent at each step and filter out unsafe actions. Consequently,                                  𝑢min ≤ 𝑢(𝑖) ≤ 𝑢max ,                                                  (1c)
+the safe DRL enhances both the safety, i.e., constraint satisfaction, and                                𝑥min ≤ 𝑥(𝑖) ≤ 𝑥max ,                                                 (1d)
+performance optimization, e.g., reducing cost, at the cost of negligible
+                                                                                             where 𝑥(𝑘) denotes the state vector at the 𝑘th time step and 𝑢(𝑘)
+overhead of computational time
+                                                                                             is the control input. The cost function in (1a) delineates the opti-
+                                                                                             mization criterion, emphasizing the balance between achieving desired
+Remark 1. Selecting hyperparameters in DRL typically demands con-
+                                                                                             temperature trajectories and minimizing energy cost over a prediction
+siderable effort and may necessitate repeating the entire process when
+                                                                                             horizon 𝑁, with 𝐴, 𝑅 and 𝐵 as weighting matrices. The dynamics of
+the environment, e.g., buildings in this study, undergoes changes. In
+                                                                                             the system is expressed in (1b), which describes how the state of the
+MPC, attaining dynamics that strike a balance between accuracy and
+                                                                                             system evolves over time in response to control actions. Essential to the
+usability can be challenging. However, in the safe DRL framework,
+                                                                                             safety of the safe DRL framework are the action and state constraints
+off-the-shelf DRL tools can be employed without the need for hyperpa-
+                                                                                             in (1c) and (1d), respectively, which ensure that the system operates
+rameter tuning, while an approximate dynamic model, such as a linear                         within predefined operational limits. The MPC implements explicit
+one, can be utilized in the MPC component.                                                   optimization over a predetermined finite prediction horizon as in (1)
+                                                                                             and its structure includes not only the optimizer but also a simulator.
+DRL performance optimizer. As the building thermal dynamics exhibit
+                                                                                             Note that an approximate dynamic model, e.g., a linear one for building
+Markovian behavior, i.e., their current states can be completely deter-
+                                                                                             thermal dynamics, is adequate in the safe DRL framework. This ensures
+mined by the states, actions, and other factors at the previous step, we
+                                                                                             the decision efficiency of the framework.
+adopt DRL based on Markov decision process (MDP) in the proposed
+                                                                                                 With the proposed safe DRL algorithm, at each control step, the
+safe DRL framework. An MDP-based DRL for building energy manage-                             well-trained DRL agent selects an action based on the current state,
+ment is characterized by a building energy state space 𝑆, an action                          denoted as 𝑢𝐷𝑅𝐿 = 𝜋𝜃∗ (𝑠). Concurrently, within the prediction horizon 𝑛,
+space 𝐴, a reward function 𝑟(𝑠, 𝑎) ∶ 𝑆 × 𝐴 → R, and a transition proba-                      the MPC safety filter is employed to record the state at each step, rep-
+bility function 𝑃 (⋅ ∣ 𝑠, 𝑎) ∶ 𝑆 ×𝐴 → 𝛥(𝑆), which maps a state–action pair                   resented as {𝑥𝑡+1 , 𝑥𝑡+2 , … , 𝑥𝑡+𝑁 }. The process concludes with a safety
+(𝑠, 𝑎) ∈ 𝑆×𝐴 to a distribution over the state space. The state space 𝑆 and                   constraint check: (1) if ∀𝑖 ∈ N, 𝑥(𝑘 + 𝑖) ∈ 𝐶, where 𝐶 is the safety set,
+action space 𝐴 can be either discrete or continuous. In the safe DRL for                     𝑢𝐷𝑅𝐿 from the DRL optimizer is applied; (2) else, an MPC is performed
+buildings, state transitions are jointly determined by internal factors,                     and its optimized control is applied.
+e.g., occupancy and thermal mass, and external ones, e.g., ambient                               As shown in Fig. 2, the safe set is defined as the set of states within
+temperature and solar irradiation, of the buildings. Deep learning is                        a predefined temperature constraint range. If starting from the current
+incorporated to handle high-dimensional state and action spaces. In                          RL action, all states within a given finite time horizon remain within
+the DRL part of the safe DRL algorithm, the goal is to find an optimal                       the safe set, RL action is utilized. If any state is found to be unsafe, MPC
+policy 𝜋 ∗ for the building energy management with the consideration                         action is employed.
+of occupant comfort. There are two main approaches: value-based                                  The pseudo code for the safe DRL algorithm is presented in Algo-
+methods by estimating state or state–action values for optimal policy                        rithm 1. First, the MPC and the trained DRL controller are initialized
+derivation and policy-based methods by directly learning strategies                          with the same control step settings. During each time step of the test
+for action selection in each state. Both approaches may be applied                           day, the algorithm performs the followings in a loop. The safe DRL
+in the safe DRL framework and their performance is comprehensively                           first obtain the current state from the building. The DRL controller
+compared in Section 4.2.                                                                     predicts an action based on the current observation and the MPC
+                                                                                             simulator initially updates the system state using DRL-predicted action.
+MPC safety filter. Safety constraints are considered in the DRL part,                        Subsequently, it integrates MPC optimizer to conduct a forward-looking
+but they may be violated due to the exploratory nature of DRL. Thus,                         simulation of the future state trajectories within a defined predictive
+we adopt the concept of MPC to dynamically filter the unsafe actions                         range. Safety is then determined based on whether the predicted state
+from DRL in real time. The MPC consists of an optimization objective,                        trajectories surpass the predefined constraint boundaries. The role of
+approximate system dynamics, safety constraints, and other constraints                       the MPC is to ensure that the chosen action does not lead to any unsafe
+
+                                                                                         4
+X. Wang et al.                                                                                                                    Applied Energy 377 (2025) 124328
+
+
+Algorithm 1: Safe DRL Algorithm
+     Initialize MPC and DRL controllers;
+     while time in Test Days do
+          /* Get current state from the building                                                                                                          */
+ 1        state ← get_current_state();
+          /* Predict action using RL                                                                                                                      */
+ 2        action_rl ← rl_agent.predict(state);
+          /* Use MPC to predict the system behavior                                                                                                       */
+ 3        safe, mpc_action ← mpc.predict(state, action_rl);
+ 4        if safe then
+ 5            apply_action(action_rl);
+ 6        else
+ 7            apply_action(mpc_action);
+ 8        end
+          /* Step the environment to the next state                                                                                                       */
+ 9      step_environment();
+     end
+
+
+system states. If the MPC determines that the DRL action is safe, we
+                                                                                                      𝑇lower (𝑡) − 𝑇z (𝑡)
+will execute that action. Otherwise, we will reject the DRL action and            𝑃undershoot (𝑡) =                       ,                                  (5c)
+                                                                                                          𝑇lower (𝑡)
+employ the action provided by the MPC.
+                                                                                  where 𝑟sev is the severity ratio that represents the maximum of the
+2.2. Safety metric                                                                overshoot and undershoot during the entire testing period, 𝑃overshoot (𝑡)
+                                                                                  represents the percentage by which the temperature exceeds the upper
+   A safety metric that considers both the duration and severity of               bound at a specific moment 𝑡, 𝑇z is the zone temperature value at time
+the safety violation is designed for quantitative comparison of various           𝑡, 𝑇upper (𝑡) is the upper bound limit at time 𝑡, and 𝑃undershoot (𝑡) indicates
+algorithms in this subsection. This index consists of two components:             the percentage by which the temperature falls below the lower limit at
+   (1) the unsafe time ratio, representing the ratio of the period during         a specific moment 𝑡.
+which the safety constraint is violated. It is defined as                             By integrating both the unsafe time ratio and the severity ratio, the
+          𝑡violation                                                              proposed safety metric in (6) offers a comprehensive assessment of the
+𝑟time =              ,                                                 (2)        performance of the system.
+            𝑡total
+where 𝑟time represents the unsafe time ratio, 𝑡violation the period during        𝑚𝑠 = 𝑟time + 𝑟sev ,                                                          (6)
+which the safety constraint is violated, and 𝑡total the total time of the
+process.                                                                          where 𝑚𝑠 is the safety metric. The unsafe time ratio reflects the system’s
+   (2) the severity ratio, characterizing the deviation of the unsafe state       stability throughout the entire testing period, while the severity ratio
+and the norm state, normalized by the magnitude of the latter. It is              reveals the system’s capabilities in the most adverse scenarios.
+defined as
+                                                                                  3. Test case
+𝑟sev = 𝛽𝐷(𝑥, 𝐶),                                                       (3)
+
+where 𝑟sev is the severity ratio, 𝐷(𝑥, 𝐶) the distance, e.g., norms in                In this research, to focus on the building energy management task,
+vector space, from the state 𝑥 to the safety constraint 𝐶, and 𝛽 a scaling        we utilize the BESTEST Hydronic Heat Pump test case [26], which
+factor which may be related to the size of 𝐶, the relative magnitude              simulates a single-zone dwelling in Belgium with a diverse set of param-
+between 𝑟sev and 𝑟time , etc.                                                     eters, including dynamic models, baseline controllers, meteorological
+    For buildings, the unsafe time ratio is defined as the percentage of          data, electrical pricing structures, and carbon emission coefficients.
+the zone temperature overshoot and undershoot time relative to the                    The test case employed in this paper is inhabited by a five-member
+total testing period, as formulated in (4).                                       family, features a 12 × 16 m floor plan, 2.7 m high ceilings, and
+          𝑡overshoot + 𝑡undershoot                                                south-facing windows. During winter, its heating demand approximates
+𝑟time =                            ,                                   (4)        80 W/m2 . In addition, the BOPTEST environment provides various mea-
+                    𝑡total
+                                                                                  surement and control variables: 𝑈 for control signal, 𝑃 for measured
+where 𝑟time represents the unsafe time ratio, 𝑡overshoot and 𝑡undershoot          electric power, 𝑄 for thermal power, and 𝑇z for the zone operative
+refer to the total time during which the temperature exceeds its up-              temperature. Occupancy is before 7 am and after 8 pm on weekdays,
+per limit (overshoot) and falls below its lower limit (undershoot),               and throughout weekends. The requirements of thermal comfort are
+respectively, and 𝑡total represents the total time of the test. Thus, the         that the temperature stays between 21–24 ◦ C when occupied, and
+unsafe time ratio 𝑟𝑡𝑖𝑚𝑒 represents the percentage of the total test time          15–30 ◦ C otherwise. Additionally, the emulator features two testing
+that the temperature is outside the predefined comfort zone. A lower              periods scenarios: the peak heat days (January 17th to 31th) and
+ratio indicates a better performance of the system in maintaining the             typical heat days (April 19th to May 3rd). There are three electricity
+temperature within the predetermined safety limits.                               pricing scenarios: constant, dynamic and highly dynamics. The detail
+    The severity ratio is defined as the ratio of the difference between          configuration of the above scenarios is shown in Table 1.
+the zone temperature and the temperature upper (lower) limit relative
+                                                                                      The heating system comprises a 15 kW nominal thermal capacity
+to the temperature upper (lower) bound as formulated in (5).
+                                                                                  air-to-water modulating heat pump with 3.5 kW power consumption,
+𝑟sev = max(𝑃overshoot , 𝑃undershoot ),                                (5a)        connected to a floor heating system. A well-tuned proportional–integral
+                                                                                  (PI) controller, representing RBC, is included. It initializes the system
+                   𝑇z (𝑡) − 𝑇upper (𝑡)                                            during warm-up and acts as a benchmark against any implemented
+𝑃overshoot (𝑡) =                         ,                            (5b)        controllers.
+                         𝑇upper (𝑡)
+
+                                                                              5
+X. Wang et al.                                                                                                                    Applied Energy 377 (2025) 124328
+
+                      Table 1
+                      BOPTEST scenarios details.
+                       Scenarios                      Categories                            Features
+                                                      Typical heat day                      January 17th–31st
+                       Testing periods
+                                                      Peak heat day                         April 19th–May 3rd
+                                                      Constant                              Fixed rate: 0.2535 e/kWh
+                       Pricing scenarios              Dynamic                               Peak: 0.2666 e/kWh, Off-peak: 0.2383 e/kWh
+                                                      Highly dynamic                        Based on BELPEX 2019 day-ahead price [33]
+
+
+
+
+                                                           Fig. 3. RC model of different orders.
+
+
+4. MPC and DRL implementation                                                    of building materials. A higher capacitance value suggests that the
+                                                                                 material can absorb and store more heat, thereby affecting the rate of
+    This section delineates the implementation specifics of safe DRL             change in indoor temperature.
+algorithm, including the DRL performance optimizer and the MPC                       The complexity of the RC model increases with the number of RC
+safety filter, applied to the test case described in Section 3.                  combinations. Fig. 3 illustrates the structures of RC models ranging
+                                                                                 from the first-order to the third-order. Specifically, a first-order model
+                                                                                 is formulated in (7), a second-order model in (8), which considers the
+4.1. Model predictive control implementation
+                                                                                 influence of the building envelope, and a third-order model in (9),
+                                                                                 which further considers building thermal mass.
+   MPC implementation includes the system identification, problem
+                                                                                          𝑑𝑇zon  𝑇    − 𝑇zon
+formulation, and hyperparameter tuning.                                          𝐶zon ⋅         = amb        + 𝑞HVAC + 𝑞rad + 𝑞con + 𝑞latent + 𝐴 ⋅ 𝐼solar , (7)
+                                                                                           𝑑𝑡       𝑅zon
+4.1.1. System identification                                                     where 𝑇zon is the temperature inside the room, 𝑇amb the temperature
+    The performance of MPC is significantly influenced by the sys-               of the ambient environment, 𝑅zon the thermal resistance between the
+tem dynamics. To effectively implement MPC in the BESTEST Hy-                    environment and the interior of the room, 𝐶zon the heat capacity
+                                                                                 inside the room, 𝑞HVAC the heat influx generated by the heating system
+dronic Heat Pump test case, constructing a dynamic model of the
+                                                                                 (unit: W), 𝑞rad the general radiation amount, 𝑞con the convective heat
+system is essential. In this study, we develop a data-driven gray-
+                                                                                 exchange occurring indoors, 𝑞latent the latent heat within the indoor
+box model for buildings. This subsection begins with a first-order
+                                                                                 environment, 𝐼solar the solar radiation intensity, and 𝐴 the effective
+resistance-capacitance (RC) model and uses a forward selection method
+                                                                                 area of the windows.
+to gradually increase its complexity with Nelder–Mead method applied
+                                                                                         𝑑𝑇wall   𝑇    − 𝑇wall 𝑇wall − 𝑇zon
+for fitting optimization.                                                        𝐶wall ⋅        = amb         −              ,                            (8a)
+                                                                                          𝑑𝑡          𝑅out           𝑅in
+    The RC model is frequently employed in architectural energy sim-
+                                                                                         𝑑𝑇zon    𝑇    − 𝑇zon
+ulation to assess a building’s energy efficiency and its indoor thermal           𝐶zon ⋅        = wall        + 𝑞HVAC + 𝑞rad + 𝑞con + 𝑞latent + 𝐴 ⋅ 𝐼solar ,
+                                                                                           𝑑𝑡         𝑅in
+environment [34]. In the RC model, resistance represents the imped-
+iment of building materials to heat flow. A higher resistance value                                                                                       (8b)
+indicates better insulation, meaning that heat is more difficult to pass         where 𝐶wall represents the thermal capacity of the envelope, 𝑇wall the
+through the material. Capacitance signifies the thermal storage capacity         temperature of the envelope, 𝑅in the thermal resistance between the
+
+                                                                             6
+X. Wang et al.                                                                                                                                 Applied Energy 377 (2025) 124328
+
+
+
+
+                                            Fig. 4. Prediction performance of first-order RC model during the peak heat test period.
+
+
+Table 2                                                                                    training and testing performance. In contrast, the second and third-
+Training and test MSEs of RC models of various orders.                                     order models suggest potential over-fitting issues while they have lower
+ Order                           Training MSE                             Test MSE         training MSE. Consequently, this study adopts the first-order RC model,
+ 1                               2.37e−09                                 2.02e−09         the performance of which during the peak heat test period is illustrated
+ 2                               9.33e−10                                 3.87e−09         in Fig. 4.
+ 3                               9.34e−10                                 3.79e−09
+
+                                                                                           Remark 2. The first-order model is selected to balance the training
+                                                                                           and testing performance based on the data from the emulator, but the
+wall and the interior of the room, and 𝑅out the thermal resistance                         selection is case-specific. For other applications, the most appropriate
+between the wall and the ambient.                                                          model should be explored and identified via the application-specific
+                                                                                           data.
+        𝑑𝑇wall 𝑇amb − 𝑇wall 𝑇wall − 𝑇zon
+𝐶wall ⋅       =             −              ,                  (9a)
+          𝑑𝑡       𝑅out             𝑅in
+                                                                                           4.1.2. Heating power identification
+         𝑑𝑇int 𝑇zon − 𝑇int
+  𝐶int ⋅      =            + 𝑞rad ,                           (9b)                             The control system regulates the heating power provided to the
+           𝑑𝑡     𝑅int                                                                     thermal zone through heat pump control signals. This section utilizes
+                              (                          )
+         𝑑𝑇zon 𝑇wall − 𝑇zon      𝑇amb − 𝑇zon 𝑇zon − 𝑇int                                   data from the emulator to derive an equation correlating these control
+ 𝐶zon ⋅       =             +                −                (9c)
+          𝑑𝑡       𝑅in               𝑅Inf       𝑅int                                       signals with the heating output. A higher order signifies greater pre-
+                  + 𝑞HVAC + 𝑞con + 𝑞latent + 𝐴 ⋅ 𝐼solar ,                                  cision in fitting, yet it also implies increased computational burden in
+                                                                                           real-time control. After comparison, this article adopts a second-order
+where 𝑅Inf represents the thermal resistance between the external                          equation as shown in Eq. (10).
+environment and the room’s interior, 𝑅int the thermal resistance be-
+tween the building’s thermal mass and the room’s interior, 𝑇int the                        𝑞HVAC = (−9510.7 ⋅ 𝑢2hp + 16760 ⋅ 𝑢hp + 493.7).                               (10)
+temperature associated with the building’s thermal mass, and 𝐶int the                      Additionally, the fitting performance of the model is illustrated in
+thermal capacity correlated with the building’s thermal mass.                              Fig. 5. The fitting results appear to be quite satisfactory, although they
+     In our study, we focus on fitting the system dynamics of the build-                   do not entirely reflect the true values. For instance, the presence of a
+ing, as this is crucial for capturing the short-term responses of the                      constant term results in a non-zero predicted output when the input
+system, which are essential for ensuring safe control operations. Instead                  is zero. However, considering the small margin of error and the fact
+of modeling the temperature values, we choose to fit the rate of change                    that the heat pump is typically in operation during most of the heating
+of the temperature. This method enhances our ability to capture the                        period, this fitted model will be used for subsequent implementation
+dynamic nature of temperature fluctuations over time, a key aspect                         of the MPC in this paper. In real-world applications, heat flux meters
+for the predictive control strategies utilized in MPC. By modeling the                     can be employed to measure the heat flux emitted by the HVAC system
+rate of change in temperature, the MPC can effectively make dynamic                        into a designated zone to derive the relationship between the control
+adjustments in response to real-time changes in the system. We initi-                      signal and the heat flux similar to Eq. (10).
+ate our identification with a first-order model, employing a forward
+                                                                                           4.1.3. MPC formulation
+selection method to incrementally increase the model’s order. The
+                                                                                              With the system identification, we present the details of the imple-
+fitting optimization algorithm we use is the Nelder–Mead method, a
+                                                                                           mentation of the MPC safety filter in the safe DRL framework in this
+robust optimization algorithm that is insensitive to initial guesses [35].
+                                                                                           subsection.
+Subsequently, we compare the mean squared error (MSE) of models in
+                                                                                              Specifically, the mathematical formulations of the implemented
+different orders on both the two-week long training and testing data
+                                                                                           MPC safety filter is
+sets generated by the BOPTEST emulator. The results are illustrated
+in Table 2. The first-order model, with a training MSE of 2.37e−09                                            ∑
+                                                                                                              𝑁−1
+                                                                                                                     (                             )
+                                                                                           minimize      𝐽=           𝑃𝑒,𝑖 × 𝑃𝑖 + 𝑤(𝑇z,𝑖 − 𝑇sp,𝑖 )2 + (𝑇z,𝑁 − 𝑇sp,𝑁 )2 , (11a)
+and a test MSE of 2.02e−09, demonstrates a good balance between
+                                                                                                               𝑖=0
+
+                                                                                       7
+X. Wang et al.                                                                                                                                  Applied Energy 377 (2025) 124328
+
+
+
+
+                                                                       Fig. 5. Heating power identification performance.
+
+
+subject to 𝑇zon (𝑘 + 1) = 𝑇zon (𝑘) + 𝛥𝑡                                                            control time (the cumulative duration required for the MPC algorithm
+                                                                                                   to process and respond throughout the control cycle), energy cost
+                   ⋅ 𝑓 (𝑢hp (𝑘), 𝑞rad (𝑘), 𝑞con (𝑘), 𝑞latent (𝑘), 𝑞solar (𝑘)),        (11b)
+                                                                                                   (product of electricity cost and consumption) and thermal discomfort
+                 21 ≤ 𝑇z ≤ 24 (Occupied), 15 ≤ 𝑇z ≤ 30 (Unoccupied), (11c)                         (defined as the deviations of zone temperature 𝑇𝑧 from the comfort
+                 0 ≤ 𝑢hp ≤ 1.                                                        (11d)         range), Table 3 demonstrates the experimental outcomes of MPC under
+                                                                                                   various combinations of prediction horizons and control steps during
+    As shown in (11a), the cost function comprises stage cost and                                  peak heat day.
+terminal cost, where the stage cost measures the energy cost and the                                   The data from this study suggests that with a 3-h prediction horizon
+distance between the operative temperature and the desired trajectory                              and a 15-min control step, the MPC reaches a reasonable balance in
+throughout the prediction horizon, and the terminal cost focuses on the                            its overall performance. This configuration demonstrates a competent
+discrepancy of the temperature deviation at the end of the prediction                              performance in the total control time, taking 145.680 s, which reflects
+horizon, ensuring long-term stability and performance. The primary                                 the system’s efficiency in making timely and effective control decisions.
+aim of the MPC controller is twofold: firstly, to reduce energy expen-                             While the energy cost of 0.938 (€/m2 ) may not be the lowest, it
+diture, and secondly, to minimize the variance of the zone operative                               offers a satisfactory cost-performance balance. In the aspect of ther-
+temperature from its predetermined set point. The trade-off between                                mal comfort, this setup scores 3.967 (Kh/zone), showing an improved
+the two objectives is modulated by the parameter 𝑤. The first com-                                 performance relative to other alternatives and contributing positively
+ponent of the stage cost calculates energy costs by multiplying the                                to indoor environmental comfort. The results indicate that extending
+electricity usage, 𝑃 , with the time of use electricity rate, 𝑃𝑒 (€∕kWh).                          the prediction horizon leads to an increase in thermal discomfort,
+The second component represents thermal discomfort, which is the                                   which may stem from the extended prediction horizon complicating
+deviation of the working area temperature from the set point, 𝑇𝑠𝑝 ,                                the convergence of the MPC optimizer. Consequently, this study selects
+which is set as the mean of the lower and upper temperature bounds.                                the MPC configuration with a 3-h prediction horizon and a 15-min
+    The dynamics in (11b) represent the discretized version of the first-                          control step for a compromise of time efficiency, energy optimization,
+order RC building dynamic model identified in Section 4.1, as required                             and thermal comfort.
+for the implementation of MPC. The linearity of the model simplifies                                   In Eq. (11a), 𝑤 represents the hyperparameter of the weight that
+the optimization problem in the MPC and increases the computational                                requires tuning. We conduct multiple experiments testing different
+efficiency in the safety filtering process.                                                        values of 𝑤 under a configuration with a 3-h prediction horizon and a
+    The operative temperature of the zone, denoted as 𝑇𝑧 , must be                                 15-min control step, as illustrated in Fig. 6. Analyzing the data, a trend
+maintained within a specific temperature range: between 21 ◦ C and                                 is observed in both energy cost and thermal discomfort across different
+24 ◦ C during occupied periods, and between 15 ◦ C and 30 ◦ C at other                             values of 𝑤. Particularly, as 𝑤 increases from 0 to 1000, energy
+times, as specified in constraint (11c). In addition, the control signal for                       cost rises from 0.837 (€/m2 ) to 0.976 (€/m2 ), indicating a moderate
+the heat pump, 𝑢ℎ𝑝 , is regulated to stay within the bounds of 0 and 1 as                          increase in energy expenditure with higher 𝑤 values. However, the
+in (11d), which corresponds to non-operation and full power operation,                             most significant change is seen in thermal discomfort, which drastically
+respectively.                                                                                      drops from a high initial value of 41.963 (Kh/zone) to 1.655 (Kh/zone).
+                                                                                                   This indicates a substantial improvement in thermal comfort. Upon
+4.1.4. Hyperparameter tuning                                                                       further increasing 𝑤 to 5000, both energy cost and thermal discomfort
+    The performance of the MPC safety filter heavily depends on hy-                                exhibit relatively stable trends. Energy cost fluctuates between 0.938
+perparameters, e.g., the prediction horizon, the control period and the                            (€/m2 ) and 0.985 (€/m2 ), while thermal discomfort varies within the
+weight. The prediction horizon defines the time span over which the                                range of 1.655 (Kh/zone) to 3.967 (Kh/zone). This suggests that beyond
+controller anticipates future events and the control period is the inter-                          𝑤 = 1000, further increases in 𝑤 have limited effects on reducing
+val at which the control algorithm updates its decisions. The weight                               thermal discomfort, while slightly increasing the energy cost.
+serves to balance energy consumption costs with thermal discomfort. A                                  Considering both the energy cost and thermal discomfort metrics,
+longer prediction horizon or a shorter control period can provide more                             selecting 𝑤 = 1000 appears to be a balanced decision. At this point,
+information but increases the computational load. Focusing on total                                thermal discomfort is significantly reduced, and energy cost remains
+
+                                                                                               8
+X. Wang et al.                                                                                                                            Applied Energy 377 (2025) 124328
+
+                 Table 3
+                 Performance metrics of MPC under various prediction horizons and control steps.
+                  Prediction horizon (h)      Control step (min)       Total control time (s)        Cost total (€/m2 )    Thermal discomfort (Kh/zone)
+                  3                           15                       145.680                       0.938                 3.967
+                  3                           30                       74.675                        0.972                 16.749
+                  3                           60                       41.507                        1.033                 158.277
+                  6                           15                       184.163                       0.854                 5.334
+                  6                           30                       82.518                        0.959                 48.655
+                  6                           60                       48.555                        1.046                 187.296
+                  12                          15                       281.765                       0.894                 49.377
+                  12                          30                       106.3501                      0.992                 144.412
+                  12                          60                       52.683                        1.069                 261.952
+                  24                          15                       460.941                       1.097                 468.938
+                  24                          30                       170.510                       1.065                 407.034
+                  24                          60                       64.048                        1.107                 479.710
+
+
+
+
+                                                            Fig. 6. Test Results under various weight factors 𝑤.
+
+
+within an acceptable range. This balance represents an optimal choice                    of multiple BOPTEST instances in separate containers. Each container
+for ensuring comfort while also taking into account energy efficiency                    operates independently and runs parallel training tasks.
+and cost-effectiveness. Thus, this paper chooses 𝑤 = 1000 as the optimal                     Another predominant feature of the scheme is the vectorization of
+parameter.                                                                               multiple BOPTEST environments using OpenAI-Gym’s SubprocVecEnv
+                                                                                         method. This allows a single DRL algorithm to train across multi-
+4.2. Deep reinforcement learning implementation                                          ple environment instances in parallel, significantly improving data
+                                                                                         throughput and training speed.
+    The implementation of the DRL performance optimizer is detailed.                         The parallel training scheme reduces the training time and improves
+The parallel training scheme is proposed to expedite the training of DRL                 the computational efficiency for DRL algorithms. This is particularly
+algorithms using the stable baselines3 tools [36]. Moreover, the reward                  important for complex DRL models that demand extensive computa-
+function, observation and action spaces are designed in this subsection.                 tional resources and time for training. Moreover, by optimizing re-
+In the DRL performance optimizer, the heat pump is defined as an agent                   source usage, the scheme can enable conducting more experiments
+that can provide heat power while the environment is the BOPTEST test                    with limited computational resources, thus accelerating the innovation
+case emulator that can generate a new state.                                             and validation process of control strategies. The developed parallel
+                                                                                         training scheme can be extended to other simulation environments and
+4.2.1. Parallel training                                                                 application scenarios deployed by Docker beyond BOPTEST.
+    In this paper, we develop an efficient parallel training scheme                          The overall scheme is shown in Fig. 7 and the corresponding code
+compatible with the Open-AI gym interface for BOPTEST [26] and the                       has been merged into the master branch of the BOPTEST-Gym.1
+BOPTEST-Gym environment [37] to address the inefficiencies inherent
+in traditional sequential training methodologies. This scheme allows                     4.2.2. Reward function
+multiple DRL algorithms to train simultaneously in different simulated                      Similar to MPC, to achieve the dual aims of reducing thermal dis-
+environments, substantially accelerating the training process.                           comfort and operational expenses, the reward function is characterized
+    The core of the developed parallel training scheme involves a dy-                    by the negation of the incremental value of the objective function of
+namic port allocation mechanism. An automated dynamic modification                       MPC, as depicted in Eq. (12).
+of the YAML configuration files is designed to assign independent ports
+to each BOPTEST instance. This design enables the concurrent oper-                       𝑟𝑘+1 = −(𝐽𝑘+1 − 𝐽𝑘 ),                                                      (12)
+ation of multiple BOPTEST instances on the same physical or virtual
+machine without port conflicts. Furthermore, by leveraging Docker-
+                                                                                           1
+compose and the modified YAML files, we facilitate the deployment                               The link to the branch is https://github.com/ibpsa/project1-boptest-gym.
+
+
+                                                                                     9
+X. Wang et al.                                                                                                                              Applied Energy 377 (2025) 124328
+
+
+
+
+                                                                  Fig. 7. Parallel training scheme.
+
+
+Table 4                                                                               Table 5
+Observation variables.                                                                Safety metric comparison of MPC and PI controllers.
+ Observation variable    Description                        Min        Max             Controller         Scenario                  𝑟time             𝑟sev          𝑚𝑠
+ 𝑡 [s]                   Time of the week in seconds        0          60 480          MPC                Peak heat day             0.012             0.004         0.016
+ 𝑇𝑧 [K]                  Zone operative temperature         280        310             PI                 Peak heat day             0.093             0.003         0.096
+ 𝑇𝑎𝑚𝑏 [K]                Ambient temperature                265        303             MPC                Typical heat day          0.035             0.006         0.041
+ 𝑄̇ rad [W/m2 ]          Solar irradiation                  0          862             PI                 Typical heat day          0.085             0.005         0.090
+ 𝑄̇ occ [W/m2 ]          Direct normal radiation            0          219
+ 𝜆 [1]                   Electricity price                  0.4        0.4
+ 𝑇𝑙𝑜𝑤𝑒𝑟 [K]              Lower bounds of the comfort zone   280        310
+ 𝑇𝑢𝑝𝑝𝑒𝑟 [K]              Upper bounds of the comfort zone   280        310
+                                                                                      5.1. Model predictive control results
+
+                                                                                          To validate the feasibility of MPC as a safety filter, this subsection
+where 𝐽 is specified in Eq. (11a). The agent will be trained to learn in              compares the control results and safety performance of MPC with a
+a direction that simultaneously increases indoor thermal comfort and                  rule-based baseline controller, a proportional–integral (PI) controller,
+keeps energy consumption low.                                                         during the testing periods.
+                                                                                          In this subsection, the MPC is optimized with the IPOPT solver [39],
+4.2.3. Observation space                                                              with the results presented in Fig. 8.
+   In this test case, indoor temperature and energy cost are influenced                   The results demonstrate a comparative analysis of performance
+by multiple factors. The agent, during its training, cannot access in-                between the MPC and the rule-based, well-tuned baseline PI controller
+formation on all influencing factors, rendering the state space partially             provided by the BOPTEST. It is observed that under the PI controller,
+observable. To provide as much information as possible to assist the                  the zone temperature is generally close to the lower constraint limit,
+decision-making process of the agent, this study selects the observation              and at times, it even exceeds the lower temperature limit. On the
+variables as shown in Table 4. Additionally, it includes 6 h of historical            other hand, the MPC controller generally does not fall below the lower
+measurement data and the forecast values for the upcoming 24 h. The                   temperature constraint. During the peak heat day, the MPC system only
+observation values are normalized to a range of −1 to 1 to mitigate                   approaches the upper temperature limit at a few points, while in the
+the impact of the original numerical scales. The observation space                    majority of instances, it remains within the upper and lower temper-
+comprises entirely of continuous variables with a total dimension of                  ature boundaries. However, during several instances, particularly on
+608.                                                                                  typical heat day, it slightly exceeds the upper temperature limit due to
+                                                                                      elevated environmental temperatures and intense solar radiation.
+4.2.4. Action space
+                                                                                          The comparison of the safety metric between MPC and PI controllers
+     For our specific test case, the action is the heat pump control signal,
+                                                                                      on the peak heat day and the typical heat day is illustrated in Table 5.
+𝑢ℎ𝑝 , with a range of [0,1]. Different DRL algorithms require distinct ac-
+                                                                                      The results indicate that under the test conditions of the peak heat day
+tion spaces. Algorithms like deep deterministic policy gradient (DDPG),
+                                                                                      and the typical heat day, the unsafe time ratio 𝑟time for the MPC system
+soft actor critic (SAC), advantage actor–critic (A2C), and twin delayed
+                                                                                      are 0.012 and 0.035, respectively. These figures are significantly lower
+deep deterministic policy gradient (TD3) operate in a continuous action
+                                                                                      than those for the PI system, which are 0.093 and 0.085, demonstrating
+space. On the other hand, PPO and double deep Q learning (DDQN)
+                                                                                      the superior performance of the MPC in maintaining temperature stabil-
+algorithms function in a discrete action space. Therefore, we opt to
+                                                                                      ity. Considering extreme deviations, the MPC system exhibits maximum
+divide the action into 10 equal intervals, (0, 1∕10, 2∕10, … , 1), before
+                                                                                      deviations (𝑟sev ) of 0.004 and 0.006 during the test periods, compared
+passing it to the agent of PPO and DDQN. Consequently, the total
+dimension of the discrete action space is 11.                                         to the PI controller’s maximum deviations of 0.003 and 0.005. Although
+                                                                                      the PI controller shows slightly lower maximum deviations, the differ-
+5. Results                                                                            ence between the two controllers is minimal, at 0.001. This indicates
+                                                                                      that both systems maintain commendable performance even in the
+    The section presents and compares the simulation results of MPC,                  worst-case scenarios. Combining the aspects of time ratio and extreme
+DRL and safe DRL in two different test periods: the peak heat day and                 deviation percentage, the overall safety metric (𝑚𝑠 ) for the MPC and
+the typical heat day in the BOPTEST. All algorithms are deployed on a                 PI controllers on the peak heat day are 0.016 and 0.096, respectively,
+local high performance computing (HPC) cluster with a Linux operating                 and 0.041 and 0.090 on the typical heat day, respectively. Based on
+featuring dual-socket Intel(R) Xeon(R) Platinum 8338C CPU (32 cores                   those quantitative metrics, it is evident that the safety performance of
+per socket running at 2.6 GHz). The MPC is implemented using the do-                  the MPC system surpasses that of the PI controller.
+mpc framework [38], while the DRL is implemented using the Stable                         BOPTEST further sets a range of standardized KPIs to facilitate an
+Baselines3 framework [36].                                                            equitable assessment of performance. These KPIs encompass various
+
+                                                                                 10
+X. Wang et al.                                                                                                                Applied Energy 377 (2025) 124328
+
+
+
+
+                                                    Fig. 8. Simulation results of MPC and PI controllers.
+
+
+
+
+                                                          Fig. 9. KPIs of MPC and PI controllers.
+
+
+parameters such as energy cost, energy use, CO2 emissions, thermal                5.2. Deep reinforcement learning results
+discomfort, and computational time ratio. Fig. 9 showcases a compari-
+son of these KPIs between the MPC and PI controllers during the peak                  To ensure consistency with MPC, the control step size of the DRL
+heat day and the typical heat day scenarios. On the peak heat day, it is
+                                                                                  algorithm is also set to 15 min. The other hyperparameters of the six
+observed that the MPC results in higher energy cost, energy emissions,
+                                                                                  DRL algorithms are kept at default values. The algorithms are trained
+and total energy consumption than the PI controller, though the differ-
+                                                                                  excluding periods of peak heat day and typical heat day, and they are
+ence is marginal, less than 10%. The thermal comfort under MPC is 5.06
+times greater than that achieved with PI control. This implies that MPC           trained in dynamic electricity price scenarios. The testing is conducted
+significantly enhances comfort levels with a relatively modest increase           under the highly dynamic electricity price scenario in BOPTEST.
+in energy expenditure. On the typical heat day, it can be found that due              The training processes of various DRL algorithms are illustrated in
+to the substantial increase in ambient temperature and solar irradiation          Fig. 10. We vectorize 32 BOPTEST environments for parallel training,
+intensity, the performance of both the PI controller and the MPC                  with a step size of 15 min. Each episode covers two weeks, which is
+controller has declined to a certain extent, and both have experienced            43 008 steps, and each algorithm is trained for 10 million steps. Apart
+overshoot. While the PI controller exhibits marginally superior thermal           from TD3 and DDPG, the other four DRL algorithms, i.e., A2C, PPO,
+comfort compared to the MPC controller, it exceeds the prescribed                 DDQN, and SAC, all converge to relatively high reward, demonstrating
+temperature boundaries more frequently over the entire period. The                superior learning performance. As the reward values of these DRL
+PI controller surpasses both the upper and lower temperature limits. In           algorithms are close, this paper chooses DDQN to show the efficacy of
+contrast, the MPC controller only exceeds the upper temperature limit             the safe DRL algorithm on the peak heat day and the typical heat day.
+during instances of peak solar radiation. Comparing the two test results,
+                                                                                      The performance of DDQN on the peak heat day and test heat day
+it can be stated that the MPC controller demonstrates overall superior
+                                                                                  is shown in Fig. 11.
+performance over the PI controller regarding energy efficiency, thermal
+comfort, and safety.                                                                  We can observe that it performs better on the peak heat day,
+    The results above demonstrate that the MPC, although constructed              mostly within the temperature constraint. On Test Heat Day, there is
+from the linearized building energy system dynamics, satisfactorily               a significant overshoot due to solar irradiation and increased ambient
+adheres to safety constraints. Furthermore, its control effect is rela-           temperature. Compared with MPC, DDQN make more bold attempts,
+tively stable, making it suitable as a safety filter to safeguard against         which sometimes lead to performance improvements and sometimes
+potentially unsafe actions that may be made by DRL.                               lead to performance drops.
+
+                                                                             11
+X. Wang et al.                                                                                                                    Applied Energy 377 (2025) 124328
+
+
+                                                                                     reduces the safety risk of DDQN. On typical heating days, it achieves
+                                                                                     a level of safety performance comparable to that of MPC. During peak
+                                                                                     heating periods, safe DRL attains superior safety performance with the
+                                                                                     proposed safety metric 𝑚𝑠 equals to zero, indicating that at certain
+                                                                                     time steps, the actions provided by MPC are not globally optimal. Due
+                                                                                     to the exploratory nature of DRL, more optimal actions are identified
+                                                                                     during these steps, and the MPC filter successfully retains these actions,
+                                                                                     thereby enabling safe DRL to surpass the safety performance of MPC.
+                                                                                     This observation validates the effectiveness of the MPC filter and the
+                                                                                     potential of exploration-based DRL to generate more optimal actions.
+                                                                                         To further compare the DDQN and safe DRL strategies and quantify
+                                                                                     the frequency of MPC intervention, Fig. 15 shows the comparison of
+                                                                                     control signals of DDQN and safe DRL. The visualization reveals key
+                                                                                     distinctions between safe DRL and DDQN control signals, highlighting
+                                                                                     instances where safe DRL defers to MPC, denoted by the presence of
+                                                                                     orange markers.
+                  Fig. 10. Training process of DRL algorithms.
+                                                                                         In Fig. 15(a), it is noted that MPC and DRL execute actions 686 and
+                                                                                     658 times, respectively. On the 26th and 27th days, there is a noticeable
+                                                                                     increase in interventions by MPC. This response aligns with the data in
+    Further visualization of KPIs including the safety metric is shown
+                                                                                     Fig. 13(a) when the temperature curve is approaching its upper limit
+in Fig. 12. It can be seen that on the peak heat day, DDQN achieves
+a thermal discomfort level of only 0.523 and a safety metric of 0.015,               at these times. Consequently, MPC predicts the risk of overshooting in
+which is lower than the MPC and PI controllers analyzed earlier. But                 the future and filtered the actions of DRL at these moments to ensure
+at the same time, its energy cost and total energy consumption have                  the system’s safety performance.
+also increased, reaching 1.007 and 3.829 respectively, ranking the                       As depicted Figure in 15(b), on the typical heat day, MPC intervene
+highest among all controllers. On the typical heat day, on the contrary,             for 950 time steps. This indicates that, according to assessment of MPC,
+the thermal comfort decreases rapidly with thermal discomfort value                  DDQN is more prone to making unsafe actions on the typical heat day
+reaches 30.202, and the safety metric is ten times higher than peak heat             compared to the peak heat day. Taking the period from day 109 to
+day, while its energy cost and consumption are about 2.3% higher than                day 111 as an example, it is clear that compared to the control actions
+MPC. The results above show that the results of DDQN are unstable and                of DDQN, MPC’s intervention significantly reduced the control actions
+further improvement of its overall performance is needed.                            during these times to prevent the overshooting that DDQN would have
+                                                                                     likely caused (as shown in Fig. 11(b)). Despite the challenges posed by
+5.3. Safe deep reinforcement learning results                                        intense radiation and high ambient temperatures, which prevented the
+                                                                                     indoor temperature from being completely safeguarded within the safe
+    This subsection tests the proposed safe DRL algorithm to harnesses
+                                                                                     range, a notable improvement in safety is observed when compared to
+the exploratory prowess of DRL for performance enhancement while
+                                                                                     the DDQN in the typical heat day results. This demonstrates the efficacy
+utilizing the predictive strengths of MPC to dynamically safeguard the
+                                                                                     of the MPC safety filter in enhancing system safety under challenging
+DRL action at each step.
+                                                                                     environmental conditions.
+    The simulation results of safe DRL are shown in Fig. 13.
+    In comparison to the performance of the DDQN during the test                         The analysis indicates that the proposed safe DRL framework has
+periods depicted in Fig. 11, it is observed that safe DRL leads to a                 been successful to balance the performance optimization and safety
+more stable trend in the changes of operative temperature due to                     ensurance. It incorporates MPC as a safety filter, thereby enhancing
+the integration of MPC as a safety filter. This combination notably                  the KPIs and safety performance of the DRL optimizer in the safe DRL
+diminishes both the overshoot and undershoot.                                        framework. It effectively predicts potential unsafe states and filters out
+    Fig. 14 further illustrates the results of the KPIs and the safety metric        potentially unsafe actions determined from the DRL optimizer. The safe
+𝑚𝑠 for safe DRL during the testing period. It is observed that on the                DRL implementation may imply its broad applicability in enhancing
+peak heat days, safe DRL, benefiting from the safety filtering function              safety across various applications beyond the specific test case. The use
+of MPC, not only reduces the 𝑚𝑠 and thermal discomfort to zero but also              of a first-order dynamic model in the MPC safety filter in this context
+shows a decrease in energy consumption and carbon emissions. These                   illustrates its potential adaptability in other scenarios where we can
+indicators outperform those of DDQN, MPC, and PI controllers, demon-                 construct MPC as a safety filter based on first-order system dynamics
+strating a substantial improvement in performance. On the typical heat               equations derived from physical laws. Additionally, we can model the
+days, despite the high environmental temperature and solar radiation                 target building’s energy environment using the BOPTEST emulator and
+causing some overshoot, safe DRL still outperforms DDQN, MPC, and PI
+                                                                                     employ the proposed parallel training algorithm to accelerate the train-
+controllers in terms of KPIs, delivering more satisfactory results in the
+                                                                                     ing process of the DRL algorithm. Note that the DRL training process in
+context of building energy management. During the testing phase, the
+                                                                                     the safe DRL framework does not involve complex parameter tuning,
+maximum computation time required by MPC at each step is recorded
+                                                                                     thereby suitable for integrating off-the-shelf DRL tools and easier for
+as 2.57 s, demonstrating that significant performance improvements are
+achieved with a relatively small investment in time.                                 engineers to use. Finally, using sim2real technology, the algorithm can
+    The metrics comparison of algorithms is shown in Table 6. The                    be deployed in real-world scenarios. However, we also need to notice
+results reveal that during peak heating days, safe DRL achieves the                  that the false cues received from the simulation environment could
+highest thermal comfort and best safety performance, albeit at the                   mislead the agent leading to poor behavior during testing, as pointed
+cost of an acceptable higher energy use and CO2 emissions than PI                    out in [25]. To further mitigate the risks associated with practical
+controller. On typical heating days, safe DRL outperforms other algo-                implementation, techniques such as gradual transition or maintaining a
+rithms in terms of KPIs, but the safety performance is slightly weaker               human-in-the-loop approach during the initial stages of execution can
+than MPC. It can be seen that with the synergy of MPC, safe DRL                      be employed.
+
+                                                                                12
+X. Wang et al.                                                         Applied Energy 377 (2025) 124328
+
+
+
+
+                       Fig. 11. Simulation results of DDQN.
+
+
+
+
+                     Fig. 12. KPIs and safety metric of DDQN.
+
+
+
+
+                 Fig. 13. Simulation results of safe DRL controller.
+
+
+
+                                         13
+X. Wang et al.                                                                                                                           Applied Energy 377 (2025) 124328
+
+
+
+
+                                                               Fig. 14. KPIs and safety metric of safe DRL.
+
+
+
+
+Table 6
+Metrics comparison of algorithms.
+ Algorithms                Metrics
+                           Energy       Energy         Energy       Thermal         Safety           Energy       Energy         Energy      Thermal         Safety
+                           cost         emissions      total        discomfort      metric           cost         emissions      total       discomfort      metric
+                           (Euro/m2 )   (kgCO2e/m2 )   (kWh/m2 )    (Kh/zone)                        (Euro/m2 )   (kgCO2e/m2 )   (kWh/m2 )   (Kh/zone)
+                           Peak heat day                                                             Typical heat day
+ PI                        0.909        0.581          3.478        8.381           0.096            0.413        0.296          1.774       9.435           0.09
+ MPC                       0.976        0.627          3.753        1.655           0.016            0.474        0.339          2.032       9.627           0.041
+ DDQN                      1.007        0.639          3.829        0.532           0.015            0.485        0.35           2.098       30.202          0.115
+ Safe DRL (with DDQN)      0.953        0.607          3.636        0.000           0.000            0.408        0.293          1.753       9.126           0.057
+
+
+
+
+6. Conclusion                                                                                 ∙ A safety metric was proposed to assess the safety performance
+                                                                                                of algorithms during testing periods. Both the severity and the
+    This paper proposed a novel safe deep reinforcement learning (DRL)                          duration of unsafety were considered in the metric including the
+framework and tested it at different testing periods in the BOPTEST                             percentage of maximum overshoot or undershoot, and the pro-
+environment. The safe DRL algorithm demonstrated better security and                            portion of total time exceeding constraints. Comparative results
+robustness without performance degradation. The main conclusions of                             showed that the safety metric could well capture the safe and
+this work were as follows:                                                                      unsafe behaviors of the tested system and serve as a satisfactory
+     ∙ The paper proposed a safe DRL algorithm, using DRL to explore                            indicator of the safety performance of the safe DRL.
+       the optimality in uncertain environments and model predictive
+                                                                                             There are several important future research directions:
+       control (MPC) as a safety filter to check DRL actions at each step.
+       The algorithm eliminated the need for the effort-extensive tuning                      ∙ The performance of the proposed approach could be tested on
+       of DRL algorithms and allowed the use of off-the-shelf DRL                               larger HVAC systems with multiple control inputs.
+       tools, which made it easier for engineering implementation. The                        ∙ We also note that, while incorporating heat flux meters into the
+       results demonstrated that using a maximum of 2.67 s per step                             setup is technically feasible, they are not widely used today.
+       can significantly enhance the robustness of DRL control actions,
+                                                                                                Therefore, future research could explore the economic viability
+       greatly improving the overall KPIs and the safety performance
+                                                                                                of using heat flux meters, or focus on innovations in sensor tech-
+       of the control system.
+                                                                                                nology that might provide less invasive and more cost-effective
+     ∙ This paper developed a parallel training scheme for BOPTEST,
+                                                                                                methods for continuous monitoring of heat flux.
+       employing a dynamic port check and allocation mechanism.
+                                                                                              ∙ The accuracy of the MPC model affects its performance, and
+       In the parallel training scheme, multiple BOPTEST environ-
+       ments were vectorized through OpenAI-gym interface to accel-                             consequently, its effectiveness as a safety filter. The MPC setup in
+       erate the training and testing process of DRL. Computational                             this study did not consider uncertainties such as noise and bias.
+       resources were efficiently utilized to compare the effectiveness                         Future research could explore the validation of MPC variants like
+       of six mainstream DRL algorithms with the scheme. After a com-                           robust MPC and their performance as safety filters.
+       parative analysis, DDQN was selected for the safe DRL execution.                       ∙ The results of this paper demonstrate the promising potential of
+       This methodology might be extended to other simulation envi-                             safe DRL in building energy systems. Future work may include
+       ronments and application scenarios that were deployed using                              exploring its applicability to other control objectives such as
+       Docker.                                                                                  indoor humidity.
+
+                                                                                   14
+X. Wang et al.                                                                                                                    Applied Energy 377 (2025) 124328
+
+
+
+
+                                               Fig. 15. Comparison of control signals of DDQN and safe DRL.
+
+
+CRediT authorship contribution statement                                           This work was supported in part by the National Natural Sci-
+                                                                                ence Foundation of China under grants 62203302, 62273230, and
+    Xiangwei Wang: Writing – review & editing, Writing – original               62273233, Shanghai Pujiang Program (23PJ1409900), China Scholar-
+draft, Methodology, Investigation, Formal analysis, Conceptualization.          ship Council (CSC, No. 202206370056), the Science Center Program of
+Peng Wang: Writing – review & editing, Writing – original draft,                National Natural Science Foundation of China under Grant 62188101,
+Supervision, Resources, Methodology, Investigation, Funding acquisi-            the Oceanic Interdisciplinary Program of Shanghai Jiao Tong University
+tion, Data curation, Conceptualization. Renke Huang: Writing – review           (project number SL2022MS003, SL2023MS011).
+& editing, Supervision, Resources, Methodology, Investigation. Xiuli
+Zhu: Writing – review & editing, Supervision, Investigation. Javier
+Arroyo: Supervision, Resources. Ning Li: Writing – review & editing,            References
+Supervision, Investigation.
+                                                                                 [1] Allouhi A, El Fouih Y, Kousksou T, Jamil A, Zeraouli Y, Mourad Y. Energy
+Declaration of competing interest                                                    consumption and efficiency in buildings: current status and future trends. J
+                                                                                     Clean Prod 2015;109:118–30, URL https://linkinghub.elsevier.com/retrieve/pii/
+                                                                                     S0959652615007581.
+    The authors declare that they have no known competing finan-
+                                                                                 [2] Li W, Wang S. A multi-agent based distributed approach for optimal control of
+cial interests or personal relationships that could have appeared to
+                                                                                     multi-zone ventilation systems considering indoor air quality and energy use.
+influence the work reported in this paper.                                           Appl Energy 2020;275:115371, URL https://linkinghub.elsevier.com/retrieve/
+                                                                                     pii/S0306261920308837.
+Data availability                                                                [3] Stoffel P, Maier L, Kümpel A, Schreiber T, Müller D. Evaluation of advanced
+                                                                                     control strategies for building energy systems. Energy Build 2023;280:112709,
+    Data will be made available on request.                                          URL https://linkinghub.elsevier.com/retrieve/pii/S0378778822008805.
+                                                                                 [4] Likmeta A, Metelli AM, Tirinzoni A, Giol R, Restelli M, Romano D. Combining
+                                                                                     reinforcement learning with rule-based controllers for transparent and general
+Acknowledgments
+                                                                                     decision-making in autonomous driving. Robot Auton Syst 2020;131:103568,
+                                                                                     URL https://linkinghub.elsevier.com/retrieve/pii/S0921889020304085.
+   The authors express their gratitude for the technical discussions and         [5] Zhu Y, Wang Z, Chen C, Dong D. Rule-based reinforcement learning for
+the support provided by Prof. Saman Halgamuge from The University                    efficient robot navigation with space reduction. IEEE/ASME Trans Mechatronics
+of Melbourne.                                                                        2022;27(2):846–57, URL https://ieeexplore.ieee.org/document/9403986/.
+
+
+                                                                           15
+X. Wang et al.                                                                                                                                      Applied Energy 377 (2025) 124328
+
+
+ [6] Wang D, Zheng W, Wang Z, Wang Y, Pang X, Wang W. Comparison of                           [23] Ceusters G, Putratama MA, Franke R, Nowé A, Messagie M. An adaptive safety
+     reinforcement learning and model predictive control for building energy sys-                  layer with hard constraints for safe reinforcement learning in multi-energy
+     tem optimization. Appl Therm Eng 2023;228:120430, URL https://linkinghub.                     management systems. Sustain Energy Grids Netw 2023;36:101202, URL https:
+     elsevier.com/retrieve/pii/S1359431123004593.                                                  //linkinghub.elsevier.com/retrieve/pii/S2352467723002102.
+ [7] Drgoňa J, Arroyo J, Cupeiro Figueroa I, Blum D, Arendt K, Kim D, Ollé EP,                [24] Paesschesoone S, Kayedpour N, Manna C, Crevecoeur G. Reinforcement learning
+     Oravec J, Wetter M, Vrabie DL, Helsen L. All you need to know about model                     for an enhanced energy flexibility controller incorporating predictive safety filter
+     predictive control for buildings. Annu Rev Control 2020;50:190–232, URL https:                and adaptive policy updates. 2024, http://dx.doi.org/10.2139/ssrn.4743105,
+     //linkinghub.elsevier.com/retrieve/pii/S1367578820300584.                                     preprint, SSRN. URL https://www.ssrn.com/abstract=4743105.
+ [8] Yang S, Wan MP, Chen W, Ng BF, Dubey S. Model predictive control with adap-              [25] Arroyo J, Manna C, Spiessens F, Helsen L. Reinforced model predictive control
+     tive machine-learning-based model for building energy efficiency and comfort                  (RL-MPC) for building energy management. Appl Energy 2022;309:118346, URL
+     optimization. Appl Energy 2020;271:115147, URL https://linkinghub.elsevier.                   https://linkinghub.elsevier.com/retrieve/pii/S0306261921015932.
+     com/retrieve/pii/S0306261920306590.                                                      [26] Blum D, Arroyo J, Huang S, Drgoňa J, Jorissen F, Walnum HT, Chen Y,
+ [9] Lv R, Yuan Z, Lei B, Zheng J, Luo X. Model predictive control with adaptive                   Benne K, Vrabie D, Wetter M, Helsen L. Building optimization testing framework
+     building model for heating using the hybrid air-conditioning system in a railway              (BOPTEST) for simulation-based benchmarking of control strategies in buildings.
+     station. Energies 2021;14(7):1996, URL https://www.mdpi.com/1996-1073/14/                     J Build Perform Simul 2021;14(5):586–610, URL https://www.tandfonline.com/
+     7/1996.                                                                                       doi/full/10.1080/19401493.2021.1986574.
+[10] Grimm G, Messina M, Tuna S, Teel A. Model predictive control: for want of                [27] Chen B, Cai Z, Bergés M. Gnu-RL: A Precocial Reinforcement Learning Solution
+     a local control Lyapunov function, all is not lost. IEEE Trans Autom Control                  for Building HVAC Control Using a Differentiable MPC Policy. In: Proceedings of
+     2005;50(5):546–58, URL http://ieeexplore.ieee.org/document/1431036/.                          the 6th ACM international conference on systems for energy-efficient buildings,
+[11] Yu L, Qin S, Zhang M, Shen C, Jiang T, Guan X. A review of deep reinforce-                    cities, and transportation. New York NY USA: ACM; 2019, p. 316–25, URL
+     ment learning for smart building energy management. IEEE Internet Things J                    https://dl.acm.org/doi/10.1145/3360322.3360849.
+     2021;8(15):12046–63, URL https://ieeexplore.ieee.org/document/9426901/.                  [28] Ding H, Xu Y, Chew Si Hao B, Li Q, Lentzakis A. A safe reinforcement
+[12] Merabet GH, Essaaidi M, Haddou MB, Qolomany B, Qadir J, Anan M,                               learning approach for multi-energy management of smart home. Electr Power
+     Al-Fuqaha A, Abid MR, Benhaddou D. Intelligent building control systems                       Syst Res 2022;210:108120, URL https://linkinghub.elsevier.com/retrieve/pii/
+     for thermal comfort and energy-efficiency: A systematic review of artificial                  S0378779622003443.
+     intelligence-assisted techniques. Renew Sustain Energy Rev 2021;144:110969,              [29] Ojand K, Dagdougui H. Q -learning-based model predictive control for en-
+     Publisher: Elsevier JCR: Q1 : 1 : 15.9 5: 16.9 EI:.                                           ergy management in residential aggregator. IEEE Trans Autom Sci Eng
+[13] Radaideh MI, Shirvan K. Rule-based reinforcement learning methodology to                      2022;19(1):70–81, URL https://ieeexplore.ieee.org/document/9478948/.
+     inform evolutionary algorithms for constrained optimization of engineering ap-           [30] Aswani A, Master N, Taneja J, Culler D, Tomlin C. Reducing transient and
+     plications. Knowl-Based Syst 2021;217:106836, URL https://linkinghub.elsevier.                steady state electricity consumption in HVAC using learning-based model-
+     com/retrieve/pii/S095070512100099X.                                                           predictive control. Proc IEEE 2012;100(1):240–53, URL http://ieeexplore.ieee.
+[14] Schulman J, Wolski F, Dhariwal P, Radford A, Klimov O. Proximal policy                        org/document/5985456/.
+     optimization algorithms. 2017, arXiv:1707.06347 [cs].                                    [31] Wabersich KP, Zeilinger MN. Linear model predictive safety certification for
+[15] Morinibu T, Noda T, Shota T. Application of deep reinforcement learning in                    learning-based control. In: 2018 IEEE conference on decision and control.
+     residential preconditioning for radiation temperature. In: 2019 8th international             CDC, Miami Beach, FL: IEEE; 2018, p. 7130–5, URL https://ieeexplore.ieee.org/
+     congress on advanced applied informatics. IIAI-AAI, Toyama, Japan: IEEE; 2019,                document/8619829/.
+     p. 561–6, URL https://ieeexplore.ieee.org/document/8992750/.                             [32] Wabersich KP, Zeilinger MN. A predictive safety filter for learning-based control
+[16] Wei T, Wang Y, Zhu Q. Deep reinforcement learning for building HVAC control.                  of constrained nonlinear dynamical systems. Automatica 2021;129:109597, URL
+     In: Proceedings of the 54th annual design automation conference 2017. Austin                  https://linkinghub.elsevier.com/retrieve/pii/S0005109821001175.
+     TX USA: ACM; 2017, p. 1–6, URL https://dl.acm.org/doi/10.1145/3061639.                   [33] Arroyo J, Spiessens F, Helsen L. Comparison of optimal control techniques for
+     3062224.                                                                                      building energy management. Front Built Environ 2022;8:849754, URL https:
+[17] Gupta A, Badr Y, Negahban A, Qiu RG. Energy-efficient heating control for smart               //www.frontiersin.org/articles/10.3389/fbuil.2022.849754/full.
+     buildings with deep reinforcement learning. J Build Eng 2021;34:101739, URL              [34] De Coninck R, Magnusson F, Åkesson J, Helsen L. Toolbox for development
+     https://linkinghub.elsevier.com/retrieve/pii/S2352710220333726.                               and validation of grey-box building models for forecasting and control. J Build
+[18] Gao G, Li J, Wen Y. Energy-efficient thermal comfort control in smart buildings               Perform Simul 2016;9(3):288–303, URL http://www.tandfonline.com/doi/full/
+     via deep reinforcement learning. 2019, arXiv:1901.04693 [cs].                                 10.1080/19401493.2015.1046933.
+[19] Zhao W, He T, Chen R, Wei T, Liu C. State-wise safe reinforcement learning: A            [35] Nelder JA, Mead R. A simplex method for function minimization. Comput
+     survey. 2023, arXiv:2302.03122 [cs].                                                          J 1965;7(4):308–13, URL https://academic.oup.com/comjnl/article-lookup/doi/
+[20] Wang Z, Hong T. Reinforcement learning for building controls: The opportunities               10.1093/comjnl/7.4.308.
+     and challenges. Appl Energy 2020;269:115036, URL https://linkinghub.elsevier.            [36] Raffin A, Hill A, Gleave A, Kanervisto A, Ernestus M, Dormann N.
+     com/retrieve/pii/S0306261920305481.                                                           Stable-Baselines3: Reliable reinforcement learning implementations.
+[21] Hewing L, Wabersich KP, Menner M, Zeilinger MN. Learning-based model predic-             [37] Arroyo J, Manna C, Spiessens F, Helsen L. An open-AI gym environment
+     tive control: Toward safe learning in control. Annu Rev Control Robot Auton Syst              for the building optimization testing (BOPTEST) framework. 2021, http://
+     2020;3(1):269–96, URL https://www.annualreviews.org/doi/10.1146/annurev-                      dx.doi.org/10.26868/25222708.2021.30380, URL https://publications.ibpsa.org/
+     control-090419-075625.                                                                        conference/paper/?id=bs2021_30380.
+[22] Bellegarda G, Byl K. An online training method for augmenting MPC with deep              [38] Fiedler F, Karg B, Lüken L, Brandner D, Heinlein M, Brabender F, Lucia S.
+     reinforcement learning. In: 2020 IEEE/RSJ international conference on intelligent             do-mpc: Towards FAIR nonlinear and robust model predictive control. Control
+     robots and systems. IROS, Las Vegas, NV, USA: IEEE; 2020, p. 5453–9, URL                      Eng Pract 2023;140:105676, URL https://linkinghub.elsevier.com/retrieve/pii/
+     https://ieeexplore.ieee.org/document/9341021/.                                                S0967066123002459.
+                                                                                              [39] Wächter A, Biegler LT. On the implementation of an interior-point filter
+                                                                                                   line-search algorithm for large-scale nonlinear programming. Math Program
+                                                                                                   2006;106(1):25–57, URL http://link.springer.com/10.1007/s10107-004-0559-y.
+
+
+
+
+                                                                                         16
+
