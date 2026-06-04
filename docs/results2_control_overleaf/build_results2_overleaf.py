@@ -207,7 +207,7 @@ def table_transfer(d: dict) -> str:
     for variant, vlabel in [("pure_v3", "pure v3"), ("hybrid_l010", "hybrid $\\lambda_T=0.10$"), ("direct_v35", "direct v3.5")]:
         for scen, label in [("peak_heat_window", "peak"), ("typical_heat_window", "typical")]:
             r = tr[(tr.variant == variant) & (tr.scenario == scen)].iloc[0]
-            rows.append(f"{vlabel} & {label} & {f(r.ms_gap,3)} & {f(r.action_gap_norm,3)} & {int(r.first_divergence_step)} & {tex_escape(r.top_feature)} \\\\")
+            rows.append(f"{vlabel} & {label} & {f(r.temp_rmse_c,3)} & {f(r.ms_gap,3)} & {f(r.action_gap_norm,3)} & {int(r.first_divergence_step)} & {tex_escape(r.top_feature)} \\\\")
     return "\n".join(rows)
 
 
@@ -512,6 +512,8 @@ Seed & 42 & 42 & 42 & 42--46 (N=5) \\
 \end{{tabular}}
 \end{{table}}
 
+\paragraph{{Thermostatic PPO baseline (roadmap \S4).}} Block 2 opens with the control baseline: a single-level thermostatic PPO controller trained purely on the v3 rollout surrogate (the canonical 1-hour-step checkpoint \texttt{{rc\_node\_v3\_tsupply.pt}}) with no v3.5 regularization ($\lambda_T=\lambda_P=0$). The actor and critic are separate MLP heads (Stable-Baselines3 \texttt{{MlpPolicy}}): the actor maps the 17D observation \eqref{{eq:obs17}} to a tanh-squashed continuous supply-temperature command \eqref{{eq:action_map}}, while the critic estimates the state value entering the PPO advantage. Training runs for 10M surrogate steps under the shared settings of Table~\ref{{tab:ppo_hparams}}; with entropy coefficient zero the evaluated policy is deterministic. Crucially, the trained policy is run \emph{{zero-shot}} on the live BOPTEST RTE with no live finetuning, so the baseline is already a strict surrogate-to-simulator transfer test. It is the reference against which the two negative controls (direct v3.5, warm-start) and the hybrid are measured.
+
 The canonical observation interface is the 17-dimensional extended TSup-style vector:
 \begin{{equation}}
   s_t =
@@ -655,9 +657,27 @@ The time-series and action diagnostics in Figures~\ref{{fig:closed_loop_traces}}
   \label{{fig:action_phase}}
 \end{{figure}}
 
+\paragraph{{Hybrid $\lambda_T$ sweep and canonical selection (roadmap \S5).}} The canonical hybrid operating point was selected by a thermostatic sweep over the temperature-disagreement weight $\lambda_T\in\{{0.05,0.10,0.15\}}$ at fixed $\lambda_P=5\times10^{{-5}}$ (Table~\ref{{tab:hybrid_sweep}}). The mid setting $\lambda_T=0.10$ (\texttt{{hybrid\_l010}}) is canonical: per the roadmap selection rule it retains the energy advantage over pure v3 while avoiding the stronger comfort degradation seen at the weaker ($0.05$) and stronger ($0.15$) censor settings. Only the canonical point's live-BOPTEST KPIs are retained as a frozen artifact; the bracketing points served selection only.
+
+\begin{{table}}[t]
+\centering
+\caption{{Thermostatic hybrid $\lambda_T$ sweep design (roadmap \S5; $\lambda_P=5\times10^{{-5}}$ throughout). The mid point is the retained canonical.}}
+\label{{tab:hybrid_sweep}}
+\small
+\begin{{tabular}}{{lll}}
+\toprule
+$\lambda_T$ & Tag & Role \\
+\midrule
+0.05 & hybrid\_l005 & weaker censor (sweep bracket) \\
+0.10 & hybrid\_l010 & \textbf{{canonical}} (retained; $m_s={ctx['hyb_peak_ms']}$ peak, ${ctx['hyb_typ_ms']}$ typical) \\
+0.15 & hybrid\_l015 & stronger censor (sweep bracket) \\
+\bottomrule
+\end{{tabular}}
+\end{{table}}
+
 \section{{Warm-start negative control (roadmap \S4.5)}}
 
-A second negative control tests whether v3.5 is useful as a policy initializer rather than a reward-shaping censor: pretrain on direct v3.5, then warm-start on the hybrid backend. It does not help. Warm-started policies are markedly worse than scratch-trained hybrid policies (Table~\ref{{tab:warmstart}}), raising $m_s$ by roughly two to three times. The problem is the role assigned to the surrogate during early policy formation, not a lack of fine-tuning.
+A second negative control tests whether v3.5 is useful as a policy \emph{{initializer}} rather than a reward-shaping censor. The benchmark (\texttt{{run\_block2.py warmstart}}) runs four steps: \emph{{(1) pretrain}} a thermostatic policy on the calibrated v3.5 surrogate; \emph{{(2) scratch finetune}} a thermostatic policy from random initialization directly on the live BOPTEST RTE; \emph{{(3) warm-start finetune}} a second policy on BOPTEST initialized from the v3.5-pretrained checkpoint of step~1; and \emph{{(4) evaluate}} both finetuned policies on the same BOPTEST windows and compare. The comparison is therefore internally controlled --- scratch and warm-start differ only in initialization. It does not help: warm-started policies are markedly worse than the scratch finetune (Table~\ref{{tab:warmstart}}), raising $m_s$ by roughly two to three times on both windows. The problem is the role assigned to the surrogate during early policy formation, not a lack of fine-tuning; v3.5 belongs in the reward as a censor, not in the weights as an initializer.
 
 \begin{{table}}[t]
 \centering
@@ -682,23 +702,26 @@ Mode & Scenario & $m_s$ & Violation (\%) \\
 
 \section{{Transfer-gap diagnostics (roadmap \S5.5)}}
 
-The transfer-gap diagnostic pairs surrogate-side and live-BOPTEST metrics for the same policy:
+This diagnostic (roadmap \S5.5) compares three controllers --- pure v3, hybrid $\lambda_T=0.10$, and direct v3.5 --- in three steps. \emph{{Step 1}}: a standalone direct-v3.5 thermostatic policy is trained on the calibrated v3.5 environment (the failure control; \texttt{{thermostatic-train --variant v35\_direct}}), separate from the warm-start checkpoint of the previous section because it answers a different question (zero-shot live transfer rather than warm-start utility). \emph{{Step 2}}: all three policies are run in closed loop on the live BOPTEST RTE for the two 14-day windows (\texttt{{thermostatic-transfer --variant all}}). \emph{{Step 3}}: for each policy we compute four transfer diagnostics (\texttt{{thermostatic-diagnose}}) --- the temperature tracking gap (live RMSE$_T$), the surrogate-vs-live maintenance-score mismatch
 \begin{{equation}}
-  \Delta m_s = m_s^{{\mathrm{{BOPTEST}}}} - m_s^{{\mathrm{{surrogate}}}},
+  \Delta m_s = m_s^{{\mathrm{{surrogate}}}} - m_s^{{\mathrm{{BOPTEST}}}}
+  \quad(\text{{negative}}\Rightarrow\text{{surrogate optimistic}}),
   \qquad
-  g_a = \frac{{1}}{{N}}\sum_{{t=1}}^{{N}}\left\|a_t^{{\mathrm{{BOPTEST}}}}-a_t^{{\mathrm{{surrogate}}}}\right\|_2 .
+  g_a = \frac{{1}}{{N}}\sum_{{t=1}}^{{N}}\left\|a_t^{{\mathrm{{BOPTEST}}}}-a_t^{{\mathrm{{surrogate}}}}\right\|_2 ,
   \label{{eq:transfer_gap}}
 \end{{equation}}
-Direct v3.5 has the largest transfer mismatch ($|\Delta m_s|\approx 0.9$--$1.0$, action-gap norm $\approx 2.0$), and its top divergence driver is $t_{{\mathrm{{zone}}}}$ --- its sharp temperature dynamics produce live actions unlike the surrogate rollout. Hybrid $\lambda_T=0.10$ has the smallest gap ($\approx 0.02$) and, on the typical window, holds the BOPTEST-consistent action for 16 steps before drifting (Table~\ref{{tab:transfer}}).
+the action-gap norm $g_a$, and the first divergence step (earliest 15-min step where surrogate and live trajectories separate beyond threshold), with the top driver feature attributed to the divergence.
+
+Direct v3.5 has the largest transfer mismatch ($|\Delta m_s|\approx 0.9$--$1.0$, $g_a\approx 2.0$, live RMSE$_T>4.3\,^\circ$C), and its top divergence driver is $t_{{\mathrm{{zone}}}}$: its sharp temperature dynamics produce live actions unlike the surrogate rollout. Hybrid $\lambda_T=0.10$ has the smallest gap ($|\Delta m_s|\approx 0.02$) and, on the typical window, holds the BOPTEST-consistent action for 16 steps before drifting (Table~\ref{{tab:transfer}}). The action-gap norm is the most diagnostic column: $g_a=2.0$ for direct v3.5 means the policy sits at the opposite action bound from what BOPTEST would choose throughout the episode, i.e.\ a learned bang-bang exploit of the surrogate.
 
 \begin{{table}}[t]
 \centering
-\caption{{Transfer diagnostics across three backends (\texttt{{reports/hybrid\_transfer\_comparison.csv}}). $\Delta m_s = $ surrogate $-$ live; negative means the surrogate is optimistic.}}
+\caption{{Transfer diagnostics across three backends (\texttt{{reports/hybrid\_transfer\_comparison.csv}}). $\Delta m_s = $ surrogate $-$ live; negative means the surrogate is optimistic. Temp gap is the live closed-loop RMSE$_T$.}}
 \label{{tab:transfer}}
 \small
-\begin{{tabular}}{{llrrrl}}
+\begin{{tabular}}{{llrrrrl}}
 \toprule
-Variant & Scenario & $\Delta m_s$ & Action gap & First div. step & Top driver \\
+Variant & Scenario & Temp gap ($^\circ$C) & $\Delta m_s$ & Action gap & First div. & Top driver \\
 \midrule
 {ctx['table_transfer']}
 \bottomrule
@@ -714,7 +737,9 @@ Variant & Scenario & $\Delta m_s$ & Action gap & First div. step & Top driver \\
 
 \section{{HDRL sensitivity: the hybrid weight is controller-family specific (roadmap \S6)}}
 
-The HDRL experiment asks whether the thermostatic hybrid setting $\lambda_T=0.10$ transfers to a hierarchical controller. It does not (Table~\ref{{tab:hdrl}}). HDRL performs best at $\lambda_T=0.00$ on both windows and degrades monotonically as temperature-disagreement regularization is increased. This shows the correct physical-censor strength depends on the controller family and its action decomposition, not on a universal weight.
+HDRL here is a \emph{{seasonal}} hierarchy. A high-level seasonal selector routes control to one of two low-level PPO setpoint specialists --- a winter agent (trained 5M steps on cold-season day ranges with cold-biased comfort shaping) and a summer agent (7M steps on warm-season ranges) --- each acting on the same 17D observation and supply-temperature action. Formally the controller is $\pi(a_t\mid s_t)=\pi_{{k(t)}}(a_t\mid s_t)$ with the high-level gate $k(t)\in\{{\text{{winter}},\text{{summer}}\}}$ chosen by season; the hierarchy supplies regime-aware temporal abstraction, so each low-level specialist solves a narrower, better-conditioned control problem than a single global policy.
+
+The HDRL experiment asks whether the thermostatic hybrid setting $\lambda_T=0.10$ transfers to this hierarchical controller. It does not (Table~\ref{{tab:hdrl}}). The mechanism is over-regularization: because each seasonal specialist already encodes comfort-aware structure (season-tuned shaping plus the high-level gate), the additional v3.5 temperature-disagreement censor constrains an already comfort-aware low-level loop, biasing it toward conservative under-heating; performance therefore degrades monotonically with $\lambda_T$, and the correct transfer keeps only the power channel ($\lambda_T=0$). HDRL performs best at $\lambda_T=0.00$ on both windows and degrades monotonically as temperature-disagreement regularization is increased. This shows the correct physical-censor strength depends on the controller family and its action decomposition, not on a universal weight.
 
 \begin{{table}}[t]
 \centering
@@ -741,7 +766,7 @@ $\lambda_T$ & Scenario & $m_s$ & Violation (\%) & RMSE$_T$ ($^\circ$C) & Energy 
 
 \section{{MORL observation ablation: 5D failure to 17D success (roadmap \S6.5--\S7)}}
 
-MORL uses a four-stage pipeline that differs from the single-stage PPO families (roadmap Section 7): (1) a 2M-step surrogate \emph{{pretrain}} on the 17D hybrid backend with canonical $(w_c,w_e,w_s)=(0.80,0.20,0.00)$; (2) an \emph{{ERAM}} weight-adaptation stage (20 iterations of 100k steps from initial weights $0.34/0.33/0.33$); (3) a 100k-step \emph{{finetune}} on the live BOPTEST RTE at learning rate $10^{{-4}}$ with $\pm3$-day episode-start jitter; and (4) a 12-month \emph{{yearly evaluation}}. MORL is the only family with a live-BOPTEST finetune; the thermostatic/HDRL families are evaluated zero-shot after surrogate-only training, which is a strictly harder transfer.
+MORL uses a four-stage pipeline that differs from the single-stage PPO families (roadmap Section 7): (1) a 2M-step surrogate \emph{{pretrain}} on the 17D hybrid backend with canonical $(w_c,w_e,w_s)=(0.80,0.20,0.00)$; (2) an \emph{{ERAM}} weight-adaptation stage (20 iterations of 100k steps from initial weights $0.34/0.33/0.33$, weight-update temperature $\tau_w=0.35$); (3) a 100k-step \emph{{finetune}} on the live BOPTEST RTE at learning rate $10^{{-4}}$ with $\pm3$-day episode-start jitter; and (4) a 12-month \emph{{yearly evaluation}}. MORL is the only family with a live-BOPTEST finetune; the thermostatic/HDRL families are evaluated zero-shot after surrogate-only training, which is a strictly harder transfer.
 
 MORL initially failed with a 5D observation (zone temperature, ambient, hour, day, occupancy). Under the current code path, a reconstructed 5D rerun obtains RMSE$_T={ctx['m5_rmse']}\,^\circ$C, violation ${ctx['m5_viol']}\%$, and $m_s={ctx['m5_ms']}$; the originally frozen 5D artifact was even worse (RMSE$_T={ctx['m5frozen_rmse']}\,^\circ$C, $m_s={ctx['m5frozen_ms']}$) and is retained only as an audit artifact. Replacing the observation with the 17D TSup-style vector recovers a usable policy: RMSE$_T={ctx['m17_rmse']}\,^\circ$C, violation ${ctx['m17_viol']}\%$, $m_s={ctx['m17_ms']}$ (Table~\ref{{tab:morl5d17d}}). The dominant MORL bottleneck was the observation geometry, not the reward scalarization alone.
 
@@ -765,6 +790,8 @@ Variant & Obs dim & RMSE$_T$ ($^\circ$C) & Violation (\%) & $m_s$ \\
   \caption{{MORL 5D failure and 17D recovery. The observation interface, not only the scalarized reward, determines whether MORL is viable.}}
   \label{{fig:morl5d17d}}
 \end{{figure}}
+
+\paragraph{{Power-only backend and claim discipline (roadmap \S7, \S9, \S13).}} MORL inherits the controller-family lesson of the HDRL sweep: it runs on the \emph{{power-only}} hybrid backend ($\lambda_T=0$, $\lambda_P=5\times10^{{-5}}$), because temperature-disagreement censoring hurts non-thermostatic families. The MORL claim is deliberately narrow and audit-protected. Before the seed expansion, commit \texttt{{93df9b3}} froze the canonical plan and the seed-45/46 falsification predictions; after $N=5$, commit \texttt{{62dc859}} appended the observed variance without rewriting the pre-registration, and a replay test confirmed bit-identical BOPTEST trajectories for a fixed checkpoint (so the spread is training stochasticity, not simulator noise). The defensible reading is therefore: under the fixed 17D power-only backend, MORL is substantially stronger than the reconstructed 5D interface and yields a usable comfort--energy Pareto structure, but the $N=5$ canonical variance (CV $0.42$--$0.61$) is too high for a deployment-stability claim --- the single-seed canonical is the best of five, not the median.
 
 \section{{MORL Pareto front and N=5 seed variance (roadmap \S8--\S9)}}
 
