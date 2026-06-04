@@ -334,6 +334,52 @@ def table_scenarios(manifest: dict) -> str:
     return "\n".join(rows)
 
 
+def table_ms_decomp(d: dict) -> str:
+    """Full data-driven m_s = r_time + r_sev decomposition across all controllers
+    (r_time = violation/100; r_sev = m_s - r_time)."""
+    arch = d["arch"]; tr = d["transfer"]; hdrl = d["hdrl"]; ss = d["seed_sum"]; pi = d["pi"]
+    v35 = arch[arch.variant == "v35_calibrated"].iloc[0]
+
+    def row(name, ms, viol):
+        rt = float(viol) / 100.0
+        rs = max(float(ms) - rt, 0.0)
+        return f"{name} & {f(ms,3)} & {f(rt,3)} & {f(rs,3)} \\\\"
+
+    out = []
+    for scen, sl in [("peak_heat_window", "peak"), ("typical_heat_window", "typical")]:
+        pv = _scen_row(d["pure"], scen, controller="thermostatic")
+        hy = _scen_row(d["hybrid"], scen)
+        h0 = hdrl[(hdrl.variant == "l000") & (hdrl.scenario == scen)].iloc[0]
+        dv_ms = v35["peak_control_m_s"] if scen == "peak_heat_window" else v35["typical_control_m_s"]
+        dv_v = tr[(tr.variant == "direct_v35") & (tr.scenario == scen)].iloc[0]["boptest_violation_pct"]
+        out.append(row(f"pure v3 ({sl})", pv.m_s, pv.violation_pct))
+        out.append(row(f"direct v3.5 ({sl})", dv_ms, dv_v))
+        out.append(row(f"hybrid $\\lambda_T{{=}}0.10$ ({sl})", hy.m_s, hy.violation_pct))
+        out.append(row(f"HDRL $\\lambda_T{{=}}0$ ({sl})", h0.m_s, h0.violation_pct))
+    n50 = ss[ss.canonical == "comfort_050_energy_050"].iloc[0]
+    n75 = ss[ss.canonical == "comfort_075_energy_025"].iloc[0]
+    out.append(row("MORL 50/50 (yearly, N=5)", n50.ms_mean, n50.violation_pct_mean))
+    out.append(row("MORL 75/25 (yearly, N=5)", n75.ms_mean, n75.violation_pct_mean))
+    out.append(row("PI (yearly)", pi["ms"].mean(), pi["viol_pct"].mean()))
+    return "\n".join(out)
+
+
+def table_hypotheses() -> str:
+    rows = [
+        ("H1", "The higher-fidelity twin (v3.5) used directly as the rollout environment yields the best controller.",
+         "\\S4--4.5", "FALSIFIED (direct v3.5 $m_s>1.0$)"),
+        ("H2", "Calibrated v3.5 is useful when its role changes from dynamics provider to a frozen reward-shaping censor.",
+         "\\S5", "SUPPORTED (hybrid is best)"),
+        ("H3", "The thermostatic-optimal censor weight $\\lambda_T=0.10$ transfers to the HDRL family.",
+         "\\S6", "FALSIFIED (HDRL best at $\\lambda_T=0$)"),
+        ("H4", "MORL viability is determined by the reward scalarization alone.",
+         "\\S6.5--7", "FALSIFIED (needs the 17D observation)"),
+        ("H5", "The single-seed MORL canonical ($m_s\\approx0.10$) is representative.",
+         "\\S8--9", "FALSIFIED at N=5 (best of five; CV $0.42$--$0.61$)"),
+    ]
+    return "\n".join(f"{a} & {b} & {c} & {dd} \\\\" for a, b, c, dd in rows)
+
+
 def table_nomenclature() -> str:
     rows = [
         (r"$m_s$", "--", "BOPTEST-style maintenance score (lower is better; combines comfort violation and tracking)"),
@@ -419,6 +465,22 @@ Figure~\ref{{fig:block2_pipeline}} summarizes the Block 2 pipeline. Direct v3.5 
 Scenario & Day idx & Start (s) & Dur. (d) & Ambient mean ($^\circ$C) & Role \\
 \midrule
 {ctx['table_scenarios']}
+\bottomrule
+\end{{tabular}}
+\end{{table}}
+
+Block 2 is structured as a sequence of falsifiable hypotheses, each tied to a roadmap section and resolved against live BOPTEST evidence (Table~\ref{{tab:hypotheses}}). This pre-registration-style framing is what lets the negative results (direct v3.5, HDRL over-regularization, MORL seed variance) be read as decisions rather than tuning accidents.
+
+\begin{{table}}[t]
+\centering
+\caption{{Block 2 falsifiable-hypothesis ledger. Each hypothesis is tested on the live BOPTEST RTE in the indicated roadmap section.}}
+\label{{tab:hypotheses}}
+\small
+\begin{{tabular}}{{>{{\raggedright\arraybackslash}}p{{6mm}}>{{\raggedright\arraybackslash}}p{{74mm}}ll}}
+\toprule
+ & Hypothesis & roadmap & Verdict \\
+\midrule
+{ctx['table_hypotheses']}
 \bottomrule
 \end{{tabular}}
 \end{{table}}
@@ -668,6 +730,8 @@ $\lambda_T$ & Scenario & $m_s$ & Violation (\%) & RMSE$_T$ ($^\circ$C) & Energy 
 \end{{tabular}}
 \end{{table}}
 
+\paragraph{{Engineering reading.}} As $\lambda_T$ rises, energy falls slightly (the censor biases the low-level loop toward conservative under-heating, e.g. $329.6\to300.4$ kWh on peak) but comfort collapses --- peak violation roughly quadruples ($6.1\%\to23.0\%$) and RMSE$_T$ nearly doubles. HDRL already supplies comfort-aware temporal abstraction through its scheduler, so an additional temperature-disagreement censor is redundant and over-constrains the setpoint controller; the correct transfer of the Block 1 recipe to HDRL keeps only the power channel ($\lambda_T=0$, $\lambda_P=5\times10^{{-5}}$).
+
 \begin{{figure}}[t]
   \centering
   \includegraphics[width=0.88\linewidth]{{block2_hdrl_lambda_sweep_sensitivity.pdf}}
@@ -720,6 +784,8 @@ Preference / statistic & RMSE$_T$ ($^\circ$C) & Violation (\%) & $m_s$ & Interpr
 \end{{tabular}}
 \end{{table}}
 
+\paragraph{{Engineering reading.}} The front is strongly asymmetric. Energy-only control (0/100) collapses to a degenerate non-heating policy ($86.8\%$ violation, $m_s={ctx['p0_ms']}$): minimizing energy simply means not heating. Comfort-only (100/0) is the best single-seed $m_s$ but the most energy-hungry, and the practical 75/25 point recovers near-comfort-only comfort at lower energy --- the recommended deployment compromise. The crucial caveat is the seed dimension: the single-seed front overstates reliability, because the $N=5$ extension turns both canonicals into wide distributions (CV ${ctx['n50_cv']}$--${ctx['n75_cv']}$), so the Pareto curve should be read as a best-seed envelope, not a deployment guarantee.
+
 \begin{{figure}}[t]
   \centering
   \includegraphics[width=0.86\linewidth]{{block2_q1_polish_morl_pareto_ellipses.pdf}}
@@ -762,6 +828,22 @@ At $N=3$, the practical canonical appeared to show near-deterministic winter beh
 \section{{PI reference and synthesis (roadmap \S10--\S11)}}
 
 The BOPTEST built-in PI controller is a reproducible reference, not a tuned strong baseline. On the 12-month yearly evaluation it is comfort-poor but energy-frugal: mean RMSE$_T={ctx['pi_rmse']}\,^\circ$C, mean violation ${ctx['pi_viol']}\%$, mean monthly energy ${ctx['pi_energy']}$ kWh, mean $m_s={ctx['pi_ms']}$. All Block 2 RL/MORL agents reach $m_s$ well below PI's ${ctx['pi_ms']}$, dominating it on comfort at comparable or lower energy after accounting for the comfort/energy trade-off.
+
+Table~\ref{{tab:ms_decomp}} consolidates the maintenance-score decomposition across every controller family. It makes the cross-family pattern explicit: usable controllers (pure v3, hybrid, MORL 17D) keep both $r_{{\mathrm{{time}}}}$ and $r_{{\mathrm{{sev}}}}$ small, whereas the failures (direct v3.5, PI) carry a large $r_{{\mathrm{{time}}}}$ --- they spend a large fraction of the horizon outside the band. PI is the mirror image of direct v3.5: both have $r_{{\mathrm{{time}}}}$ near or above $0.6$, but PI fails by chronic under-heating while direct v3.5 fails by saturated overshoot.
+
+\begin{{table}}[t]
+\centering
+\caption{{Cross-controller maintenance-score decomposition $m_s = r_{{\mathrm{{time}}}} + r_{{\mathrm{{sev}}}}$ (Eq.~\ref{{eq:ms}}). $r_{{\mathrm{{time}}}}$ = fraction of steps outside the band; $r_{{\mathrm{{sev}}}}$ = worst relative band exceedance. Thermostatic/HDRL rows are 14-day windows; MORL/PI rows are 12-month yearly means.}}
+\label{{tab:ms_decomp}}
+\small
+\begin{{tabular}}{{lrrr}}
+\toprule
+Controller (window/eval) & $m_s$ & $r_{{\mathrm{{time}}}}$ & $r_{{\mathrm{{sev}}}}$ \\
+\midrule
+{ctx['table_ms_decomp']}
+\bottomrule
+\end{{tabular}}
+\end{{table}}
 
 Block 2 establishes four controller-side claims. First, predictive fidelity and RL training utility are not equivalent: direct v3.5 is the more accurate twin yet fails as a rollout environment (live violation $>77\%$). Second, role separation works --- v3 provides smooth rollout dynamics while frozen v3.5 acts as a physical censor through disagreement shaping --- giving the canonical hybrid ($m_s={ctx['hyb_peak_ms']}$ peak, ${ctx['hyb_typ_ms']}$ typical). Third, the censor strength is controller-family specific: HDRL rejects $\lambda_T=0.10$ and is best at $\lambda_T=0$. Fourth, MORL is viable only with the 17D interface, and its N=5 analysis reveals high seed variance and falsifies the N=3 seasonal-inversion mechanism. The engineering implication is that hybrid surrogate RL is a role-allocation problem --- rollout smoothness, physical censoring, observation geometry, controller family, and seed stabilization are separate design axes. This is the bridge to Block 3, where the fixed \texttt{{bestest\_air}} recipe is transferred to the hydronic BOPTEST family.
 
@@ -824,6 +906,8 @@ def main() -> None:
 
     ctx = {
         "table_nomenclature": table_nomenclature(),
+        "table_ms_decomp": table_ms_decomp(d),
+        "table_hypotheses": table_hypotheses(),
         "table_reward": reward_tbl,
         "table_obs17": table_obs17(),
         "table_scenarios": scen_tbl,
