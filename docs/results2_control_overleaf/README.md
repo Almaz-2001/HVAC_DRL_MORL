@@ -41,6 +41,19 @@ Scientific scope covered in this package:
 - MORL 5D failure, 17D recovery, Pareto sweep, N=5 seed variance, and seasonal
   variance falsification.
 
+Q1-rigor additions (all data-driven / verified-from-source):
+
+- Explicit `m_s` definition (`m_s = r_time + r_sev`) with the comfort-band
+  thresholds, sourced from `evaluation/benchmark_bestest_air_article7_style.py`.
+- Reward-shaping parameter table from `configs/env.yaml`.
+- 17D observation feature-group table from `envs/tsup_features.py`.
+- Targeted/yearly scenario-definition table from `scenario_manifest.json`.
+- Hybrid disagreement statistics read from `reports/hybrid_disagreement_summary.csv`.
+- 95% t-confidence intervals on the two MORL canonicals' `m_s` over the N=5 seeds.
+- MORL four-stage pipeline description (pretrain / ERAM / live finetune / yearly).
+- Nomenclature table, a Limitations section, and roadmap Section 4-11
+  cross-references.
+
 All numeric claims are read directly from project artifacts by the builder
 (provenance map: `roadmap.md` Section 11.1):
 

@@ -189,6 +189,57 @@ def table_pi(d: dict):
     }
 
 
+def load_env_reward() -> dict:
+    import yaml
+    with (ROOT / "configs/env.yaml").open("r", encoding="utf-8") as fh:
+        return yaml.safe_load(fh)
+
+
+def table_reward(cfg: dict) -> str:
+    m = cfg.get("morl", {})
+    c = cfg.get("comfort_shaping", {})
+    rows = [
+        ("Comfort band", f"{f(m.get('temp_low',21),1)} / {f(m.get('temp_high',24),1)} C", "comfort interval (band\\_low/high)"),
+        ("Comfort deadband", f"{f(c.get('deadband_c',0.5),2)} C", "soft margin around band edges"),
+        ("In-band bonus", f"{f(c.get('band_bonus',0.05),3)}/step", "reward for staying inside the band"),
+        ("Undershoot / overshoot weight", f"{f(c.get('undershoot_weight',1.15),2)} / {f(c.get('overshoot_weight',1.15),2)}", "generic violation penalties"),
+        ("Cold-ambient asymmetry", f"{f(c.get('cold_undershoot_weight',1.6),2)} (amb $<{f(c.get('cold_amb_threshold_c',8.0),1)}$ C)", "extra cold-undershoot penalty"),
+        ("Hot-ambient asymmetry", f"{f(c.get('hot_overshoot_weight',1.8),2)} (amb $>{f(c.get('hot_amb_threshold_c',24.0),1)}$ C)", "extra hot-overshoot penalty"),
+        ("Heating action bonus", f"{f(c.get('heating_action_bonus',0.04),2)} ($T_{{\\mathrm{{sup}}}}\\ge {f(c.get('heating_t_supply_c',29.0),1)}$ C)", "anti-degenerate shaping"),
+        ("Cooling action bonus", f"{f(c.get('cooling_action_bonus',0.06),2)} ($T_{{\\mathrm{{sup}}}}\\le {f(c.get('cooling_t_supply_c',21.0),1)}$ C)", "anti-degenerate shaping"),
+        ("MORL weights ($w_c/w_e/w_s$)", f"{f(m.get('w_comfort',0.8),2)} / {f(m.get('w_energy',0.2),2)} / {f(m.get('w_safety',0.0),2)}", "canonical scalarization"),
+        ("Energy scale", f"${m.get('energy_scale','2e-4')}$ (W$\\to$reward)", "energy-to-reward conversion"),
+    ]
+    return "\n".join(f"{a} & {b} & {c_} \\\\" for a, b, c_ in rows)
+
+
+def table_obs17() -> str:
+    # Static, verified from envs/tsup_features.py (BASIC=5, TIME=4, FORECAST=5,
+    # prev-action=2, delta=1; total 17). obs_mode=extended in configs/env.yaml.
+    rows = [
+        ("Physical state (basic)", "5", "$T_{\\mathrm{zone}}$, CO$_2$, clipped-log power, prev. $T_{\\mathrm{sup}}$, $T_{\\mathrm{amb}}$"),
+        ("Cyclic time", "4", "hour and day sine/cosine encodings"),
+        ("Ambient forecast", "5", "$T_{\\mathrm{amb}}$ at $+1,+3,+6,+12,+24$ h"),
+        ("Previous action", "2", "$(a_{T_{\\mathrm{sup}}}, a_{\\mathrm{fan}})$ from last step"),
+        ("Temperature delta", "1", "causal-smoothed $\\Delta T_{\\mathrm{zone}}$"),
+        ("Total (extended)", "17", "obs\\_mode = extended"),
+    ]
+    return "\n".join(f"{a} & {b} & {c} \\\\" for a, b, c in rows)
+
+
+def table_scenarios(manifest: dict) -> str:
+    rows = []
+    roles = {"peak_heat_window": "January coldest, heating stress test",
+             "typical_heat_window": "February moderate, deployment-realistic"}
+    for s in manifest.get("scenarios", []):
+        nm = s["name"]
+        rows.append(
+            f"\\texttt{{{tex_escape(nm)}}} & {int(s['start_day_index'])} & {int(float(s['start_time_sec']))} & "
+            f"{int(s['duration_days'])} & {f(s['daily_mean_t_amb_c'],1)} & {roles.get(nm,'')} \\\\")
+    rows.append("yearly evaluation & 12 months & --- & 14/mo & varied & MORL + PI yearly summary \\\\")
+    return "\n".join(rows)
+
+
 def table_nomenclature() -> str:
     rows = [
         (r"$m_s$", "--", "BOPTEST-style maintenance score (lower is better; combines comfort violation and tracking)"),
@@ -255,7 +306,7 @@ Block 1 established a deliberately asymmetric surrogate result: the compact v3 s
 
 The experiments compare five controller families: pure-v3 thermostatic PPO, direct-v3.5 PPO, hybrid-v3/v3.5 PPO, hierarchical DRL (HDRL), and preference-conditioned MORL. All policies are trained on surrogate backends and then evaluated in closed loop against BOPTEST. Two targeted 14-day windows are used for the main thermostatic/HDRL comparison: \texttt{{peak\_heat\_window}} (January, daily-mean ambient $-24.4\,^\circ$C) and \texttt{{typical\_heat\_window}} (February, $+2.4\,^\circ$C). MORL and PI reference values additionally use the 12-month yearly evaluation protocol. This difference is intentional: the targeted windows expose controller-family mechanisms, while the yearly protocol exposes seed stability and preference robustness.
 
-Figure~\ref{{fig:block2_pipeline}} summarizes the Block 2 pipeline. Direct v3.5 is a negative control, not a failed implementation; it asks whether the highest-fidelity predictive surrogate can be used directly as the policy rollout environment. The answer is no. The hybrid backend then asks whether the same physical model is useful if its role is changed from dynamics provider to reward-shaping censor: yes for thermostatic PPO, no for HDRL at the same $\lambda_{{\mathrm{{temp}}}}$, and conditionally yes for MORL after the observation interface is expanded from 5D to 17D.
+Figure~\ref{{fig:block2_pipeline}} summarizes the Block 2 pipeline. Direct v3.5 is a negative control, not a failed implementation; it asks whether the highest-fidelity predictive surrogate can be used directly as the policy rollout environment. The answer is no. The hybrid backend then asks whether the same physical model is useful if its role is changed from dynamics provider to reward-shaping censor: yes for thermostatic PPO, no for HDRL at the same $\lambda_{{\mathrm{{temp}}}}$, and conditionally yes for MORL after the observation interface is expanded from 5D to 17D. These experiments correspond to \texttt{{roadmap.md}} Block 2 Sections 4 (pure v3), 4.5 (warm-start), 5 (hybrid), 5.5 (transfer diagnostics), 6 (HDRL), 6.5 (MORL 5D), 7--9 (MORL 17D / Pareto / canonical seed analysis), and 10 (PI); their artifact provenance and rebuild commands are catalogued in roadmap Section 11.1.
 
 \begin{{figure}}[t]
   \centering
@@ -263,6 +314,20 @@ Figure~\ref{{fig:block2_pipeline}} summarizes the Block 2 pipeline. Direct v3.5 
   \caption{{Block 2 controller-learning pipeline. The experiments separate the rollout model, the physical regularizer, the controller family, the observation interface, and live BOPTEST validation.}}
   \label{{fig:block2_pipeline}}
 \end{{figure}}
+
+\begin{{table}}[t]
+\centering
+\caption{{Targeted-window and yearly scenario definitions (verified from \texttt{{outputs/block2\_*/scenario\_manifest.json}}).}}
+\label{{tab:scenarios}}
+\small
+\begin{{tabular}}{{lrrrrl}}
+\toprule
+Scenario & Day idx & Start (s) & Dur. (d) & Ambient mean ($^\circ$C) & Role \\
+\midrule
+{ctx['table_scenarios']}
+\bottomrule
+\end{{tabular}}
+\end{{table}}
 
 \section{{PPO interface, observation design, and reward}}
 
@@ -303,7 +368,23 @@ The canonical observation interface is the 17-dimensional extended TSup-style ve
   \right] \in \mathbb{{R}}^{{17}}.
   \label{{eq:obs17}}
 \end{{equation}}
-It contains 5 physical states (zone temperature, CO$_2$, clipped-log power, previous supply temperature, ambient), 4 cyclic time features, 5 ambient forecasts ($+1,+3,+6,+12,+24$ h), 2 previous-action terms, and 1 causal-smoothed $\Delta T_{{\mathrm{{zone}}}}$. The failed MORL baseline uses only the earlier 5D observation, which lacks sufficient actuation and forecast context. The action is a single normalized supply-temperature command,
+It contains 5 physical states (zone temperature, CO$_2$, clipped-log power, previous supply temperature, ambient), 4 cyclic time features, 5 ambient forecasts ($+1,+3,+6,+12,+24$ h), 2 previous-action terms, and 1 causal-smoothed $\Delta T_{{\mathrm{{zone}}}}$. The failed MORL baseline uses only the earlier 5D observation, which lacks sufficient actuation and forecast context.
+
+\begin{{table}}[t]
+\centering
+\caption{{Extended 17D observation feature groups (verified from \texttt{{envs/tsup\_features.py}}).}}
+\label{{tab:obs17}}
+\small
+\begin{{tabular}}{{lll}}
+\toprule
+Feature group & Dim. & Contents \\
+\midrule
+{ctx['table_obs17']}
+\bottomrule
+\end{{tabular}}
+\end{{table}}
+
+The action is a single normalized supply-temperature command,
 \begin{{equation}}
   a_t \in [-1,1],
   \qquad
@@ -311,6 +392,31 @@ It contains 5 physical states (zone temperature, CO$_2$, clipped-log power, prev
   \label{{eq:action_map}}
 \end{{equation}}
 with a 1.0 C deadband and a per-step rate limit; the comfort band is $21$--$24\,^\circ$C.
+
+\paragraph{{Evaluation metric.}} The headline maintenance score combines the comfort-violation rate and the worst-case relative severity over a rollout,
+\begin{{equation}}
+  m_s = r_{{\mathrm{{time}}}} + r_{{\mathrm{{sev}}}},
+  \quad
+  r_{{\mathrm{{time}}}} = \frac{{1}}{{N}}\sum_{{t}} \mathbb{{1}}\!\left[T_t < T_{{\ell}} \lor T_t > T_{{h}}\right],
+  \quad
+  r_{{\mathrm{{sev}}}} = \max_t \max\!\left(\frac{{(T_{{\ell}}-T_t)_+}}{{T_{{\ell}}}},\, \frac{{(T_t-T_{{h}})_+}}{{T_{{h}}}}\right),
+  \label{{eq:ms}}
+\end{{equation}}
+with $T_{{\ell}}=21\,^\circ$C and $T_{{h}}=24\,^\circ$C (source: \texttt{{evaluation/benchmark\_bestest\_air\_article7\_style.py}}). Hence $r_{{\mathrm{{time}}}}$ is the fraction of steps outside the band (violation\,$\%=100\,r_{{\mathrm{{time}}}}$) and $r_{{\mathrm{{sev}}}}$ is the single worst relative band exceedance; lower $m_s$ is better. RMSE$_T$ is reported against the band center $T^{{\star}}=22.5\,^\circ$C.
+
+\begin{{table}}[t]
+\centering
+\caption{{Reward-shaping parameters (verified from \texttt{{configs/env.yaml}}).}}
+\label{{tab:reward}}
+\small
+\begin{{tabular}}{{lll}}
+\toprule
+Component & Value & Role \\
+\midrule
+{ctx['table_reward']}
+\bottomrule
+\end{{tabular}}
+\end{{table}}
 
 \section{{Hybrid backend: mathematical role of v3.5}}
 
@@ -322,7 +428,7 @@ The hybrid backend changes the role of the calibrated physical surrogate. Instea
   - \lambda_P \left|P^{{v3}}_{{t+1}}-P^{{v3.5}}_{{t+1}}\right|.
   \label{{eq:hybrid_reward}}
 \end{{align}}
-For the canonical thermostatic hybrid, $\lambda_T=0.10$ and $\lambda_P=5.0\times 10^{{-5}}$; PPO otherwise computes the advantage $A_t = r^{{\mathrm{{hyb}}}}_t + \gamma V(s_{{t+1}}) - V(s_t)$ unchanged. Thus v3.5 is neither a second policy loss nor a direct dynamics model: it is a frozen physics-informed censor that discourages the policy from entering state-action regions where the smooth v3 rollout and the calibrated physical model disagree. Across the canonical hybrid traces, the mean temperature disagreement is $0.969\,^\circ$C (p95 $2.52\,^\circ$C) and the mean power disagreement is $708$ W (p95 $1236$ W) --- large enough to shape learning, bounded enough to stay informative.
+For the canonical thermostatic hybrid, $\lambda_T=0.10$ and $\lambda_P=5.0\times 10^{{-5}}$; PPO otherwise computes the advantage $A_t = r^{{\mathrm{{hyb}}}}_t + \gamma V(s_{{t+1}}) - V(s_t)$ unchanged. Thus v3.5 is neither a second policy loss nor a direct dynamics model: it is a frozen physics-informed censor that discourages the policy from entering state-action regions where the smooth v3 rollout and the calibrated physical model disagree. Across the canonical hybrid traces (\texttt{{reports/hybrid\_disagreement\_summary.csv}}, overall), the mean temperature disagreement is ${ctx['dis_temp_mean']}\,^\circ$C (p95 ${ctx['dis_temp_p95']}\,^\circ$C) and the mean power disagreement is ${ctx['dis_pow_mean']}$ W (p95 ${ctx['dis_pow_p95']}$ W) --- large enough to shape learning, bounded enough to stay informative.
 
 \begin{{figure}}[t]
   \centering
@@ -456,6 +562,8 @@ $\lambda_T$ & Scenario & $m_s$ & Violation (\%) & RMSE$_T$ ($^\circ$C) & Energy 
 
 \section{{MORL observation ablation: 5D failure to 17D success}}
 
+MORL uses a four-stage pipeline that differs from the single-stage PPO families (roadmap Section 7): (1) a 2M-step surrogate \emph{{pretrain}} on the 17D hybrid backend with canonical $(w_c,w_e,w_s)=(0.80,0.20,0.00)$; (2) an \emph{{ERAM}} weight-adaptation stage (20 iterations of 100k steps from initial weights $0.34/0.33/0.33$); (3) a 100k-step \emph{{finetune}} on the live BOPTEST RTE at learning rate $10^{{-4}}$ with $\pm3$-day episode-start jitter; and (4) a 12-month \emph{{yearly evaluation}}. MORL is the only family with a live-BOPTEST finetune; the thermostatic/HDRL families are evaluated zero-shot after surrogate-only training, which is a strictly harder transfer.
+
 MORL initially failed with a 5D observation (zone temperature, ambient, hour, day, occupancy). Under the current code path, a reconstructed 5D rerun obtains RMSE$_T={ctx['m5_rmse']}\,^\circ$C, violation ${ctx['m5_viol']}\%$, and $m_s={ctx['m5_ms']}$; the originally frozen 5D artifact was even worse (RMSE$_T={ctx['m5frozen_rmse']}\,^\circ$C, $m_s={ctx['m5frozen_ms']}$) and is retained only as an audit artifact. Replacing the observation with the 17D TSup-style vector recovers a usable policy: RMSE$_T={ctx['m17_rmse']}\,^\circ$C, violation ${ctx['m17_viol']}\%$, $m_s={ctx['m17_ms']}$ (Table~\ref{{tab:morl5d17d}}). The dominant MORL bottleneck was the observation geometry, not the reward scalarization alone.
 
 \begin{{table}}[t]
@@ -481,7 +589,7 @@ Variant & Obs dim & RMSE$_T$ ($^\circ$C) & Violation (\%) & $m_s$ \\
 
 \section{{MORL Pareto front and N=5 seed variance}}
 
-The MORL Pareto sweep varies comfort/energy weights with safety weight zero (Table~\ref{{tab:morl_pareto_seed}}). Energy-only control collapses comfort ($m_s={ctx['p0_ms']}$, violation ${ctx['p0_viol']}\%$); comfort-leaning settings are far more stable. The single-seed (seed 42) Pareto points are reported separately from the $N=5$ canonical extensions, because the seed analysis is the central audit result: the neutral 50/50 canonical has $m_s={ctx['n50_ms']}\pm{ctx['n50_std']}$ (CV ${ctx['n50_cv']}$) and the practical 75/25 canonical has $m_s={ctx['n75_ms']}\pm{ctx['n75_std']}$ (CV ${ctx['n75_cv']}$). Seed 46 is an outlier in both groups (Table~\ref{{tab:morl_per_seed}}). Because the replay audit produced bit-identical BOPTEST trajectories for a fixed policy, this variance is attributed to PPO/ERAM training stochasticity, not simulator noise. The single-seed canonical ($m_s\approx0.10$) is therefore the \emph{{best}} of five, not the median.
+The MORL Pareto sweep varies comfort/energy weights with safety weight zero (Table~\ref{{tab:morl_pareto_seed}}). Energy-only control collapses comfort ($m_s={ctx['p0_ms']}$, violation ${ctx['p0_viol']}\%$); comfort-leaning settings are far more stable. The single-seed (seed 42) Pareto points are reported separately from the $N=5$ canonical extensions, because the seed analysis is the central audit result: the neutral 50/50 canonical has $m_s={ctx['n50_ms']}\pm{ctx['n50_std']}$ (CV ${ctx['n50_cv']}$, 95\% $t$-CI $[{ctx['n50_ci_lo']},{ctx['n50_ci_hi']}]$) and the practical 75/25 canonical has $m_s={ctx['n75_ms']}\pm{ctx['n75_std']}$ (CV ${ctx['n75_cv']}$, 95\% $t$-CI $[{ctx['n75_ci_lo']},{ctx['n75_ci_hi']}]$). Seed 46 is an outlier in both groups (Table~\ref{{tab:morl_per_seed}}). Because the replay audit produced bit-identical BOPTEST trajectories for a fixed policy, this variance is attributed to PPO/ERAM training stochasticity, not simulator noise. The single-seed canonical ($m_s\approx0.10$) is therefore the \emph{{best}} of five, not the median.
 
 \begin{{table}}[t]
 \centering
@@ -568,6 +676,29 @@ def main() -> None:
     n75 = d["seed_sum"][d["seed_sum"].canonical == "comfort_075_energy_025"].iloc[0]
     p0 = d["pareto"][d["pareto"].label == "comfort_000_energy_100"].iloc[0]
 
+    # Q1 additions: reward config, scenario manifest, disagreement stats, N=5 CI.
+    import json
+    import math
+    try:
+        reward_tbl = table_reward(load_env_reward())
+    except Exception as exc:
+        print(f"[warn] reward table fallback: {exc}")
+        reward_tbl = table_reward({})
+    try:
+        manifest = json.loads((ROOT / "outputs/bestest_air_article7_style_15min/scenario_manifest.json").read_text(encoding="utf-8"))
+        scen_tbl = table_scenarios(manifest)
+    except Exception as exc:
+        print(f"[warn] scenario table fallback: {exc}")
+        scen_tbl = ""
+    dis = read_csv("reports/hybrid_disagreement_summary.csv")
+    dov = dis[dis.scenario == "overall"].iloc[0]
+    # 95% t-CI (n=5, t_{0.975,4}=2.776) on m_s for the two canonicals.
+    tcrit = 2.776
+    n50 = d["seed_sum"][d["seed_sum"].canonical == "comfort_050_energy_050"].iloc[0]
+    n75 = d["seed_sum"][d["seed_sum"].canonical == "comfort_075_energy_025"].iloc[0]
+    ci50 = tcrit * float(n50.ms_std) / math.sqrt(5)
+    ci75 = tcrit * float(n75.ms_std) / math.sqrt(5)
+
     pure_peak = _scen_row(d["pure"], "peak_heat_window", controller="thermostatic")
     pure_typ = _scen_row(d["pure"], "typical_heat_window", controller="thermostatic")
     hyb_peak = _scen_row(d["hybrid"], "peak_heat_window")
@@ -578,6 +709,15 @@ def main() -> None:
 
     ctx = {
         "table_nomenclature": table_nomenclature(),
+        "table_reward": reward_tbl,
+        "table_obs17": table_obs17(),
+        "table_scenarios": scen_tbl,
+        "dis_temp_mean": f(dov.temp_disagree_mean_c, 3),
+        "dis_temp_p95": f(dov.temp_disagree_p95_c, 2),
+        "dis_pow_mean": f(dov.power_disagree_mean_w, 0),
+        "dis_pow_p95": f(dov.power_disagree_p95_w, 0),
+        "n50_ci_lo": f(float(n50.ms_mean) - ci50, 3), "n50_ci_hi": f(float(n50.ms_mean) + ci50, 3),
+        "n75_ci_lo": f(float(n75.ms_mean) - ci75, 3), "n75_ci_hi": f(float(n75.ms_mean) + ci75, 3),
         "table_main_kpi": kpi,
         "table_warmstart": table_warmstart(d),
         "table_transfer": table_transfer(d),

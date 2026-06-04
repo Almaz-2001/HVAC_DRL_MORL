@@ -878,6 +878,11 @@ MORL single-seed Pareto sweep                        -> outputs/morl_pareto_hybr
 MORL N=5 canonical seed variance                     -> reports/morl_*canonical*.csv
 PI yearly baseline                                   -> evaluation/run_block2.py pi-yearly  (m_s, violation, energy, RMSE_T)
 Block 2 tables/figures rebuild                       -> evaluation/run_block2.py build-reports  (Section 11)
+m_s metric definition (r_time + r_sev)               -> evaluation/benchmark_bestest_air_article7_style.py (compute_safety_metrics)
+Reward / action / comfort-band parameters            -> configs/env.yaml  (morl + comfort_shaping + action_wrappers)
+17D observation feature groups                       -> envs/tsup_features.py  (obs_mode = extended)
+Targeted + yearly scenario definitions               -> outputs/block2_*/scenario_manifest.json
+Hybrid v3-vs-v3.5 disagreement statistics            -> reports/hybrid_disagreement_summary.csv  (overall row)
 ```
 
 To rebuild the Block 2 artifacts, run the Section 4-11 commands through
