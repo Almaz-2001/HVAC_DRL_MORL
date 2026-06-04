@@ -355,11 +355,12 @@ warm-start (from v3.5) & typical & 1.289 & 86.83 \\
 
 This diagnostic (roadmap \S5.5) compares three controllers --- pure v3, hybrid $\lambda_T=0.10$, and direct v3.5 --- in three steps. \emph{Step 1}: a standalone direct-v3.5 thermostatic policy is trained on the calibrated v3.5 environment (the failure control; \texttt{thermostatic-train --variant v35\_direct}), separate from the warm-start checkpoint of the previous section because it answers a different question (zero-shot live transfer rather than warm-start utility). \emph{Step 2}: all three policies are run in closed loop on the live BOPTEST RTE for the two 14-day windows (\texttt{thermostatic-transfer --variant all}). \emph{Step 3}: for each policy we compute four transfer diagnostics (\texttt{thermostatic-diagnose}) --- the temperature tracking gap (live RMSE$_T$), the surrogate-vs-live maintenance-score mismatch
 \begin{equation}
-  \Delta m_s = m_s^{\mathrm{surrogate}} - m_s^{\mathrm{BOPTEST}}
-  \quad(\text{negative}\Rightarrow\text{surrogate optimistic}),
-  \qquad
-  g_a = \frac{1}{N}\sum_{t=1}^{N}\left\|a_t^{\mathrm{BOPTEST}}-a_t^{\mathrm{surrogate}}\right\|_2 ,
-  \label{eq:transfer_gap}
+\begin{aligned}
+  \Delta m_s &= m_s^{\mathrm{surrogate}} - m_s^{\mathrm{BOPTEST}}
+  \qquad(\text{negative}\Rightarrow\text{surrogate optimistic}), \\[3pt]
+  g_a &= \frac{1}{N}\sum_{t=1}^{N}\big\|\,a_t^{\mathrm{BOPTEST}}-a_t^{\mathrm{surrogate}}\,\big\|_{2} .
+\end{aligned}
+\label{eq:transfer_gap}
 \end{equation}
 the action-gap norm $g_a$, and the first divergence step (earliest 15-min step where surrogate and live trajectories separate beyond threshold), with the top driver feature attributed to the divergence.
 
