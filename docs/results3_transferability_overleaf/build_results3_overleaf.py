@@ -769,6 +769,12 @@ def main() -> None:
 
     write_tex(ctx)
     print(f"Wrote {BASE / 'main.tex'}")
+    if "--integrated" in sys.argv:
+        sys.path.insert(0, str(BASE.parent))
+        from build_integrated_paper import strip_to_body
+        (BASE / "section_body.tex").write_text(
+            strip_to_body((BASE / "main.tex").read_text(encoding="utf-8")), encoding="utf-8")
+        print(f"Wrote {BASE / 'section_body.tex'}")
 
 
 if __name__ == "__main__":

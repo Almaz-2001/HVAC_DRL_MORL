@@ -1,0 +1,114 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{siunitx}
+\usepackage{xcolor}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{float}
+\usepackage{placeins}
+\usepackage{hyperref}
+
+\geometry{margin=2.0cm}
+\graphicspath{%
+  {../results1_digital_twin_overleaf/figures/}%
+  {../results2_control_overleaf/figures/}%
+  {../results3_transferability_overleaf/figures/}}
+\hypersetup{colorlinks=true, linkcolor=blue!55!black, citecolor=blue!55!black, urlcolor=blue!55!black}
+\captionsetup{font=small, labelfont=bf}
+
+% Macros shared by all three Results bodies (their own \newcommand lines were
+% stripped with the section preambles).
+\newcommand{\RMSE}{\ensuremath{\mathrm{RMSE}}}
+\newcommand{\MAE}{\ensuremath{\mathrm{MAE}}}
+\newcommand{\Czon}{\ensuremath{C_{\mathrm{zon}}}}
+\newcommand{\Tsupply}{\ensuremath{T_{\mathrm{sup}}}}
+\newcommand{\That}{\ensuremath{\widehat{T}}}
+
+\title{Predictive Fidelity is Not Control Utility: A Hybrid Surrogate Recipe for
+Reinforcement-Learning HVAC Control and Its Pre-registered Transferability}
+\author{TODO authors}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+TODO abstract.
+\end{abstract}
+
+\textbf{Keywords:} TODO; reinforcement learning; HVAC; digital twin; surrogate model; transfer.
+
+\section*{Nomenclature}
+TODO consolidated nomenclature (merge the per-section symbol tables from the
+standalone Results packages: $m_s$, RMSE$_T$, $\Czon$, $\Tsupply$, $\lambda_T$,
+$\lambda_P$, $\rho_C$, $\tau_k$, $\Delta E$, etc.).
+
+\section{Introduction}
+\subsection{Motivation}        TODO
+\subsection{Gap}               TODO
+\subsection{Hypothesis and study design} TODO
+\subsection{Results summary}   TODO
+\subsection{Contributions}     TODO
+
+\section{Related Work}
+\subsection{Deep reinforcement learning and MORL for HVAC control} TODO
+\subsection{Surrogate models and digital twins for building simulation} TODO
+\subsection{Physics-informed, Neural ODE, and hybrid models} TODO
+\subsection{Benchmark environments and building-simulation infrastructure} TODO
+\subsection{Predictive information, distribution shift, and transfer gap} TODO
+\subsection{Transfer learning and cross-testcase generalization} TODO
+\subsection{Research gap and positioning of this paper} TODO
+
+\section{Methodology}
+\subsection{Reference environment} TODO
+\subsection{Problem formulation}   TODO
+\subsection{Surrogate model design}
+\subsubsection{Control-oriented surrogate v3} TODO (relocate the v3 architecture/training math from Results I)
+\subsubsection{Physically informed surrogate v3.5 and Stage A/B/C calibration} TODO (relocate from Results I)
+\subsubsection{Hybrid surrogate and loss coupling} TODO (relocate the hybrid-reward math from Results II)
+\subsection{DRL controller} TODO (relocate the PPO interface / reward / observation from Results II)
+\subsection{Evaluation protocol and transferability methodology} TODO (relocate metrics/adapter spec from Results III)
+
+\section{Experimental Setup}
+\subsection{Testbeds and serving layer} TODO
+\subsection{Data generation and preprocessing} TODO
+\subsection{Training and calibration workflow} TODO
+\subsection{Runtime characteristics} TODO
+\subsection{Evaluation protocol and metrics} TODO
+\subsection{Statistical and audit protocol} TODO
+\subsection{Reproducibility and audit trail} TODO
+
+% ===== Results sections (auto-generated bodies; sections 5, 6, 7) =====
+\input{../results1_digital_twin_overleaf/section_body.tex}
+\input{../results2_control_overleaf/section_body.tex}
+\input{../results3_transferability_overleaf/section_body.tex}
+
+\section{Discussion}
+\subsection{Predictive validity vs RL training utility} TODO
+\subsection{Controller-family specificity} TODO
+\subsection{Transferability boundary} TODO
+\subsection{Step-size, first-divergence horizon, and pre-registration discipline} TODO
+\subsection{Positioning relative to related work} TODO
+\subsection{Threats to validity}\label{ssec:block1-limitations}\label{ssec:b3lim} TODO (absorb the per-section Limitations bullets; these labels also catch the refs that the stripped per-section Limitations used to carry)
+
+\section{Conclusion}
+TODO (absorb the per-section conclusions; state Block 4 future work).
+
+\section*{Data availability}
+TODO (cite roadmap provenance maps: Sections 3.2, 11.1, 15.7; reports/ and outputs/ artifacts).
+
+\section*{Supplementary Material: Hou and Evins Numerical Artifacts}
+TODO (S1--S11 tables).
+
+\end{document}
