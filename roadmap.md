@@ -367,6 +367,41 @@ Runtime throughput (steps/s, median/P95 ms)        -> reports/speed_benchmark_ta
 Figures rie_fig01..08 (PDF + PNG)                  -> docs/results1_digital_twin_overleaf/figures/  (generated)
 ```
 
+To rebuild the artifacts themselves (not just locate them), run the Block 1
+stages through `evaluation/run_block1.py`; each command writes the files
+referenced in the map above:
+
+```bash
+# v3 corpus + training            -> outputs/surrogate_v2/
+python3 -B evaluation/run_block1.py collect-data
+python3 -B evaluation/run_block1.py v3-train
+
+# v3.5 Stage A/B/C, both passes    -> outputs/surrogate_v35_inverse_boptest_15min_{episodeaware,power_head_only}/
+python3 -B evaluation/run_block1.py prepare-15min
+python3 -B evaluation/run_block1.py v35-calibrate --preset canonical
+
+# corpus-matched v3 + attribution  -> reports/block1_corpus_matched_comparison.{csv,json}
+python3 -B evaluation/run_block1.py v3-train-15min
+python3 -B evaluation/run_block1.py build-corpus-matched-report
+
+# prepared rollouts (v3, raw/cal v3.5, matched v3) -> outputs/surrogate_*_rollout_prepared_*/
+python3 -B evaluation/run_block1.py validate-rollouts --variant matched
+
+# Hou-and-Evins tables + speed benchmark -> reports/hou_evins_*.csv, reports/speed_benchmark_table.csv
+python3 -B evaluation/run_block1.py build-reports
+python3 -B evaluation/run_block1.py speed-benchmark
+
+# ...or the whole Block 1 pipeline end-to-end:
+python3 -B evaluation/run_block1.py all
+```
+
+After the artifacts exist, regenerate the manuscript section, figures, and
+tables with:
+
+```bash
+python3 -B docs/results1_digital_twin_overleaf/build_results1_overleaf.py
+```
+
 Power-channel caveat for reviewers: the canonical calibrated v3.5 power head is
 the `power_head_only` (second-pass) checkpoint, used for all reported power
 metrics (MAE 482 W, CV(RMSE) ~69%, NMBE ~-12%). The
