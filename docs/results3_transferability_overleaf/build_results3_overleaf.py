@@ -19,12 +19,69 @@ from pathlib import Path
 
 import pandas as pd
 
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+from matplotlib.patches import FancyArrowPatch, FancyBboxPatch
+
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 BASE = Path(__file__).resolve().parent
+FIG = BASE / "figures"
 CZON_AIR = 4.413e5  # bestest_air canonical C_zon (Block 1), J/K
+
+NAVY = "#1f4e79"; TEAL = "#008080"; AMBER = "#c9822b"
+GREEN = "#3b7d3a"; SLATE = "#5d6875"; PURPLE = "#6b5b95"; BURGUNDY = "#9b3d3d"
+plt.rcParams.update({"font.family": "serif", "font.size": 10, "figure.dpi": 130})
+
+
+def _save(fig, stem: str) -> None:
+    FIG.mkdir(parents=True, exist_ok=True)
+    fig.savefig(FIG / f"{stem}.pdf", bbox_inches="tight")
+    fig.savefig(FIG / f"{stem}.png", dpi=300, bbox_inches="tight")
+    plt.close(fig)
+
+
+def _box(ax, x, y, w, h, text, color, fc="#ffffff", fs=8.2):
+    ax.add_patch(FancyBboxPatch((x, y), w, h, boxstyle="round,pad=0.012,rounding_size=0.02",
+                                linewidth=1.2, edgecolor=color, facecolor=fc))
+    ax.text(x + w / 2, y + h / 2, text, ha="center", va="center", fontsize=fs, color="#1f2933")
+
+
+def _arrow(ax, start, end, color=SLATE):
+    ax.add_patch(FancyArrowPatch(start, end, arrowstyle="-|>", mutation_scale=12, linewidth=1.3, color=color))
+
+
+def fig_adapter(verdicts: dict) -> None:
+    """Adapter-mediated transfer schematic: one frozen controller, three
+    pre-registered actuator adapters, three testcase actuator interfaces."""
+    fig, ax = plt.subplots(figsize=(11.2, 5.0))
+    ax.set_axis_off(); ax.set_xlim(0, 1); ax.set_ylim(0, 1)
+    ax.text(0.5, 0.95, "Adapter-mediated transfer: one frozen controller, three actuator interfaces",
+            ha="center", fontsize=12.5, weight="bold", color="#1f2933")
+    ax.text(0.5, 0.885, "the Block 2 hybrid policy is frozen; only the pre-registered adapter $\\mathcal{A}_k$ changes per testcase",
+            ha="center", fontsize=9.0, style="italic", color=SLATE)
+    _box(ax, 0.02, 0.46, 0.20, 0.22, "frozen Block 2\nhybrid policy\nsupply-temp $a_t$", NAVY, "#eef5fb")
+    _box(ax, 0.27, 0.46, 0.21, 0.22, "adapter $\\mathcal{A}_k$\n$T^{\\mathrm{sup}}_t\\!=\\!18\\!+\\!\\frac{a_t+1}{2}(17)$", PURPLE, "#f4f1fa", fs=7.8)
+    cases = [
+        (0.72, "heat-pump setpoint+enable", verdicts.get("bestest_hydronic_heat_pump", "FAIL")),
+        (0.45, "boiler/radiator direct setpoint", verdicts.get("bestest_hydronic", "FAIL")),
+        (0.18, "commercial supply valve", verdicts.get("singlezone_commercial_hydronic", "PASS")),
+    ]
+    for y, label, verdict in cases:
+        ok = verdict.startswith("PASS")
+        col = GREEN if ok else BURGUNDY
+        vtxt = "PASS$^\\dagger$" if ok else "FAIL"
+        _box(ax, 0.53, y, 0.27, 0.155, label, TEAL, "#edf8f7", fs=7.8)
+        _box(ax, 0.85, y, 0.13, 0.155, vtxt, col, "#ffffff", fs=8.5)
+        _arrow(ax, (0.48, 0.57), (0.53, y + 0.078), SLATE)
+        _arrow(ax, (0.80, y + 0.078), (0.85, y + 0.078), col)
+    _arrow(ax, (0.22, 0.57), (0.27, 0.57))
+    ax.text(0.5, 0.085, "controller-side verdict is per-testcase ($1.25\\times$PI threshold); the surrogate side (full Stage A/B/C) PASSES on all three.",
+            ha="center", fontsize=8.4, color="#374151")
+    _save(fig, "fig_block3_adapter")
 
 
 def read_csv(rel: str) -> pd.DataFrame:
@@ -114,7 +171,7 @@ def table_nomenclature() -> str:
         (r"$\rho_{C,k}$", "--", "re-identified $C_{\\mathrm{zon}}$ ratio vs the \\texttt{bestest\\_air} baseline"),
         (r"$\mathcal{A}_k$", "--", "pre-registered actuator adapter for testcase $k$"),
     ]
-    return "\n".join(f"{a} & {b} & {tex_escape(c) if c.find(chr(92))<0 else c} \\\\" for a, b, c in rows)
+    return "\n".join(f"{a} & {b} & {c} \\\\" for a, b, c in rows)
 
 
 def table_hypotheses(tm: pd.DataFrame) -> str:
@@ -246,7 +303,14 @@ The adapter maps the frozen source policy output to the target actuator interfac
   T^{{\mathrm{{sup}}}}_t = 18 + \tfrac{{a_t+1}}{{2}}(35-18),
   \label{{eq:adapter}}
 \end{{equation}}
-where $\mathcal{{A}}_{{k}}$ is the pre-registered adapter for testcase $k$, $a_t\in[-1,1]$ is the frozen policy output, and $y_t$ are available BOPTEST measurements used by rule-based adapter logic. Adapter smoke tests verify that low/high overrides produce directionally valid heating before any yearly run. The recalibration regimes (Table~\ref{{tab:regimes}}) keep the controller frozen and vary only how much of the surrogate adapts.
+where $\mathcal{{A}}_{{k}}$ is the pre-registered adapter for testcase $k$, $a_t\in[-1,1]$ is the frozen policy output, and $y_t$ are available BOPTEST measurements used by rule-based adapter logic. Adapter smoke tests verify that low/high overrides produce directionally valid heating before any yearly run. Figure~\ref{{fig:adapter}} shows the adapter-mediated transfer: one frozen controller drives three different actuator interfaces through the per-testcase adapters, with per-testcase controller verdicts. The recalibration regimes (Table~\ref{{tab:regimes}}) keep the controller frozen and vary only how much of the surrogate adapts.
+
+\begin{{figure}}[H]
+  \centering
+  \includegraphics[width=0.97\linewidth]{{fig_block3_adapter.pdf}}
+  \caption{{Adapter-mediated transfer schematic. The frozen Block 2 hybrid policy is routed through a pre-registered actuator adapter $\mathcal{{A}}_k$ to each testcase's actuator interface; the controller-side verdict (against the $1.25\times$ PI threshold) is per-testcase, while full Stage A/B/C surrogate recalibration passes on all three.}}
+  \label{{fig:adapter}}
+\end{{figure}}
 
 \begin{{table}}[H]
 \centering
@@ -472,6 +536,12 @@ def main() -> None:
         "cm_de": f(cm.energy_delta_pct_vs_pi, 1), "cm_raw_rmse": f(cm.raw_rmse_t_c, 3),
         "cm_full_rmse": f(cm.full_rmse_t_c, 3), "cm_gain": f(cm.rmse_improvement_pct, 1), "cm_ratio": f(cm.c_zon_ratio_vs_bestest_air, 3),
     }
+    try:
+        verdicts = {r.testcase: str(r.none_controller_verdict) for _, r in tm.iterrows()}
+        fig_adapter(verdicts)
+    except Exception as exc:
+        print(f"[warn] adapter figure skipped: {exc}")
+
     write_tex(ctx)
     print(f"Wrote {BASE / 'main.tex'}")
 

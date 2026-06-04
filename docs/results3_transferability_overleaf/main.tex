@@ -64,10 +64,10 @@ Symbol & Unit & Meaning \\
 $m_{s,\mathrm{RL}}$ & -- & live BOPTEST maintenance score of the frozen RL controller (lower better) \\
 $m_{s,\mathrm{PI}}$ & -- & maintenance score of the testcase built-in PI controller \\
 $\tau_k$ & -- & pre-registered pass threshold $1.25\,m_{s,\mathrm{PI},k}$ for testcase $k$ \\
-$\Delta E_k$ & \si{\percent} & energy change of the RL controller vs PI on testcase \$k\$ \\
+$\Delta E_k$ & \si{\percent} & energy change of the RL controller vs PI on testcase $k$ \\
 $G^{\mathrm{RMSE}}_k$ & \si{\percent} & rollout-RMSE improvement after full Stage A/B/C recalibration \\
 $\rho_{C,k}$ & -- & re-identified $C_{\mathrm{zon}}$ ratio vs the \texttt{bestest\_air} baseline \\
-$\mathcal{A}_k$ & -- & pre-registered actuator adapter for testcase \$k\$ \\
+$\mathcal{A}_k$ & -- & pre-registered actuator adapter for testcase $k$ \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -103,7 +103,14 @@ The adapter maps the frozen source policy output to the target actuator interfac
   T^{\mathrm{sup}}_t = 18 + \tfrac{a_t+1}{2}(35-18),
   \label{eq:adapter}
 \end{equation}
-where $\mathcal{A}_{k}$ is the pre-registered adapter for testcase $k$, $a_t\in[-1,1]$ is the frozen policy output, and $y_t$ are available BOPTEST measurements used by rule-based adapter logic. Adapter smoke tests verify that low/high overrides produce directionally valid heating before any yearly run. The recalibration regimes (Table~\ref{tab:regimes}) keep the controller frozen and vary only how much of the surrogate adapts.
+where $\mathcal{A}_{k}$ is the pre-registered adapter for testcase $k$, $a_t\in[-1,1]$ is the frozen policy output, and $y_t$ are available BOPTEST measurements used by rule-based adapter logic. Adapter smoke tests verify that low/high overrides produce directionally valid heating before any yearly run. Figure~\ref{fig:adapter} shows the adapter-mediated transfer: one frozen controller drives three different actuator interfaces through the per-testcase adapters, with per-testcase controller verdicts. The recalibration regimes (Table~\ref{tab:regimes}) keep the controller frozen and vary only how much of the surrogate adapts.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.97\linewidth]{fig_block3_adapter.pdf}
+  \caption{Adapter-mediated transfer schematic. The frozen Block 2 hybrid policy is routed through a pre-registered actuator adapter $\mathcal{A}_k$ to each testcase's actuator interface; the controller-side verdict (against the $1.25\times$ PI threshold) is per-testcase, while full Stage A/B/C surrogate recalibration passes on all three.}
+  \label{fig:adapter}
+\end{figure}
 
 \begin{table}[H]
 \centering

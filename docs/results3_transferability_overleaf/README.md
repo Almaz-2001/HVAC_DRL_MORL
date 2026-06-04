@@ -17,6 +17,12 @@ Contents:
 - `figures/` - PDF/PNG figures referenced by `main.tex` (produced by the Block 3
   evaluation scripts; this builder references them and does not regenerate them).
 
+The builder also generates one self-contained schematic,
+`fig_block3_adapter`, showing the adapter-mediated transfer (one frozen
+controller -> per-testcase adapter `A_k` -> three actuator interfaces) with
+data-driven per-testcase controller verdicts; all other figures are referenced
+from `figures/` (Block 3 evaluation scripts).
+
 Layout matches Results I/II exactly: no `\maketitle`; one `\section`
 (Results III = Section 6) with subsections 6.1-6.13; `float`/`placeins` with
 `[H]` floats; nomenclature table after the protocol figure; clean captions
