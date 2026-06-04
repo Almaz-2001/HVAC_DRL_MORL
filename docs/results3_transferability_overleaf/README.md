@@ -23,6 +23,14 @@ controller -> per-testcase adapter `A_k` -> three actuator interfaces) with
 data-driven per-testcase controller verdicts; all other figures are referenced
 from `figures/` (Block 3 evaluation scripts).
 
+An actuator-adapter mapping table specifies, per testcase, the concrete BOPTEST
+override variables and `T_sup`-to-override formulas (heat-intensity
+`h = clip((T_sup-18)/17,0,1)`), verified from
+`configs/block3_actuator_mapping_*.yaml`. A data-provenance note in Limitations
+states which values are data-driven from `reports/block3_*` CSVs versus verified
+literals from the audit-frozen manifest/adapter configs, plus the single-run /
+N=3 statistical scope of the `C_zon`-uniformity finding.
+
 Layout matches Results I/II exactly: no `\maketitle`; one `\section`
 (Results III = Section 6) with subsections 6.1-6.13; `float`/`placeins` with
 `[H]` floats; nomenclature table after the protocol figure; clean captions

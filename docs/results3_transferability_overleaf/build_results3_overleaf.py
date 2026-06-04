@@ -161,6 +161,25 @@ def table_czon(tm: pd.DataFrame):
     return "\n".join(rows), mean, std
 
 
+def table_adapters() -> str:
+    """Per-testcase actuator-adapter mapping, verified from
+    configs/block3_actuator_mapping_*.yaml (pre-registered; audit anchors
+    eb7091e / 46fbaa9 / 645626e). Each adapter shares the heat-intensity map
+    h = clip((T_sup-18)/17, 0, 1)."""
+    rows = [
+        (r"\texttt{heat\_pump}", r"\texttt{oveTSet\_u} (K)",
+         r"$288.15+9h$ (zone setpoint $15$--$24^\circ$C)",
+         r"\texttt{oveHeaPumY\_u}, \texttt{ovePum\_u}, \texttt{oveFan\_u} from $h$"),
+        (r"\texttt{hydronic}", r"\texttt{oveTSetSup\_u} (K)",
+         r"$T^{\mathrm{sup}}_t+273.15$ (direct supply)",
+         r"\texttt{ovePum\_u} from $h$; fixed comfort-band context"),
+        (r"\texttt{commercial}", r"\texttt{dh\_oveTSupSetHea\_u} (K)",
+         r"$T^{\mathrm{sup}}_t+273.15$ (district supply)",
+         r"heating valves + pump from $h$; fixed zone/air context"),
+    ]
+    return "\n".join(f"{a} & {b} & {c} & {dd} \\\\" for a, b, c, dd in rows)
+
+
 def table_nomenclature() -> str:
     rows = [
         (r"$m_{s,\mathrm{RL}}$", "--", "live BOPTEST maintenance score of the frozen RL controller (lower better)"),
@@ -312,6 +331,22 @@ where $\mathcal{{A}}_{{k}}$ is the pre-registered adapter for testcase $k$, $a_t
   \label{{fig:adapter}}
 \end{{figure}}
 
+Concretely, each adapter first maps the policy command to a normalized heat-intensity $h=\mathrm{{clip}}\!\big((T^{{\mathrm{{sup}}}}_t-18)/17,\,0,\,1\big)$ and then drives the testcase's pre-registered BOPTEST override inputs (Table~\ref{{tab:adapters}}). The mappings were finalized and committed before any control run (audit anchors \texttt{{eb7091e}} / \texttt{{46fbaa9}} / \texttt{{645626e}}), so the actuator interface cannot be tuned post hoc.
+
+\begin{{table}}[H]
+\centering
+\small
+\caption{{Per-testcase actuator-adapter mapping (verified from \texttt{{configs/block3\_actuator\_mapping\_*.yaml}}). All adapters share $h=\mathrm{{clip}}((T^{{\mathrm{{sup}}}}_t-18)/17,0,1)$; setpoint overrides are in kelvin.}}
+\label{{tab:adapters}}
+\begin{{tabularx}}{{\linewidth}}{{l l >{{\raggedright\arraybackslash}}p{{40mm}} >{{\raggedright\arraybackslash}}X}}
+\toprule
+Testcase & Primary override & Override formula & Auxiliary overrides \\
+\midrule
+{ctx['table_adapters']}
+\bottomrule
+\end{{tabularx}}
+\end{{table}}
+
 \begin{{table}}[H]
 \centering
 \small
@@ -416,7 +451,7 @@ Full Stage A/B/C improves target rollout RMSE on all three testcases (gains $60.
   \bar\rho_C = {ctx['czon_mean']},\quad s_{{\rho_C}} = {ctx['czon_std']}.
   \label{{eq:czon_stats}}
 \end{{equation}}
-The calibrated thermal capacitance is thus more closely associated with hydronic-family physics than with the obvious commercial zone-size proxy: despite the stretch testcase having an order-of-magnitude larger zone volume, its ratio sits within $\pm2\%$ of the family mean. This generalizes the calibration component of the v3.5 surrogate beyond a single building.
+The calibrated thermal capacitance is thus more closely associated with hydronic-family physics than with the obvious commercial zone-size proxy: despite the stretch testcase having an order-of-magnitude larger zone volume, its ratio sits within $\pm2\%$ of the family mean. This generalizes the calibration component of the v3.5 surrogate beyond a single building. The uniformity claim is, however, established on $N=3$ single-zone hydronic cases and is therefore a hydronic-family observation rather than a statistically powered law; it is not asserted for radiant, VRF, multi-zone, or cross-climate cases (Section~\ref{{ssec:b3lim}}).
 
 \begin{{table}}[H]
 \centering
@@ -490,8 +525,11 @@ Prediction & Pre-reg.\ & A-priori & Observed & Verdict \\
 \end{{table}}
 
 \subsection{{Limitations}}
+\label{{ssec:b3lim}}
 
 \begin{{itemize}}
+  \item \textbf{{Data provenance.}} The live KPIs ($m_s$, RMSE$_T$, energy, RMSE gains, and the $C_{{\mathrm{{zon}}}}$ ratios) are read directly from the \texttt{{reports/block3\_*}} artifacts; the pre-registered hypotheses, a-priori probabilities, predictions, and actuator-adapter mappings are verified literals from the audit-frozen manifest and adapter configs; and absolute $C_{{\mathrm{{zon}}}}$ values are reconstructed as $\rho_{{C,k}}\times 4.413\times10^5$ J/K from the data-driven ratio.
+  \item \textbf{{Single run per cell.}} Each testcase$\times$regime cell is a single live BOPTEST run (the manifest caps $N=3$ per cell and excludes a seed cascade), so the transfer KPIs carry no seed-variance interval; the $\bar\rho_C$ spread is across testcases, not seeds.
   \item \textbf{{Frozen-controller scope.}} By manifest design the controller is never fine-tuned on the target testcase; Block 3 therefore measures the transferability of the \emph{{calibration pipeline}}, not of an adapted controller.
   \item \textbf{{N=3 hydronic family.}} The uniform-$C_{{\mathrm{{zon}}}}$ finding ($1.918\pm0.032$) is established on three single-zone hydronic cases; it is not claimed for radiant, VRF, multi-zone, or cross-climate cases.
   \item \textbf{{Single weather source.}} All testcases use one weather-file source, so cross-climate generalization is explicitly out of scope.
@@ -520,6 +558,7 @@ def main() -> None:
 
     ctx = {
         "table_nomenclature": table_nomenclature(),
+        "table_adapters": table_adapters(),
         "table_transfer_matrix": table_transfer_matrix(tm),
         "table_primary": table_primary(ps),
         "table_czon": czon_rows,
