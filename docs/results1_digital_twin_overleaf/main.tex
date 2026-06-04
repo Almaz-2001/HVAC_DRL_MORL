@@ -303,7 +303,17 @@ The intermediate Stage~B estimate is \(\Czon=4.413\times10^5~\mathrm{J/K}\), and
 \end{equation}
 where \(\Czon^{\mathrm{final}}=4.413 \times 10^5~\mathrm{J/K}\). The update remains inside the prior physical plausibility band.
 
-Beyond the point estimate, the identification is well conditioned: over the final 20 Stage~B epochs the \(\Czon\) trajectory is stable to within \(\pm1,005\)~J/K (0.23\% of its value), i.e.\ two orders of magnitude tighter than the \(\pm 10\%\) prior band, so the result is not a wandering optimum. Physically, the identified capacitance corresponds to an equivalent thermal mass of \(\Czon/c_{p,\mathrm{air}}\approx439\)~kg of air (\(c_{p,\mathrm{air}}=1005~\mathrm{J\,kg^{-1}K^{-1}}\)), or roughly 366~m\(^3\) of equivalent air volume at \(\rho=1.2~\mathrm{kg\,m^{-3}}\). This is the expected order of magnitude for the \texttt{bestest\_air} zone augmented by the effective thermal mass of its internal surfaces, which is exactly why the data-driven update over the air-only prior is small (\(+5\%\)) rather than large.
+Beyond the point estimate, two complementary uncertainty checks apply. The optimizer is well conditioned (over the final 20 Stage~B epochs the \(\Czon\) trajectory is stable to within \(\pm1,005\)~J/K, 0.23\%). More importantly, a Laplace/Fisher identifiability interval --- obtained from the local curvature of the one-step temperature SSE with respect to \(\Czon\) (residual heads fixed) over the high-excitation transients (\(n=1838\)) --- gives a \(1\sigma\) uncertainty of 6.6\% and a 95\% interval \([3.845,\,4.980]\times10^5\)~J/K. The \(+5.1\%\) data-driven update therefore sits within roughly one standard error of the prior: \(\Czon\) is identifiable with a moderate, honestly bounded signal rather than a tightly pinned value. Physically, the identified capacitance corresponds to an equivalent thermal mass of \(\Czon/c_{p,\mathrm{air}}\approx439\)~kg of air (\(c_{p,\mathrm{air}}=1005~\mathrm{J\,kg^{-1}K^{-1}}\)), or roughly 366~m\(^3\) of equivalent air volume at \(\rho=1.2~\mathrm{kg\,m^{-3}}\). This is the expected order of magnitude for the \texttt{bestest\_air} zone augmented by the effective thermal mass of its internal surfaces, which is exactly why the data-driven update over the air-only prior is small (\(+5\%\)) rather than large.
+
+\medskip\noindent\textbf{Physical-consistency audit.} As a final check we probe the learned dynamics directly: sweeping the supply-temperature command across its range with the state held fixed, the predicted next-step zone temperature increases with \Tsupply{} in 100\% of 400 sampled states (correct sign in every case), with a mean sensitivity of \(+0.061\)~\(^\circ\)C per \(^\circ\)C and a mean Spearman rank correlation of 0.91 (Figure~\ref{fig:physics}). The response is monotone in the physically expected direction; the small departures from strict monotonicity reflect the neural residual head and stay well inside the surrogate temperature tolerance.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.74\linewidth]{\detokenize{rie_fig09_physics_consistency.pdf}}
+  \caption{Physical-consistency audit: predicted next-step zone temperature versus the supply-temperature command for representative initial states. The response is monotone increasing, so the learned dynamics respect the correct sign of the control.}
+  \label{fig:physics}
+\end{figure}
+
 
 \begin{figure}[H]
   \centering

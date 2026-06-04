@@ -65,6 +65,7 @@ The current roadmap-consistent figure set is:
 - `rie_fig06_runtime_feasibility` - BOPTEST RTE versus surrogate runtime feasibility on a log-scale throughput plot.
 - `rie_fig07_episode_replicability` - per-episode RMSE across the eight held-out BOPTEST rollouts used for replicative validity.
 - `rie_fig08_v3_learning_curve` - v3 supervised train/validation learning curves with the early-stop epoch marked (overfitting check).
+- `rie_fig09_physics_consistency` - predicted next-step zone temperature vs the supply-temperature command for representative states (monotone-response / correct-sign audit).
 
 ## Scientific Scope
 
@@ -104,8 +105,10 @@ Overleaf file compiles as Section 4:
 - 4.3 Physics-Informed Twin and Inverse Calibration (v3.5) - the lumped-capacity
   ODE backbone, explicit-Euler discretization, positive `C_zon`
   reparameterization, a Stage A telemetry-alignment table, the Stage B MAP
-  inverse-problem statement with the excitation-identifiability argument, and the
-  Stage B `C_zon` identification table
+  inverse-problem statement with the excitation-identifiability argument, the
+  Stage B `C_zon` identification table, a Laplace/Fisher identifiability interval
+  for `C_zon` (1-sigma ~6.6%), and a physical-consistency audit of the learned
+  dynamics (monotone, correct-sign response to the supply-temperature command)
 - 4.4 Multi-Step Validation and Matched-Corpus Ablation - metric definitions
   (rollout RMSE, `R^2`, P95), the Hou-and-Evins multi-horizon rollout table (with
   the diagnostic negative 24 h v3 `R^2`), and the additive attribution
