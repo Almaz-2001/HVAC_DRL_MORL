@@ -333,6 +333,47 @@ Hybridization starts only in Section 5, after the direct-v3.5 negative control
 in Section 4.5 has documented why direct use of the calibrated twin is not a
 sufficient RL-training backend.
 
+### 3.2. Results I provenance map (reviewer-facing data and figures)
+
+The Results I / Block 1 manuscript section lives in
+`docs/results1_digital_twin_overleaf/` and is regenerated entirely from the
+versioned artifacts below by one command:
+
+```bash
+python3 -B docs/results1_digital_twin_overleaf/build_results1_overleaf.py
+```
+
+Reviewers do not need the manuscript build to inspect the evidence: every
+figure, table, and inline number in Results I is read directly from `reports/`
+and `outputs/`. The provenance map is:
+
+```text
+Results I content                                  -> source artifact
+--------------------------------------------------    -----------------------------------------------------------
+Data corpora table                                 -> reports/hou_evins_sample_generation_table.csv
+v3 architecture / training hyperparameters         -> reports/hou_evins_training_hyperparams_table.csv
+Feature scaling + physical-constraint table        -> reports/hou_evins_scaling_table.csv
+v3 learning curve + best-epoch / val R^2           -> outputs/surrogate_v2/train_history_v2.csv
+Multi-horizon rollout RMSE and 24 h R^2 (S11)      -> reports/hou_evins_predictive_validity_table.csv
+Stage A alignment, Stage B excitation, C_zon       -> outputs/surrogate_v35_inverse_boptest_15min_episodeaware/calibration_summary_boptest_v35.json
+Stage B C_zon trajectory + stability band          -> outputs/surrogate_v35_inverse_boptest_15min_episodeaware/stage_b_history_v35.csv
+Canonical Stage C power head (power MAE 482 W)     -> outputs/surrogate_v35_inverse_boptest_15min_power_head_only/calibration_summary_boptest_v35.json
+Temperature rollout: 24 h RMSE, P95, residuals,    -> outputs/surrogate_v35_rollout_prepared_15min_power_head_only/calibrated_v35/
+  persistence baseline                                  (all_full_rollouts.csv, horizon_metrics.csv, window_errors.csv, episode_summary.csv)
+Power-channel ASHRAE-G14 metrics (canonical)       -> outputs/surrogate_v35_rollout_prepared_15min_power_head_only/calibrated_v35/all_full_rollouts.csv
+v3 rollout reference                               -> outputs/surrogate_v3_rollout_prepared_15min/v3/
+Matched-corpus four-variant + decomposition        -> reports/block1_corpus_matched_comparison.csv (+ .json)
+Runtime throughput (steps/s, median/P95 ms)        -> reports/speed_benchmark_table.csv
+Figures rie_fig01..08 (PDF + PNG)                  -> docs/results1_digital_twin_overleaf/figures/  (generated)
+```
+
+Power-channel caveat for reviewers: the canonical calibrated v3.5 power head is
+the `power_head_only` (second-pass) checkpoint, used for all reported power
+metrics (MAE 482 W, CV(RMSE) ~69%, NMBE ~-12%). The
+`surrogate_v35_rollout_prepared_15min_episodeaware/` directory holds the
+intermediate first-pass head and must not be used for power-channel numbers; the
+temperature head is identical between the two passes.
+
 ## 4. Block 2: First Control Baseline -- Pure v3 Thermostatic PPO
 
 Block 2 commands are routed through `evaluation/run_block2.py`. The wrapper

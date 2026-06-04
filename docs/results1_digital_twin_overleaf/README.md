@@ -115,10 +115,13 @@ Overleaf file compiles as Section 4:
 - 4.6 Step-Size Design Disclosure - reviewer disclosure of the 3600 s vs 900 s
   step mismatch, the explicit-`dt` consistency of v3.5 vs v3, and the audit-chain
   rationale for preserving it
-- 4.7 Limitations and Reproducibility - temperature-scoped validation, the
-  disclosed power-channel ASHRAE-G14 shortfall, single-testcase/single-seed
-  limitations, and the one-command reproducibility statement
+- 4.7 Limitations - temperature-scoped validation, the disclosed power-channel
+  ASHRAE-G14 shortfall, and single-testcase/single-seed limitations
 - 4.8 Block 1 Conclusion
+
+Artifact provenance (which `outputs/` and `reports/` files back every figure and
+table) is documented in `roadmap.md`, Section 3.2, not inside the manuscript
+section.
 
 A nomenclature/SI table opens the section, the v3 subsection includes a
 supervised learning-curve figure and a design-rationale table, the validation
