@@ -409,6 +409,13 @@ metrics (MAE 482 W, CV(RMSE) ~69%, NMBE ~-12%). The
 intermediate first-pass head and must not be used for power-channel numbers; the
 temperature head is identical between the two passes.
 
+The same data-driven section pattern applies to the other blocks: Results II
+(`docs/results2_control_overleaf/`, Block 2) and Results III
+(`docs/results3_transferability_overleaf/`, Block 3) are generated from their own
+`reports/` and `outputs/` artifacts by analogous builders. The Block 2 / Results
+II provenance map is in Section 11.1; Results I is the reference implementation
+(`docs/results1_digital_twin_overleaf/build_results1_overleaf.py`).
+
 ## 4. Block 2: First Control Baseline -- Pure v3 Thermostatic PPO
 
 Block 2 commands are routed through `evaluation/run_block2.py`. The wrapper
@@ -848,6 +855,42 @@ ls reports/morl_*canonical*.csv
 ls reports/morl_pareto_front_table.csv
 ls reports/hou_evins_*.csv
 ```
+
+### 11.1. Results II provenance map (reviewer-facing data and figures)
+
+Results II (Block 2 control results) lives in `docs/results2_control_overleaf/`.
+Following the Results I pattern, it is regenerated from versioned artifacts by a
+data-driven builder `build_results2_overleaf.py` (to be added, mirroring
+`docs/results1_digital_twin_overleaf/build_results1_overleaf.py`). Reviewers can
+inspect every Block 2 number directly from `reports/` and `outputs/`:
+
+```text
+Results II content                                   -> source artifact
+---------------------------------------------------     ----------------------------------------------------------
+Pure v3 thermostatic baseline KPIs                   -> outputs/bestest_air_article7_style_15min/summary.csv
+Direct-v3.5 warm-start negative control              -> outputs/block2_thermostatic_warmstart_utility/comparison_summary.csv
+Thermostatic hybrid sweep (canonical hybrid_l010)    -> outputs/block2_thermostatic_*hybrid*/  (benchmark summaries)
+Architecture justification on live BOPTEST (S9)      -> reports/hou_evins_architecture_justification_table.csv
+Fidelity-to-RL transfer-gap diagnostics              -> reports/hybrid_transfer_comparison.csv (+ reports/figures/hybrid_transfer_gap_comparison.png)
+HDRL sweep (best lambda_temp = 0.00)                 -> outputs/block2_hdrl_hybrid_v3_v35_l0{00,03,05,10}/
+MORL 5D vs 17D observation-interface ablation        -> reports/block2_morl_5d_reconstructed_comparison.csv
+MORL single-seed Pareto sweep                        -> outputs/morl_pareto_hybrid_power_only/<tag>/ ; reports/morl_pareto_front_table.csv
+MORL N=5 canonical seed variance                     -> reports/morl_*canonical*.csv
+PI yearly baseline                                   -> evaluation/run_block2.py pi-yearly  (m_s, violation, energy, RMSE_T)
+Block 2 tables/figures rebuild                       -> evaluation/run_block2.py build-reports  (Section 11)
+```
+
+To rebuild the Block 2 artifacts, run the Section 4-11 commands through
+`evaluation/run_block2.py` (thermostatic-train/benchmark, warmstart,
+hdrl-train/benchmark, morl-5d, morl-17d, morl-canonical, pi-yearly,
+build-reports), then regenerate the section with `build_results2_overleaf.py`.
+
+Claim discipline for Results II must match Sections 9 and 13: the MORL result is
+the narrowed claim (17D power-only hybrid is substantially stronger than the
+reconstructed 5D interface and yields a useful Pareto structure, but N=5
+canonical variance is too high for a deployment-stability claim), and the
+fidelity-to-RL gap / hybrid role assignment is the Block 1->Block 2 dependency
+established in Section 3.1.
 
 ## 12. Rebuild the Word Article Skeleton
 

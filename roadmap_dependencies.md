@@ -38,6 +38,20 @@ means the section is independent of compute closure.
 | 12      | Rebuild the Word Article Skeleton                        | 11                                          | (final manuscript)           |
 | 17      | Paper Manuscript Build Path + Artifact Consolidation     | 11, 12, 15                                  | `paper_artifacts/` canonical paper package |
 
+## Manuscript section packages (Overleaf, `docs/`)
+
+Each results block has a standalone, data-driven Overleaf package that
+regenerates its manuscript section, figures, and tables directly from the
+`reports/` and `outputs/` artifacts produced by the sections above. These are
+section-build steps (not compute), analogous to Sections 11-12 but per-block and
+LaTeX-facing.
+
+| Package (builder)                                            | Reads from (roadmap sections)        | Produces / status |
+|--------------------------------------------------------------|--------------------------------------|-------------------|
+| Results I  (`build_results1_overleaf.py`)                    | 1, 2, 2.5, 3                         | `docs/results1_digital_twin_overleaf/` — **done** (provenance map: roadmap 3.2) |
+| Results II (`build_results2_overleaf.py`, planned)           | 4, 4.5, 5, 5.5, 6, 6.5, 8, 9, 10, 11 | `docs/results2_control_overleaf/` — planned (provenance map: roadmap 11.1) |
+| Results III (`build_results3_overleaf.py`, planned)          | 15                                   | `docs/results3_transferability_overleaf/` — planned |
+
 ## Independent sections (no compute closure)
 
 | Section | Title                                                    | Role                                        |
@@ -106,3 +120,13 @@ means the section is independent of compute closure.
 - **Independent sections have no compute-closure dependency** but still have
   a temporal ordering inside the roadmap (e.g., audit anchors in Section 13
   presuppose the MORL canonical work of Section 9 has been committed).
+- **Manuscript section packages are data-driven and read-only**: the
+  per-block Overleaf builders under `docs/` consume `reports/`/`outputs/`
+  artifacts and never modify model or pipeline code. They depend only on the
+  artifact-producing sections listed in their table row, so Results II cannot be
+  finalized until its Block 2 inputs (Sections 4-11) exist, and Results III
+  until Section 15 closes. Results I is the reference implementation; Results II
+  and III mirror its structure (provenance map, nomenclature/SI, limitations,
+  data-driven tables/figures). The power-channel checkpoint caveat from
+  Results I (canonical `power_head_only`, not the intermediate `episodeaware`)
+  applies wherever calibrated v3.5 power is reported downstream.
