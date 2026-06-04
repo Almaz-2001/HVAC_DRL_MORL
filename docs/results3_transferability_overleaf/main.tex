@@ -28,8 +28,10 @@
 \begin{document}
 
 \setcounter{section}{5}
-\section{Pre-registered Transferability to Hydronic-Family BOPTEST Testcases}
+\section{Results III: Transferability Hypothesis}
 \label{sec:results3-transfer}
+
+\subsection{Block 3 objective and evidence boundary}
 
 Blocks 1 and 2 established the source-case recipe on BOPTEST \texttt{bestest\_air}: a v3 rollout surrogate supplies smooth control-oriented dynamics, a calibrated v3.5 RC--NeuralODE supplies a frozen physical disagreement censor, and the thermostatic PPO policy trained on the resulting hybrid backend is the strongest verified controller on the targeted windows. Block 3 asks a narrower, more falsifiable question: does this fixed source-case recipe transfer to related BOPTEST hydronic-family testcases?
 
@@ -47,7 +49,7 @@ Artifact provenance and rebuild commands for every table and figure are catalogu
 
 \begin{figure}[H]
   \centering
-  \includegraphics[width=0.94\linewidth]{final17_fig11_block3_transferability_protocol.pdf}
+  \includegraphics[width=0.97\linewidth]{fig_block3_protocol.pdf}
   \caption{Block 3 pre-registered transferability protocol. Controller-side transfer is tested against a testcase-specific PI threshold; surrogate-side transfer is tested by full Stage A/B/C recalibration on target telemetry.}
   \label{fig:protocol}
 \end{figure}

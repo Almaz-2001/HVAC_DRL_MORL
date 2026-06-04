@@ -17,6 +17,11 @@ Contents:
 - `figures/` - PDF/PNG figures referenced by `main.tex` (produced by the Block 3
   evaluation scripts; this builder references them and does not regenerate them).
 
+The section is titled "Results III: Transferability Hypothesis" and opens with a
+"Block 3 objective and evidence boundary" subsection. The pre-registered protocol
+figure is self-generated (`fig_block3_protocol`, a clean 4-stage schematic that
+replaces the earlier external figure whose stage boxes overlapped).
+
 The builder also generates one self-contained schematic,
 `fig_block3_adapter`, showing the adapter-mediated transfer (one frozen
 controller -> per-testcase adapter `A_k` -> three actuator interfaces) with

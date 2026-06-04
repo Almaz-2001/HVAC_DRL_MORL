@@ -239,6 +239,33 @@ def fig_controller_bar(tm: pd.DataFrame) -> None:
     _save(fig, "fig_block3_controller_bar")
 
 
+def fig_protocol() -> None:
+    """Clean Block 3 pre-registered transferability protocol (replaces the
+    external figure whose stage boxes overlapped)."""
+    fig, ax = plt.subplots(figsize=(11.4, 4.2))
+    ax.set_axis_off(); ax.set_xlim(0, 1); ax.set_ylim(0, 1)
+    ax.text(0.5, 0.95, "Block 3 pre-registered transferability protocol", ha="center",
+            fontsize=12.5, weight="bold", color="#1f2933")
+    ax.text(0.5, 0.875, "the manifest (testcases, regimes, hypotheses, threshold) is committed before any non-bestest_air run",
+            ha="center", fontsize=8.8, style="italic", color=SLATE)
+    boxes = [
+        (0.015, "Pre-register\nmanifest", "testcases, regimes,\nhypotheses,\n$\\tau_k=1.25\\,m_s^{\\mathrm{PI}}$", NAVY, "#eef5fb"),
+        (0.260, "Per-testcase\nsetup", "adapter smoke test\n+ PI baseline", TEAL, "#edf8f7"),
+        (0.505, "Transfer + recalibrate", "mode=none transfer;\npartial (Stage C);\nfull (Stage A/B/C)", AMBER, "#fff6ea"),
+        (0.750, "Aggregate\n+ close", "transfer matrix;\nhypothesis closure", GREEN, "#eef8ee"),
+    ]
+    w = 0.225
+    for x, title, body, col, fc in boxes:
+        _box(ax, x, 0.40, w, 0.32, f"{title}\n\n{body}", col, fc, fs=8.0)
+    for x in [0.24, 0.485, 0.73]:
+        _arrow(ax, (x, 0.56), (x + 0.02, 0.56), SLATE)
+    ax.text(0.5, 0.135, "two component verdicts: controller-side $m_s^{\\mathrm{RL}}\\leq\\tau_k$ (per testcase) and surrogate-side full Stage A/B/C RMSE gain.",
+            ha="center", fontsize=8.4, color="#374151")
+    ax.text(0.5, 0.06, "Pre-registration block is bit-identical between the open (1861e48) and close (7ada793) commits; only result appendices are appended.",
+            ha="center", fontsize=8.0, style="italic", color=SLATE)
+    _save(fig, "fig_block3_protocol")
+
+
 def table_adapters() -> str:
     """Per-testcase actuator-adapter mapping, verified from
     configs/block3_actuator_mapping_*.yaml (pre-registered; audit anchors
@@ -346,8 +373,10 @@ def write_tex(ctx: dict) -> None:
 \begin{{document}}
 
 \setcounter{{section}}{{5}}
-\section{{Pre-registered Transferability to Hydronic-Family BOPTEST Testcases}}
+\section{{Results III: Transferability Hypothesis}}
 \label{{sec:results3-transfer}}
+
+\subsection{{Block 3 objective and evidence boundary}}
 
 Blocks 1 and 2 established the source-case recipe on BOPTEST \texttt{{bestest\_air}}: a v3 rollout surrogate supplies smooth control-oriented dynamics, a calibrated v3.5 RC--NeuralODE supplies a frozen physical disagreement censor, and the thermostatic PPO policy trained on the resulting hybrid backend is the strongest verified controller on the targeted windows. Block 3 asks a narrower, more falsifiable question: does this fixed source-case recipe transfer to related BOPTEST hydronic-family testcases?
 
@@ -365,7 +394,7 @@ Artifact provenance and rebuild commands for every table and figure are catalogu
 
 \begin{{figure}}[H]
   \centering
-  \includegraphics[width=0.94\linewidth]{{final17_fig11_block3_transferability_protocol.pdf}}
+  \includegraphics[width=0.97\linewidth]{{fig_block3_protocol.pdf}}
   \caption{{Block 3 pre-registered transferability protocol. Controller-side transfer is tested against a testcase-specific PI threshold; surrogate-side transfer is tested by full Stage A/B/C recalibration on target telemetry.}}
   \label{{fig:protocol}}
 \end{{figure}}
@@ -731,6 +760,7 @@ def main() -> None:
     try:
         verdicts = {r.testcase: str(r.none_controller_verdict) for _, r in tm.iterrows()}
         fig_adapter(verdicts)
+        fig_protocol()
         fig_topology()
         fig_regime_progression(ps)
         fig_controller_bar(tm)
