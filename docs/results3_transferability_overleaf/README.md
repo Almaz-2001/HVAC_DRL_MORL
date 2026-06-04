@@ -23,6 +23,18 @@ controller -> per-testcase adapter `A_k` -> three actuator interfaces) with
 data-driven per-testcase controller verdicts; all other figures are referenced
 from `figures/` (Block 3 evaluation scripts).
 
+A "Testcase architecture and physical processes" subsection adds: a comparative
+HVAC-topology schematic (`fig_block3_topology`: source -> distribution -> zone for
+the source case and the three hydronic targets), the governing single-zone
+hydronic energy balance (ODE), and a physics table (heat source, `C_zon`,
+equivalent thermal mass `C_zon/c_p`, mean delivered power from the Stage-C
+telemetry, thermal regime). It also adds two data-driven diagnostic figures:
+`fig_block3_regime_progression` (primary-testcase surrogate fidelity across
+recalibration regimes) and `fig_block3_controller_bar` (m_s_RL vs m_s_PI vs the
+1.25xPI threshold across the three testcases). The mean-power jump (~28x for the
+commercial case) is used as the data-driven signature of a ventilation/AHU-
+dominated regime.
+
 An actuator-adapter mapping table specifies, per testcase, the concrete BOPTEST
 override variables and `T_sup`-to-override formulas (heat-intensity
 `h = clip((T_sup-18)/17,0,1)`), verified from

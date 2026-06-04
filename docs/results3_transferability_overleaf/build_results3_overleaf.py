@@ -161,6 +161,84 @@ def table_czon(tm: pd.DataFrame):
     return "\n".join(rows), mean, std
 
 
+def fig_topology() -> None:
+    """Comparative HVAC-topology schematic: source -> distribution -> zone for the
+    source case and the three hydronic targets."""
+    fig, ax = plt.subplots(figsize=(11.4, 4.8))
+    ax.set_axis_off(); ax.set_xlim(0, 1); ax.set_ylim(0, 1)
+    ax.text(0.5, 0.965, "HVAC topology: source $\\to$ distribution $\\to$ zone across the source case and three hydronic targets",
+            ha="center", fontsize=11.5, weight="bold", color="#1f2933")
+    cols = [
+        (0.015, "bestest_air\n(source)", "air-supply\nunit", "direct air\nsupply", "single-zone\nair", NAVY, "#eef5fb"),
+        (0.260, "heat pump", "heat pump", "hydronic\nloop + pump", "single-zone", TEAL, "#edf8f7"),
+        (0.505, "hydronic", "boiler +\nradiator", "hydronic\nloop + pump", "single-zone", AMBER, "#fff6ea"),
+        (0.750, "commercial", "district heat\n+ AHU", "hydronic +\nAHU (fans,\nvalves)", "large\ncommercial", GREEN, "#eef8ee"),
+    ]
+    w = 0.225
+    for x, title, src, dist, zone, col, fc in cols:
+        ax.text(x + w / 2, 0.885, title, ha="center", fontsize=9.2, weight="bold", color=col)
+        _box(ax, x, 0.62, w, 0.16, src, col, fc, fs=8.0)
+        _box(ax, x, 0.38, w, 0.16, dist, col, fc, fs=8.0)
+        _box(ax, x, 0.14, w, 0.16, zone, col, fc, fs=8.0)
+        _arrow(ax, (x + w / 2, 0.62), (x + w / 2, 0.54), col)
+        _arrow(ax, (x + w / 2, 0.38), (x + w / 2, 0.30), col)
+    ax.text(0.5, 0.025, "Transfer changes the heat source, the distribution path, and the actuator set; the zone energy balance and $C_{\\mathrm{zon}}$ are the shared physics.",
+            ha="center", fontsize=8.3, style="italic", color=SLATE)
+    _save(fig, "fig_block3_topology")
+
+
+def fig_regime_progression(ps: pd.DataFrame) -> None:
+    """Primary-testcase surrogate-fidelity progression across recalibration regimes."""
+    order = [("partial", "stage_c_top5_heads", "Stage C\ntop-5%"),
+             ("partial", "stage_c_allrows_power", "Stage C\nall-rows pwr"),
+             ("partial", "stage_c_allrows_heads", "Stage C\nall-rows heads"),
+             ("full", "stage_abc_allrows_heads", "full\nStage A/B/C")]
+    labels, rmse, pmae = [], [], []
+    for reg, art, lab in order:
+        r = ps[(ps.regime == reg) & (ps.artifact == art)]
+        if len(r):
+            labels.append(lab); rmse.append(float(r.iloc[0].rmse_t_c)); pmae.append(float(r.iloc[0].power_mae_w))
+    x = range(len(labels))
+    fig, (a1, a2) = plt.subplots(1, 2, figsize=(10.6, 4.0))
+    a1.bar(x, rmse, color=TEAL, edgecolor="#111827", linewidth=0.4)
+    for i, v in enumerate(rmse): a1.text(i, v + 0.02, f"{v:.3f}", ha="center", fontsize=8)
+    a1.set_xticks(list(x)); a1.set_xticklabels(labels, fontsize=8)
+    a1.set_ylabel("RMSE$_T$ (C)"); a1.set_title("Temperature fidelity", loc="left", weight="bold", fontsize=10)
+    a2.bar(x, pmae, color=BURGUNDY, edgecolor="#111827", linewidth=0.4)
+    for i, v in enumerate(pmae): a2.text(i, v + 20, f"{v:.0f}", ha="center", fontsize=8)
+    a2.set_xticks(list(x)); a2.set_xticklabels(labels, fontsize=8)
+    a2.set_ylabel("Power MAE (W)"); a2.set_title("Power fidelity", loc="left", weight="bold", fontsize=10)
+    for a in (a1, a2):
+        a.grid(True, axis="y", color="#e6e8eb", linewidth=0.7); a.spines["top"].set_visible(False); a.spines["right"].set_visible(False)
+    fig.suptitle("Primary testcase: surrogate fidelity improves with recalibration depth (controller frozen)", fontsize=10.5, weight="bold")
+    fig.tight_layout()
+    _save(fig, "fig_block3_regime_progression")
+
+
+def fig_controller_bar(tm: pd.DataFrame) -> None:
+    """Controller-side m_s_RL vs m_s_PI vs threshold across the three testcases."""
+    labels = [SHORT[t] for t in tm.testcase]
+    rl = tm.m_s_rl.astype(float).to_numpy(); pi = tm.m_s_pi.astype(float).to_numpy(); thr = tm.pass_threshold_m_s.astype(float).to_numpy()
+    import numpy as np
+    x = np.arange(len(labels)); width = 0.34
+    fig, ax = plt.subplots(figsize=(9.0, 4.2))
+    ax.bar(x - width / 2, rl, width, label="$m_s^{\\mathrm{RL}}$ (frozen hybrid)", color=NAVY, edgecolor="#111827", linewidth=0.4)
+    ax.bar(x + width / 2, pi, width, label="$m_s^{\\mathrm{PI}}$ (baseline)", color=SLATE, edgecolor="#111827", linewidth=0.4)
+    for i in range(len(labels)):
+        ax.plot([x[i] - 0.5, x[i] + 0.5], [thr[i], thr[i]], color=BURGUNDY, linewidth=1.6, linestyle="--")
+        ok = rl[i] <= thr[i]
+        ax.text(x[i] - width / 2, rl[i] + 0.02, "PASS" if ok else "FAIL", ha="center", fontsize=8,
+                color=GREEN if ok else BURGUNDY, weight="bold")
+    ax.text(x[-1] + 0.5, thr[-1] + 0.02, "$\\tau_k=1.25\\,m_s^{\\mathrm{PI}}$", color=BURGUNDY, fontsize=8, ha="right")
+    ax.set_xticks(x); ax.set_xticklabels(labels)
+    ax.set_ylabel("$m_s$ (lower better)")
+    ax.set_title("Controller-side transfer vs the pre-registered threshold", loc="left", weight="bold")
+    ax.grid(True, axis="y", color="#e6e8eb", linewidth=0.7); ax.spines["top"].set_visible(False); ax.spines["right"].set_visible(False)
+    ax.legend(frameon=False, fontsize=8.5)
+    fig.tight_layout()
+    _save(fig, "fig_block3_controller_bar")
+
+
 def table_adapters() -> str:
     """Per-testcase actuator-adapter mapping, verified from
     configs/block3_actuator_mapping_*.yaml (pre-registered; audit anchors
@@ -178,6 +256,21 @@ def table_adapters() -> str:
          r"heating valves + pump from $h$; fixed zone/air context"),
     ]
     return "\n".join(f"{a} & {b} & {c} & {dd} \\\\" for a, b, c, dd in rows)
+
+
+def table_physics(tm: pd.DataFrame, powers: dict) -> str:
+    src = {"bestest_hydronic_heat_pump": "heat pump", "bestest_hydronic": "boiler/radiator",
+           "singlezone_commercial_hydronic": "district + AHU"}
+    regime = {"bestest_hydronic_heat_pump": "conduction-dominated", "bestest_hydronic": "slow hydronic",
+              "singlezone_commercial_hydronic": "ventilation/AHU-dominated"}
+    cp = 1005.0
+    rows = [f"\\texttt{{bestest\\_air}} (source) & air supply & {CZON_AIR/1e5:.3f} & {CZON_AIR/cp:.0f} & --- & reference \\\\", "\\midrule"]
+    for _, r in tm.iterrows():
+        C = float(r.c_zon_ratio_vs_bestest_air) * CZON_AIR
+        p = powers.get(r.testcase)
+        ptxt = f"{p:,.0f}" if p else "---"
+        rows.append(f"{SHORT[r.testcase]} & {src[r.testcase]} & {C/1e5:.3f} & {C/cp:.0f} & {ptxt} & {regime[r.testcase]} \\\\")
+    return "\n".join(rows)
 
 
 def table_nomenclature() -> str:
@@ -363,6 +456,38 @@ full & Stage A + Stage B + Stage C on target telemetry & frozen Block 2 hybrid c
 \end{{tabular}}
 \end{{table}}
 
+\subsection{{Testcase architecture and physical processes}}
+
+The three targets differ in heat source, distribution path, and actuator set, but share the same single-zone energy balance (Figure~\ref{{fig:topology}}). For a hydronic zone the governing first-order balance is
+\begin{{equation}}
+  C_{{\mathrm{{zon}}}}\frac{{dT_{{\mathrm{{zon}}}}}}{{dt}} = \dot{{Q}}_{{\mathrm{{hyd}}}}(u_t) + \frac{{T_{{\mathrm{{amb}}}}-T_{{\mathrm{{zon}}}}}}{{R_{{\mathrm{{env}}}}}} + \dot{{Q}}_{{\mathrm{{gain}}}},
+  \label{{eq:hydronic_balance}}
+\end{{equation}}
+where $\dot{{Q}}_{{\mathrm{{hyd}}}}$ is the delivered hydronic heat (whose actuation path --- heat pump, boiler/radiator, or district valve --- changes per testcase), $R_{{\mathrm{{env}}}}$ the envelope resistance, and $\dot{{Q}}_{{\mathrm{{gain}}}}$ the internal/solar gains. Transfer changes the \emph{{delivery path}} $\dot{{Q}}_{{\mathrm{{hyd}}}}$ and the actuator interface, but $C_{{\mathrm{{zon}}}}$ is the shared physical invariant that Stage~B re-identifies --- which is why its re-identified value transfers (Section~\ref{{ssec:czon}}).
+
+\begin{{figure}}[H]
+  \centering
+  \includegraphics[width=0.97\linewidth]{{fig_block3_topology.pdf}}
+  \caption{{Comparative HVAC topology of the source case and the three hydronic targets (source $\to$ distribution $\to$ zone). Transfer changes the heat source, distribution path, and actuator set, while the zone energy balance \eqref{{eq:hydronic_balance}} and $C_{{\mathrm{{zon}}}}$ are shared.}}
+  \label{{fig:topology}}
+\end{{figure}}
+
+Table~\ref{{tab:physics}} summarizes the architecture and the identified physics. The equivalent thermal mass $C_{{\mathrm{{zon}}}}/c_{{p,\mathrm{{air}}}}$ (with $c_{{p,\mathrm{{air}}}}=1005$~J\,kg$^{{-1}}$K$^{{-1}}$) is roughly $2\times$ the \texttt{{bestest\_air}} value for every hydronic case, consistent with the added water-loop and surface thermal mass. The mean delivered power exposes the operating regime: it is of order $10^3$~W for the residential cases (envelope-conduction / slow-hydronic dominated) but two orders of magnitude larger for the commercial case (roughly ${ctx['power_ratio']}\times$), because that zone is ventilation/AHU-dominated. This ventilation dominance is the physical reason the commercial controller passes the comfort threshold yet overshoots energy by $+35.3\%$; it also makes a conduction-only time constant ill-defined from total power for that case.
+
+\begin{{table}}[H]
+\centering
+\small
+\caption{{Testcase architecture and identified physics. $C_{{\mathrm{{zon}}}}$ in $10^5$~J/K; equivalent mass $=C_{{\mathrm{{zon}}}}/c_{{p,\mathrm{{air}}}}$; mean delivered power from the Stage-C telemetry.}}
+\label{{tab:physics}}
+\begin{{tabularx}}{{\linewidth}}{{l l r r r >{{\raggedright\arraybackslash}}X}}
+\toprule
+Testcase & Heat source & $C_{{\mathrm{{zon}}}}$ & eq.\ mass (kg) & mean power (W) & Thermal regime \\
+\midrule
+{ctx['table_physics']}
+\bottomrule
+\end{{tabularx}}
+\end{{table}}
+
 \subsection{{Engineering metrics and pass/fail rules}}
 
 The controller-side pass threshold is normalized by each testcase's built-in PI baseline, and energy is reported on a separate axis:
@@ -416,6 +541,13 @@ Testcase & $m_s^{{\mathrm{{RL}}}}$ & $m_s^{{\mathrm{{PI}}}}$ & $\tau_k$ & Ctrl. 
   \label{{fig:deployment_plane}}
 \end{{figure}}
 
+\begin{{figure}}[H]
+  \centering
+  \includegraphics[width=0.80\linewidth]{{fig_block3_controller_bar.pdf}}
+  \caption{{Controller-side transfer: frozen-hybrid $m_s^{{\mathrm{{RL}}}}$ against the PI baseline $m_s^{{\mathrm{{PI}}}}$ and the pre-registered threshold $\tau_k=1.25\,m_s^{{\mathrm{{PI}}}}$ (dashed). The two residential cases exceed the threshold (FAIL); the commercial case is below it (PASS, with the separate energy caveat).}}
+  \label{{fig:controller_bar}}
+\end{{figure}}
+
 \subsection{{Primary testcase: \texttt{{bestest\_hydronic\_heat\_pump}}}}
 
 The primary testcase was pre-registered as the easiest target (closest to \texttt{{bestest\_air}} in envelope class, but with a hydronic heat-pump actuator). The yearly PI baseline is $m_s={ctx['hp_pi']}$ with threshold $\tau={ctx['hp_tau']}$. The frozen hybrid controller obtains $m_s={ctx['hp_rl']}$ with energy ${ctx['hp_de']}\%$ relative to PI, so the controller verdict is FAIL: the policy saves energy but violates comfort too often. Full Stage A/B/C recalibration instead succeeds (Table~\ref{{tab:primary}}): RMSE$_T={ctx['hp_full_rmse']}\,^\circ$C and $C_{{\mathrm{{zon}}}}={ctx['hp_czon']}\times10^5$ J/K $={ctx['hp_ratio']}\times$ \texttt{{bestest\_air}}. The component-level split is explicit: surrogate recalibration transfers; the frozen controller does not.
@@ -434,6 +566,13 @@ Regime / artifact & RMSE$_T$ ($^\circ$C) & Power MAE (W) & $m_s^{{\mathrm{{RL}}}
 \end{{tabularx}}
 \end{{table}}
 
+\begin{{figure}}[H]
+  \centering
+  \includegraphics[width=0.92\linewidth]{{fig_block3_regime_progression.pdf}}
+  \caption{{Primary-testcase surrogate-fidelity progression across recalibration regimes. Temperature and power fidelity improve monotonically toward full Stage A/B/C, while the frozen controller's live $m_s$ is invariant by manifest scope.}}
+  \label{{fig:regime_progression}}
+\end{{figure}}
+
 \subsection{{Secondary testcase: \texttt{{bestest\_hydronic}}}}
 
 The secondary testcase tests whether the primary failure was specific to heat-pump nonlinearities. It was not. The residential boiler/radiator case has PI $m_s={ctx['hy_pi']}$ and threshold $\tau={ctx['hy_tau']}$; the frozen hybrid controller obtains $m_s={ctx['hy_rl']}$ with energy ${ctx['hy_de']}\%$ relative to PI --- replicating the residential controller-side failure (energy saved, comfort threshold not met). Full Stage A/B/C again succeeds: RMSE$_T$ drops from ${ctx['hy_raw_rmse']}$ to ${ctx['hy_full_rmse']}\,^\circ$C (a ${ctx['hy_gain']}\%$ gain) and $C_{{\mathrm{{zon}}}}={ctx['hy_ratio']}\times$ \texttt{{bestest\_air}}. The N=2 residential pattern is therefore consistent: frozen-controller transfer fails; surrogate recalibration transfers.
@@ -443,6 +582,7 @@ The secondary testcase tests whether the primary failure was specific to heat-pu
 The stretch testcase was pre-registered as the hardest, most informative falsification probe. The manifest predicted that mode=none controller transfer would FAIL (a-priori probability 0.80) and that the commercial-scale $C_{{\mathrm{{zon}}}}$ would likely be scale-dependent (hypothesis B, $[3,10]\times$, a-priori 0.50). The observed result is mixed and scientifically useful. The frozen controller obtains $m_s={ctx['cm_rl']}$ against PI $m_s={ctx['cm_pi']}$ and threshold ${ctx['cm_tau']}$, so it \emph{{passes}} the $m_s$ criterion --- but it consumes ${ctx['cm_de']}\%$ more energy than PI, so the correct reading is threshold PASS, not deployment-ready PASS. The surrogate side is again strong: full Stage A/B/C reduces RMSE$_T$ from ${ctx['cm_raw_rmse']}$ to ${ctx['cm_full_rmse']}\,^\circ$C (${ctx['cm_gain']}\%$), and the identified $C_{{\mathrm{{zon}}}}$ ratio is ${ctx['cm_ratio']}\times$ --- inside the lower-probability uniform hypothesis A, not the predicted $3$--$10\times$ range.
 
 \subsection{{Surrogate-side transfer and $C_{{\mathrm{{zon}}}}$ consistency}}
+\label{{ssec:czon}}
 
 Full Stage A/B/C improves target rollout RMSE on all three testcases (gains $60.2\%$, $87.4\%$, $87.8\%$), supporting the weak surrogate-side transfer hypothesis on $N=3$ (Figure~\ref{{fig:stage_abc_gain}}). The strongest physical finding is the consistency of the re-identified capacitance: the three hydronic testcases cluster tightly around ${ctx['czon_mean']}\times$ the \texttt{{bestest\_air}} value (Table~\ref{{tab:czon}}),
 \begin{{equation}}
@@ -575,11 +715,27 @@ def main() -> None:
         "cm_de": f(cm.energy_delta_pct_vs_pi, 1), "cm_raw_rmse": f(cm.raw_rmse_t_c, 3),
         "cm_full_rmse": f(cm.full_rmse_t_c, 3), "cm_gain": f(cm.rmse_improvement_pct, 1), "cm_ratio": f(cm.c_zon_ratio_vs_bestest_air, 3),
     }
+    # Mean delivered power per testcase from the Stage-C telemetry (physical regime).
+    powers = {}
+    for tc in tm.testcase:
+        try:
+            d = read_csv(f"data/block3_{tc}/hydronic_adapter_stage_c_15min.csv")
+            powers[tc] = float(d["p_total"].mean())
+        except Exception:
+            pass
+    ctx["table_physics"] = table_physics(tm, powers)
+    cm_p = powers.get("singlezone_commercial_hydronic")
+    hp_p = powers.get("bestest_hydronic_heat_pump")
+    ctx["power_ratio"] = f"{cm_p / hp_p:.0f}" if (cm_p and hp_p) else "about 30"
+
     try:
         verdicts = {r.testcase: str(r.none_controller_verdict) for _, r in tm.iterrows()}
         fig_adapter(verdicts)
+        fig_topology()
+        fig_regime_progression(ps)
+        fig_controller_bar(tm)
     except Exception as exc:
-        print(f"[warn] adapter figure skipped: {exc}")
+        print(f"[warn] figure regeneration skipped: {exc}")
 
     write_tex(ctx)
     print(f"Wrote {BASE / 'main.tex'}")

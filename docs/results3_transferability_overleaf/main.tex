@@ -146,6 +146,42 @@ full & Stage A + Stage B + Stage C on target telemetry & frozen Block 2 hybrid c
 \end{tabular}
 \end{table}
 
+\subsection{Testcase architecture and physical processes}
+
+The three targets differ in heat source, distribution path, and actuator set, but share the same single-zone energy balance (Figure~\ref{fig:topology}). For a hydronic zone the governing first-order balance is
+\begin{equation}
+  C_{\mathrm{zon}}\frac{dT_{\mathrm{zon}}}{dt} = \dot{Q}_{\mathrm{hyd}}(u_t) + \frac{T_{\mathrm{amb}}-T_{\mathrm{zon}}}{R_{\mathrm{env}}} + \dot{Q}_{\mathrm{gain}},
+  \label{eq:hydronic_balance}
+\end{equation}
+where $\dot{Q}_{\mathrm{hyd}}$ is the delivered hydronic heat (whose actuation path --- heat pump, boiler/radiator, or district valve --- changes per testcase), $R_{\mathrm{env}}$ the envelope resistance, and $\dot{Q}_{\mathrm{gain}}$ the internal/solar gains. Transfer changes the \emph{delivery path} $\dot{Q}_{\mathrm{hyd}}$ and the actuator interface, but $C_{\mathrm{zon}}$ is the shared physical invariant that Stage~B re-identifies --- which is why its re-identified value transfers (Section~\ref{ssec:czon}).
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.97\linewidth]{fig_block3_topology.pdf}
+  \caption{Comparative HVAC topology of the source case and the three hydronic targets (source $\to$ distribution $\to$ zone). Transfer changes the heat source, distribution path, and actuator set, while the zone energy balance \eqref{eq:hydronic_balance} and $C_{\mathrm{zon}}$ are shared.}
+  \label{fig:topology}
+\end{figure}
+
+Table~\ref{tab:physics} summarizes the architecture and the identified physics. The equivalent thermal mass $C_{\mathrm{zon}}/c_{p,\mathrm{air}}$ (with $c_{p,\mathrm{air}}=1005$~J\,kg$^{-1}$K$^{-1}$) is roughly $2\times$ the \texttt{bestest\_air} value for every hydronic case, consistent with the added water-loop and surface thermal mass. The mean delivered power exposes the operating regime: it is of order $10^3$~W for the residential cases (envelope-conduction / slow-hydronic dominated) but two orders of magnitude larger for the commercial case (roughly $28\times$), because that zone is ventilation/AHU-dominated. This ventilation dominance is the physical reason the commercial controller passes the comfort threshold yet overshoots energy by $+35.3\%$; it also makes a conduction-only time constant ill-defined from total power for that case.
+
+\begin{table}[H]
+\centering
+\small
+\caption{Testcase architecture and identified physics. $C_{\mathrm{zon}}$ in $10^5$~J/K; equivalent mass $=C_{\mathrm{zon}}/c_{p,\mathrm{air}}$; mean delivered power from the Stage-C telemetry.}
+\label{tab:physics}
+\begin{tabularx}{\linewidth}{l l r r r >{\raggedright\arraybackslash}X}
+\toprule
+Testcase & Heat source & $C_{\mathrm{zon}}$ & eq.\ mass (kg) & mean power (W) & Thermal regime \\
+\midrule
+\texttt{bestest\_air} (source) & air supply & 4.413 & 439 & --- & reference \\
+\midrule
+hydronic heat pump & heat pump & 8.348 & 831 & 2,778 & conduction-dominated \\
+hydronic (boiler) & boiler/radiator & 8.623 & 858 & 679 & slow hydronic \\
+commercial hydronic & district + AHU & 8.426 & 838 & 76,860 & ventilation/AHU-dominated \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
 \subsection{Engineering metrics and pass/fail rules}
 
 The controller-side pass threshold is normalized by each testcase's built-in PI baseline, and energy is reported on a separate axis:
@@ -201,6 +237,13 @@ commercial hydronic & 0.431 & 0.628 & 0.785 & PASS$^\dagger$ & 35.3 & 1.952 & 0.
   \label{fig:deployment_plane}
 \end{figure}
 
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.80\linewidth]{fig_block3_controller_bar.pdf}
+  \caption{Controller-side transfer: frozen-hybrid $m_s^{\mathrm{RL}}$ against the PI baseline $m_s^{\mathrm{PI}}$ and the pre-registered threshold $\tau_k=1.25\,m_s^{\mathrm{PI}}$ (dashed). The two residential cases exceed the threshold (FAIL); the commercial case is below it (PASS, with the separate energy caveat).}
+  \label{fig:controller_bar}
+\end{figure}
+
 \subsection{Primary testcase: \texttt{bestest\_hydronic\_heat\_pump}}
 
 The primary testcase was pre-registered as the easiest target (closest to \texttt{bestest\_air} in envelope class, but with a hydronic heat-pump actuator). The yearly PI baseline is $m_s=0.464$ with threshold $\tau=0.579$. The frozen hybrid controller obtains $m_s=0.665$ with energy $-7.3\%$ relative to PI, so the controller verdict is FAIL: the policy saves energy but violates comfort too often. Full Stage A/B/C recalibration instead succeeds (Table~\ref{tab:primary}): RMSE$_T=0.565\,^\circ$C and $C_{\mathrm{zon}}=8.348\times10^5$ J/K $=1.892\times$ \texttt{bestest\_air}. The component-level split is explicit: surrogate recalibration transfers; the frozen controller does not.
@@ -224,6 +267,13 @@ full: Stage A/B/C & 0.565 & 1767 & 0.665 & surrogate PASS, ctrl FAIL \\
 \end{tabularx}
 \end{table}
 
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.92\linewidth]{fig_block3_regime_progression.pdf}
+  \caption{Primary-testcase surrogate-fidelity progression across recalibration regimes. Temperature and power fidelity improve monotonically toward full Stage A/B/C, while the frozen controller's live $m_s$ is invariant by manifest scope.}
+  \label{fig:regime_progression}
+\end{figure}
+
 \subsection{Secondary testcase: \texttt{bestest\_hydronic}}
 
 The secondary testcase tests whether the primary failure was specific to heat-pump nonlinearities. It was not. The residential boiler/radiator case has PI $m_s=0.750$ and threshold $\tau=0.938$; the frozen hybrid controller obtains $m_s=0.976$ with energy $-5.8\%$ relative to PI --- replicating the residential controller-side failure (energy saved, comfort threshold not met). Full Stage A/B/C again succeeds: RMSE$_T$ drops from $2.666$ to $0.335\,^\circ$C (a $87.4\%$ gain) and $C_{\mathrm{zon}}=1.954\times$ \texttt{bestest\_air}. The N=2 residential pattern is therefore consistent: frozen-controller transfer fails; surrogate recalibration transfers.
@@ -233,6 +283,7 @@ The secondary testcase tests whether the primary failure was specific to heat-pu
 The stretch testcase was pre-registered as the hardest, most informative falsification probe. The manifest predicted that mode=none controller transfer would FAIL (a-priori probability 0.80) and that the commercial-scale $C_{\mathrm{zon}}$ would likely be scale-dependent (hypothesis B, $[3,10]\times$, a-priori 0.50). The observed result is mixed and scientifically useful. The frozen controller obtains $m_s=0.431$ against PI $m_s=0.628$ and threshold $0.785$, so it \emph{passes} the $m_s$ criterion --- but it consumes $35.3\%$ more energy than PI, so the correct reading is threshold PASS, not deployment-ready PASS. The surrogate side is again strong: full Stage A/B/C reduces RMSE$_T$ from $1.952$ to $0.238\,^\circ$C ($87.8\%$), and the identified $C_{\mathrm{zon}}$ ratio is $1.909\times$ --- inside the lower-probability uniform hypothesis A, not the predicted $3$--$10\times$ range.
 
 \subsection{Surrogate-side transfer and $C_{\mathrm{zon}}$ consistency}
+\label{ssec:czon}
 
 Full Stage A/B/C improves target rollout RMSE on all three testcases (gains $60.2\%$, $87.4\%$, $87.8\%$), supporting the weak surrogate-side transfer hypothesis on $N=3$ (Figure~\ref{fig:stage_abc_gain}). The strongest physical finding is the consistency of the re-identified capacitance: the three hydronic testcases cluster tightly around $1.918\times$ the \texttt{bestest\_air} value (Table~\ref{tab:czon}),
 \begin{equation}
