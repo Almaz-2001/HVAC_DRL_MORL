@@ -389,9 +389,14 @@ def table_sample(sample: pd.DataFrame) -> str:
         ("v35_collected_15min_exploration", "15-min exploration corpus"),
     ]:
         r = sample.loc[sample.dataset_id == key].iloc[0]
+        # Insert a space after each comma so the long comma-separated lists can
+        # wrap inside the tabularx X columns (otherwise they overflow into the
+        # neighbouring column and overlap).
+        policy_mix = tex_escape(str(r.controller_or_policy_mix).replace(",", ", "))
+        scenario_mix = tex_escape(str(r.season_or_scenario_mix).replace(",", ", "))
         rows.append(
             f"{tex_escape(label)} & {int(r.rows):,} & {int(r.step_sec)} & "
-            f"{tex_escape(r.controller_or_policy_mix)} & {tex_escape(r.season_or_scenario_mix)} \\\\"
+            f"{policy_mix} & {scenario_mix} \\\\"
         )
     return "\n".join(rows)
 
@@ -457,16 +462,18 @@ def table_scaling_features(scaling: pd.DataFrame) -> str:
 def table_stage(ep: dict, power: dict, corpus: pd.DataFrame) -> str:
     raw_24 = float(corpus.loc[corpus.variant == "v35_raw", "rmse_24h_c"].iloc[0])
     cal_24 = float(corpus.loc[corpus.variant == "v35_calibrated", "rmse_24h_c"].iloc[0])
+    # (label, before, after, display_scale, decimals) with metric-appropriate
+    # significant figures rather than a blanket 3-decimal format.
     rows = [
-        ("1-step RMSE_T (C)", float(ep["baseline_rmse_c"]), float(ep["calibrated_rmse_c"])),
-        ("24 h rollout RMSE_T (C)", raw_24, cal_24),
-        ("Power MAE (W)", float(power["baseline_power_mae_w"]), float(power["calibrated_power_mae_w"])),
-        ("C_zon (J/K)", float(ep["c_zon_prior_j_per_k"]), float(ep["c_zon_final_j_per_k"])),
+        (r"1-step RMSE$_T$ (\si{\celsius})", float(ep["baseline_rmse_c"]), float(ep["calibrated_rmse_c"]), 1.0, 3),
+        (r"24 h rollout RMSE$_T$ (\si{\celsius})", raw_24, cal_24, 1.0, 3),
+        (r"Power MAE (\si{\watt})", float(power["baseline_power_mae_w"]), float(power["calibrated_power_mae_w"]), 1.0, 0),
+        (r"$\Czon$ ($\times 10^5$ J/K)", float(ep["c_zon_prior_j_per_k"]), float(ep["c_zon_final_j_per_k"]), 1e5, 3),
     ]
     out = []
-    for name, before, after in rows:
+    for name, before, after, scale, nd in rows:
         change = (after - before) / before * 100.0
-        out.append(f"{tex_escape(name)} & {before:.3f} & {after:.3f} & {change:+.1f}\\% \\\\")
+        out.append(f"{name} & {before/scale:.{nd}f} & {after/scale:.{nd}f} & {change:+.1f}\\% \\\\")
     return "\n".join(out)
 
 
@@ -522,10 +529,10 @@ def table_hyperparams_rationale(ep: dict, training: pd.DataFrame) -> str:
         ("Hidden dimension", "64", "smooth, low-curvature response surface for stable policy gradients"),
         ("Optimizer / LR", f"AdamW / {lookup.get('learning_rate', '1e-3')}", "decoupled weight decay; cosine annealing"),
         ("Batch size", f"{lookup.get('batch_size', '256')}", "variance/throughput trade-off on the prepared corpus"),
-        (r"Heat-flow scale $q_{\mathrm{scale}}$", "3000 W", r"keeps $q_\phi(x)$ near unit range for conditioning"),
-        (r"Capacitance floor $c_{\min}$", "5e4 J/K", "physical lower bound enforced by reparameterization"),
+        (r"Heat-flow scale $q_{\mathrm{scale}}$", r"$3000$ W", r"keeps $q_\phi(x)$ near unit range for conditioning"),
+        (r"Capacitance floor $c_{\min}$", r"$5\times10^4$ J/K", "physical lower bound enforced by reparameterization"),
         ("Excitation quantile", f"{float(exc['excitation_quantile']):.2f}", r"isolates transient windows where $\partial \widehat{T}/\partial C$ is large"),
-        (r"$\Czon$ scalar LR", f"{float(ep['czon_lr']):.0e}", "dedicated rate for the single physical parameter"),
+        (r"$\Czon$ scalar LR", r"$10^{-3}$", "dedicated rate for the single physical parameter"),
     ]
     return "\n".join(f"{a} & {b} & {c} \\\\" for a, b, c in rows)
 
@@ -564,10 +571,10 @@ def table_stage_b(ep: dict) -> str:
     exc = ep["excitation_summary"]
     eta = (float(ep["c_zon_final_j_per_k"]) - float(ep["c_zon_prior_j_per_k"])) / float(ep["c_zon_prior_j_per_k"]) * 100.0
     rows = [
-        ("C_zon prior", f"{float(ep['c_zon_prior_j_per_k'])/1e5:.3f}e5 J/K", "air volume x specific heat"),
-        ("C_zon after Stage B", f"{float(ep['c_zon_final_j_per_k'])/1e5:.3f}e5 J/K", f"{eta:+.1f}% vs prior"),
+        ("C_zon prior", f"${float(ep['c_zon_prior_j_per_k'])/1e5:.3f}\\times10^5$ J/K", "air volume x specific heat"),
+        ("C_zon after Stage B", f"${float(ep['c_zon_final_j_per_k'])/1e5:.3f}\\times10^5$ J/K", f"{eta:+.1f}% vs prior"),
         ("Stage B epochs", f"{int(ep['stage_b_epochs_ran'])}", "episode-aware run"),
-        ("C_zon learning rate", f"{float(ep['czon_lr']):.0e}", "dedicated scalar LR"),
+        ("C_zon learning rate", r"$10^{-3}$", "dedicated scalar LR"),
         ("Excitation quantile", f"{float(exc['excitation_quantile']):.2f}", f"|dT| threshold {float(exc['excitation_threshold']):.4f}"),
         ("Excitation rows", f"{int(exc['rows_excitation'])} / {int(exc['rows_train_all'])}", f"mean score {float(exc['score_mean_excitation']):.3f} vs {float(exc['score_mean_train']):.3f}"),
     ]

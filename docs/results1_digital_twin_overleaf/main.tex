@@ -126,9 +126,9 @@ The v3 surrogate is a compact control-oriented direct-\Tsupply{} model. Its role
 \toprule
 Dataset & Rows & Step (s) & Policy mix & Scenario mix \\
 \midrule
-v3 canonical corpus & 51,200 & 3600 & cool,heat,mixed,random & autumn,spring,summer,winter \\
-v3.5 calibration corpus & 10,744 & 900 & hdrl,thermostatic & peak\_heat\_window,typical\_heat\_window \\
-15-min exploration corpus & 48,384 & 900 & cool,heat,mixed,pulse,random,thermostatic\_noise & autumn,spring,summer,winter \\
+v3 canonical corpus & 51,200 & 3600 & cool, heat, mixed, random & autumn, spring, summer, winter \\
+v3.5 calibration corpus & 10,744 & 900 & hdrl, thermostatic & peak\_heat\_window, typical\_heat\_window \\
+15-min exploration corpus & 48,384 & 900 & cool, heat, mixed, pulse, random, thermostatic\_noise & autumn, spring, summer, winter \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -276,10 +276,10 @@ Post-Stage-A power MAE & 514.4 W & baseline for Stage C \\
 \toprule
 Parameter & Value & Notes \\
 \midrule
-C\_zon prior & 4.200e5 J/K & air volume x specific heat \\
-C\_zon after Stage B & 4.413e5 J/K & +5.1\% vs prior \\
+C\_zon prior & $4.200\times10^5$ J/K & air volume x specific heat \\
+C\_zon after Stage B & $4.413\times10^5$ J/K & +5.1\% vs prior \\
 Stage B epochs & 120 & episode-aware run \\
-C\_zon learning rate & 1e-03 & dedicated scalar LR \\
+C\_zon learning rate & $10^{-3}$ & dedicated scalar LR \\
 Excitation quantile & 0.95 & |dT| threshold 0.1759 \\
 Excitation rows & 403 / 8058 & mean score 0.240 vs 0.069 \\
 \bottomrule
@@ -321,10 +321,10 @@ Beyond the point estimate, the identification is well conditioned: over the fina
 \toprule
 Metric & Before & After & Relative change \\
 \midrule
-1-step RMSE\_T (C) & 0.384 & 0.235 & -38.8\% \\
-24 h rollout RMSE\_T (C) & 1.466 & 0.644 & -56.1\% \\
-Power MAE (W) & 807.829 & 482.034 & -40.3\% \\
-C\_zon (J/K) & 420000.000 & 441269.406 & +5.1\% \\
+1-step RMSE$_T$ (\si{\celsius}) & 0.384 & 0.235 & -38.8\% \\
+24 h rollout RMSE$_T$ (\si{\celsius}) & 1.466 & 0.644 & -56.1\% \\
+Power MAE (\si{\watt}) & 808 & 482 & -40.3\% \\
+$\Czon$ ($\times 10^5$ J/K) & 4.200 & 4.413 & +5.1\% \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -341,10 +341,10 @@ Choice & Value & Rationale \\
 Hidden dimension & 64 & smooth, low-curvature response surface for stable policy gradients \\
 Optimizer / LR & AdamW / 1e-3 & decoupled weight decay; cosine annealing \\
 Batch size & 256 & variance/throughput trade-off on the prepared corpus \\
-Heat-flow scale $q_{\mathrm{scale}}$ & 3000 W & keeps $q_\phi(x)$ near unit range for conditioning \\
-Capacitance floor $c_{\min}$ & 5e4 J/K & physical lower bound enforced by reparameterization \\
+Heat-flow scale $q_{\mathrm{scale}}$ & $3000$ W & keeps $q_\phi(x)$ near unit range for conditioning \\
+Capacitance floor $c_{\min}$ & $5\times10^4$ J/K & physical lower bound enforced by reparameterization \\
 Excitation quantile & 0.95 & isolates transient windows where $\partial \widehat{T}/\partial C$ is large \\
-$\Czon$ scalar LR & 1e-03 & dedicated rate for the single physical parameter \\
+$\Czon$ scalar LR & $10^{-3}$ & dedicated rate for the single physical parameter \\
 \bottomrule
 \end{tabularx}
 \end{table}
