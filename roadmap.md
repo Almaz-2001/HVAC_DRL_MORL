@@ -1208,6 +1208,35 @@ The bundle mirrors the Block 1/2 organization:
 This is a non-destructive copy bundle. Source paths remain active in
 `evaluation/`, `configs/`, `data/`, `outputs/`, and `reports/`.
 
+### 15.7. Results III provenance map (reviewer-facing data and figures)
+
+Results III (Block 3 transferability) lives in
+`docs/results3_transferability_overleaf/` and is regenerated from the artifacts
+below by the data-driven builder `build_results3_overleaf.py` (mirroring the
+Results I/II builders). Numeric values are read from `reports/`; pre-registered
+hypotheses, predictions, and audit anchors are verified literals from the
+manifest and the git audit chain.
+
+```text
+Results III content                                   -> source artifact
+----------------------------------------------------     ----------------------------------------------------------
+Headline transfer matrix (m_s, threshold, RMSE, C_zon) -> reports/block3_transfer_matrix.csv
+Primary per-regime detail (none/partial/full)          -> reports/block3_bestest_hydronic_heat_pump_transfer_summary.csv
+Secondary / stretch per-regime detail                  -> reports/block3_bestest_hydronic_transfer_summary.csv ; reports/block3_singlezone_commercial_hydronic_transfer_summary.csv
+N=2 hydronic-family roll-up                            -> reports/block3_hydronic_family_n2_summary.csv
+C_zon ratios + hydronic-family mean/std                -> reports/block3_transfer_matrix.csv (c_zon_ratio_vs_bestest_air); baseline 4.413e5 J/K (Block 1)
+Testcases / adapters / regimes / hypotheses / predictions -> configs/block3_testcase_manifest.yaml ; configs/block3_actuator_mapping_*.yaml
+Audit anchors                                          -> git log: 1861e48, 2f9d596, eb7091e, 46fbaa9, 645626e, 7ada793, cb7025f
+Figures (protocol, heatmap, RMSE gain, C_zon, closure) -> docs/results3_transferability_overleaf/figures/  (Block 3 evaluation scripts)
+```
+
+To rebuild the artifacts themselves, run the per-testcase Section 15.2 commands
+(`smoke_block3_hydronic_adapter.py`, `yearly_validation_universal_adapter.py`,
+`collect_block3_hydronic_adapter_telemetry.py`,
+`run_block3_surrogate_recalibration.py`) and then
+`evaluation/build_block3_transfer_matrix.py`; finally regenerate the section with
+`build_results3_overleaf.py`.
+
 ## 16. Audit Anchor Chain (Updated)
 
 After Block 3 closure the full audit chain is:

@@ -50,7 +50,7 @@ LaTeX-facing.
 |--------------------------------------------------------------|--------------------------------------|-------------------|
 | Results I  (`build_results1_overleaf.py`)                    | 1, 2, 2.5, 3                         | `docs/results1_digital_twin_overleaf/` — **done** (provenance map: roadmap 3.2) |
 | Results II (`build_results2_overleaf.py`, planned)           | 4, 4.5, 5, 5.5, 6, 6.5, 8, 9, 10, 11 | `docs/results2_control_overleaf/` — planned (provenance map: roadmap 11.1) |
-| Results III (`build_results3_overleaf.py`, planned)          | 15                                   | `docs/results3_transferability_overleaf/` — planned |
+| Results III (`build_results3_overleaf.py`)                   | 15                                   | `docs/results3_transferability_overleaf/` — **done** (provenance map: roadmap 15.7) |
 
 ## Independent sections (no compute closure)
 

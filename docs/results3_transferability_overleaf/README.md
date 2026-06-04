@@ -9,8 +9,21 @@ Recommended compiler:
 
 Contents:
 
-- `main.tex` - standalone, expanded Block 3 / Results III LaTeX section.
-- `figures/` - PDF figures referenced by `main.tex`.
+- `main.tex` - standalone Block 3 / Results III LaTeX section (generated).
+- `build_results3_overleaf.py` - data-driven generator: regenerates `main.tex`
+  with every numeric table and inline KPI read from `reports/` artifacts. Run
+  from the repository root with the project Python environment:
+  `python docs/results3_transferability_overleaf/build_results3_overleaf.py`.
+- `figures/` - PDF/PNG figures referenced by `main.tex` (produced by the Block 3
+  evaluation scripts; this builder references them and does not regenerate them).
+
+Layout matches Results I/II exactly: no `\maketitle`; one `\section`
+(Results III = Section 6) with subsections 6.1-6.13; `float`/`placeins` with
+`[H]` floats; nomenclature table after the protocol figure; clean captions
+(provenance lives in roadmap Section 15); a Limitations subsection and a
+dedicated "Results III conclusion". Pre-registered hypotheses, predictions, and
+audit anchors are verified literals from the manifest; all numeric values are
+data-driven from `reports/block3_*` CSVs.
 
 Scientific scope covered in this package:
 
