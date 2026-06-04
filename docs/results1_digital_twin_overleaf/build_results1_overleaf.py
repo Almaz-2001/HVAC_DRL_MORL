@@ -1027,7 +1027,7 @@ so that the per-step increment is dimensionally consistent at the {ctx['runtime_
 \label{{ssec:block1-limitations}}
 
 \paragraph{{Validation scope.}}
-The digital-twin validation in this section is scoped to the \emph{{temperature}} channel, which is the comfort-relevant quantity and is the channel that meets engineering tolerance (24 h rollout RMSE {ctx['v35_cal_24']}~$^\circ$C, P95 {ctx['p95_24h']}~$^\circ$C, near-zero bias NMBE \({ctx['nmbe_t_cal']}\)~$^\circ$C on a mean zone temperature of {ctx['mean_t_zone']}~$^\circ$C). The instantaneous \emph{{power}} channel is reported but \emph{{not}} claimed as calibrated: its coefficient of variation of the RMSE is approximately {ctx['cv_rmse_power_s11']}\% --- well above the ASHRAE Guideline~14 threshold of 30\% --- and the free-run rollout shows a substantial negative power bias (NMBE \(\approx{ctx['nmbe_power_rollout']}\)\%). Because every downstream controller-facing KPI is evaluated on the live BOPTEST simulator rather than on the surrogate power channel, this shortfall does not propagate into the control results; it is disclosed here as a genuine limitation of the surrogate's power head and as the motivation for the power-disagreement regularizer introduced later.
+The digital-twin validation in this section is scoped to the \emph{{temperature}} channel, which is the comfort-relevant quantity and is the channel that meets engineering tolerance (24 h rollout RMSE {ctx['v35_cal_24']}~$^\circ$C, P95 {ctx['p95_24h']}~$^\circ$C, near-zero bias NMBE \({ctx['nmbe_t_cal']}\)~$^\circ$C on a mean zone temperature of {ctx['mean_t_zone']}~$^\circ$C). The instantaneous \emph{{power}} channel is reported but \emph{{not}} claimed as fully calibrated. On the canonical (power-head) checkpoint its mean absolute error is {ctx['mae_power']}~W on a mean HVAC power of {ctx['mean_power']}~W, giving a coefficient of variation of the RMSE of about {ctx['cv_rmse_power']}\% and a normalized mean bias error of {ctx['nmbe_power']}\%. The CV(RMSE) exceeds the ASHRAE Guideline~14 threshold of 30\% and the NMBE is just beyond the \(\pm 10\%\) band, but both are expected for an \emph{{instantaneous}} 15-min power signal of a cycling HVAC system: Guideline~14 is formulated for energy aggregated to hourly or monthly resolution, not for instantaneous power. Because every downstream controller-facing KPI is evaluated on the live BOPTEST simulator rather than on the surrogate power channel, this residual power error does not propagate into the control results; it is disclosed here as a genuine limitation of the surrogate power head and as one motivation for the power-disagreement regularizer introduced later.
 
 \paragraph{{Other limitations.}}
 (i) A single testcase (\texttt{{bestest\_air}}) is used; cross-building generalization is deferred to the Block 3 transferability study. (ii) The supervised held-out split is contiguous (autumn-only), so the one-step \(R^2\) is optimistic and all reported control claims rely on external BOPTEST windows rather than this split. (iii) Each surrogate is trained from a single seed; a multi-seed variance study and a formal sensitivity sweep over the design choices of Table~\ref{{tab:design-rationale}} are future work. (iv) The direct-\Tsupply{{}} interface abstracts the actuator chain beyond the Stage A latency term, and the hourly-vs-15-min step mismatch is preserved by design (Section~\ref{{ssec:block1-stepsize}}).
@@ -1083,7 +1083,10 @@ def main() -> None:
     boptest_walltime_h = ppo_steps / boptest_sps / 3600.0
 
     # Persistence (naive) baseline + temperature NMBE from the free-run rollout.
-    cal_rollout = read_csv("outputs/surrogate_v35_rollout_prepared_15min_episodeaware/calibrated_v35/all_full_rollouts.csv")
+    # Use the CANONICAL power_head_only checkpoint (the episodeaware rollout is the
+    # intermediate first-pass head; the temperature head is identical because the
+    # second pass freezes it, so only the power channel differs).
+    cal_rollout = read_csv("outputs/surrogate_v35_rollout_prepared_15min_power_head_only/calibrated_v35/all_full_rollouts.csv")
     pers1, pers24 = [], []
     for _, g in cal_rollout.groupby("episode_id"):
         t = g.sort_values("step")["actual_t_zone"].to_numpy()
@@ -1106,9 +1109,11 @@ def main() -> None:
     equiv_air_mass = c_final / cp_air
     equiv_air_volume = equiv_air_mass / rho_air
 
-    # Power channel ASHRAE-G14 shortfall (reported as a disclosed limitation).
-    cv_rmse_power_s11 = float(predval.loc[(predval.model == "v3.5_calibrated") & (predval.horizon == "24h"), "RMSE_P"].iloc[0]) / float(cal_rollout["actual_p_total_w"].mean()) * 100.0
-    nmbe_power_rollout = float(cal_rollout["power_error_w"].mean()) / float(cal_rollout["actual_p_total_w"].mean()) * 100.0
+    # Power channel ASHRAE-G14 metrics from the CANONICAL calibrated head.
+    mean_power = float(cal_rollout["actual_p_total_w"].mean())
+    cv_rmse_power = float(np.sqrt((cal_rollout["power_error_w"] ** 2).mean())) / mean_power * 100.0
+    nmbe_power = float(cal_rollout["power_error_w"].mean()) / mean_power * 100.0
+    mae_power = float(cal_rollout["power_error_w"].abs().mean())
 
     fig01_roadmap_artifact_chain(sample, ep, corpus, speed)
     fig02_surrogate_design(params, ep)
@@ -1161,8 +1166,10 @@ def main() -> None:
         "czon_std_pct": fnum(czon_std_pct, 2),
         "equiv_air_mass": fnum(equiv_air_mass, 0),
         "equiv_air_volume": fnum(equiv_air_volume, 0),
-        "cv_rmse_power_s11": fnum(cv_rmse_power_s11, 0),
-        "nmbe_power_rollout": fnum(nmbe_power_rollout, 0),
+        "cv_rmse_power": fnum(cv_rmse_power, 0),
+        "nmbe_power": fnum(nmbe_power, 1),
+        "mae_power": fnum(mae_power, 0),
+        "mean_power": fnum(mean_power, 0),
         "hybrid_walltime_min": fnum(hybrid_walltime_min, 1),
         "boptest_walltime_h": fnum(boptest_walltime_h, 1),
         "stage_a_bias": fnum(float(pre["temp_bias_est_c"]), 3),
