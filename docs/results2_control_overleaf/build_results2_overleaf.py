@@ -19,15 +19,109 @@ from pathlib import Path
 
 import pandas as pd
 
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+from matplotlib.patches import FancyArrowPatch, FancyBboxPatch
+
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 BASE = Path(__file__).resolve().parent
+FIG = BASE / "figures"
+
+NAVY = "#1f4e79"; TEAL = "#008080"; AMBER = "#c9822b"
+GREEN = "#3b7d3a"; SLATE = "#5d6875"; PURPLE = "#6b5b95"; BURGUNDY = "#9b3d3d"
+
+plt.rcParams.update({
+    "font.family": "serif", "font.size": 10, "axes.titlesize": 11,
+    "axes.labelsize": 9.5, "legend.fontsize": 8.5,
+    "xtick.labelsize": 8.5, "ytick.labelsize": 8.5, "figure.dpi": 130,
+})
 
 
 def read_csv(rel: str) -> pd.DataFrame:
     return pd.read_csv(ROOT / rel)
+
+
+def _save(fig, stem: str) -> None:
+    FIG.mkdir(parents=True, exist_ok=True)
+    fig.savefig(FIG / f"{stem}.pdf", bbox_inches="tight")
+    fig.savefig(FIG / f"{stem}.png", dpi=300, bbox_inches="tight")
+    plt.close(fig)
+
+
+def _box(ax, x, y, w, h, text, color, fc="#ffffff", fs=8.3):
+    ax.add_patch(FancyBboxPatch((x, y), w, h, boxstyle="round,pad=0.012,rounding_size=0.02",
+                                linewidth=1.2, edgecolor=color, facecolor=fc))
+    ax.text(x + w / 2, y + h / 2, text, ha="center", va="center", fontsize=fs, color="#1f2933")
+
+
+def _arrow(ax, start, end, color=SLATE, text=None):
+    ax.add_patch(FancyArrowPatch(start, end, arrowstyle="-|>", mutation_scale=12, linewidth=1.3, color=color))
+    if text:
+        mx, my = (start[0] + end[0]) / 2, (start[1] + end[1]) / 2
+        ax.text(mx, my + 0.03, text, ha="center", va="bottom", fontsize=7.6, color=color)
+
+
+def fig_reward_shaping(ctx: dict) -> None:
+    """Clean, non-overlapping reward-shaping schematic with real lambda values and
+    measured disagreement. Replaces the legacy figure whose green box overlapped
+    the title."""
+    fig, ax = plt.subplots(figsize=(11.0, 4.9))
+    ax.set_axis_off(); ax.set_xlim(0, 1); ax.set_ylim(0, 1)
+    # Title rows (kept above the diagram band so nothing overlaps).
+    ax.text(0.5, 0.96, "Hybrid backend: per-step reward shaping", ha="center",
+            fontsize=13, weight="bold", color="#1f2933")
+    ax.text(0.5, 0.885, "v3.5 is a frozen reward-shaping censor --- NOT a policy-loss term and NOT the rollout model",
+            ha="center", fontsize=9.2, style="italic", color=SLATE)
+    # Diagram band y in [0.30, 0.78].
+    _box(ax, 0.02, 0.46, 0.17, 0.20, "state $s_t$,\naction $a_t$", NAVY, "#eef5fb")
+    _box(ax, 0.27, 0.60, 0.22, 0.16, "v3 rollout dynamics\n$T_{v3},\\,P_{v3}$", TEAL, "#edf8f7")
+    _box(ax, 0.27, 0.34, 0.22, 0.16, "frozen v3.5 censor\n$T_{v3.5},\\,P_{v3.5}$", GREEN, "#eef8ee")
+    _box(ax, 0.55, 0.46, 0.18, 0.20, "disagreement\n$|\\Delta T|,\\,|\\Delta P|$", AMBER, "#fff6ea")
+    _box(ax, 0.785, 0.42, 0.195, 0.28,
+         "reward\n$r=r_{c}+r_{s}+r_{e}$\n$-\\lambda_T|\\Delta T|-\\lambda_P|\\Delta P|$", PURPLE, "#f4f1fa", fs=8.0)
+    _arrow(ax, (0.19, 0.56), (0.27, 0.66), TEAL)
+    _arrow(ax, (0.19, 0.56), (0.27, 0.44), GREEN)
+    _arrow(ax, (0.49, 0.66), (0.55, 0.58), TEAL)
+    _arrow(ax, (0.49, 0.42), (0.55, 0.52), GREEN)
+    _arrow(ax, (0.73, 0.56), (0.785, 0.56), AMBER)
+    # Bottom annotation row, well below the diagram band (no overlap).
+    ax.text(0.5, 0.12,
+            f"canonical thermostatic: $\\lambda_T={ctx['lam_T']}$, $\\lambda_P={ctx['lam_P']}$"
+            f"   |   measured disagreement: mean $|\\Delta T|={ctx['dis_temp_mean']}\\,^\\circ$C, "
+            f"mean $|\\Delta P|={ctx['dis_pow_mean']}$ W",
+            ha="center", fontsize=8.6, color="#374151")
+    ax.text(0.5, 0.045, "PPO rolls out only on v3; v3.5 is evaluated in parallel and enters the scalar reward, "
+            "so the advantage $A_t$ uses the shaped reward unchanged.",
+            ha="center", fontsize=8.2, style="italic", color=SLATE)
+    _save(fig, "fig_block2_reward_shaping")
+
+
+def fig_ms_decomposition(rows: list) -> None:
+    """Data-driven decomposition m_s = r_time + r_sev for the three thermostatic
+    backends on both windows (r_time = violation/100; r_sev = m_s - r_time)."""
+    labels = [r[0] for r in rows]
+    r_time = [r[1] for r in rows]
+    r_sev = [r[2] for r in rows]
+    x = range(len(labels))
+    fig, ax = plt.subplots(figsize=(9.2, 4.4))
+    ax.bar(x, r_time, color=TEAL, label="$r_{\\mathrm{time}}$ (violation fraction)", edgecolor="#111827", linewidth=0.4)
+    ax.bar(x, r_sev, bottom=r_time, color=BURGUNDY, label="$r_{\\mathrm{sev}}$ (worst rel. severity)", edgecolor="#111827", linewidth=0.4)
+    for i, (a, b) in enumerate(zip(r_time, r_sev)):
+        ax.text(i, a + b + 0.02, f"{a+b:.3f}", ha="center", fontsize=8.2, weight="bold")
+    ax.axhline(0.10, color=SLATE, linestyle="--", linewidth=1.0)
+    ax.text(len(labels) - 0.5, 0.11, "$m_s=0.10$", color=SLATE, fontsize=8, ha="right")
+    ax.set_xticks(list(x)); ax.set_xticklabels(labels, rotation=18, ha="right")
+    ax.set_ylabel("$m_s = r_{\\mathrm{time}} + r_{\\mathrm{sev}}$")
+    ax.set_title("Maintenance-score decomposition on the live BOPTEST windows", loc="left", weight="bold")
+    ax.grid(True, axis="y", color="#e6e8eb", linewidth=0.7)
+    ax.spines["top"].set_visible(False); ax.spines["right"].set_visible(False)
+    ax.legend(frameon=False, fontsize=8)
+    fig.tight_layout()
+    _save(fig, "fig_block2_ms_decomposition")
 
 
 def tex_escape(value: object) -> str:
@@ -418,6 +512,18 @@ Component & Value & Role \\
 \end{{tabular}}
 \end{{table}}
 
+The per-step comfort term is piecewise linear with an asymmetric, ambient-dependent slope (source \texttt{{envs/backends/boptest\_backend.py}}):
+\begin{{equation}}
+  r^{{\mathrm{{comfort}}}}_t =
+  \begin{{cases}}
+    -w_u\,(T_{{\ell}} - T_t) + b_{{\mathrm{{heat}}}} & T_t < T_{{\ell}}, \\
+    +\beta & T_{{\ell}}+\delta \le T_t \le T_h-\delta, \\
+    -w_o\,(T_t - T_h) + b_{{\mathrm{{cool}}}} & T_t > T_h,
+  \end{{cases}}
+  \label{{eq:comfort}}
+\end{{equation}}
+where $w_u=1.60$ when $T_{{\mathrm{{amb}}}}\le 8\,^\circ$C (else $1.15$), $w_o=1.80$ when $T_{{\mathrm{{amb}}}}\ge 24\,^\circ$C (else $1.15$), the in-band bonus is $\beta=0.05$, the deadband is $\delta=0.5\,^\circ$C, and $b_{{\mathrm{{heat}}}},b_{{\mathrm{{cool}}}}$ are small action-direction bonuses. The energy term is $r^{{\mathrm{{energy}}}}_t=-\eta P_t$ with $\eta=2\times10^{{-4}}$, and MORL scalarizes the objectives as $r_t = w_c\,r^{{\mathrm{{comfort}}}}_t + w_e\,r^{{\mathrm{{energy}}}}_t + w_s\,r^{{\mathrm{{safety}}}}_t$. The asymmetric cold/hot weights encode that recovering a cold zone in cold weather is physically harder than the symmetric reverse.
+
 \section{{Hybrid backend: mathematical role of v3.5}}
 
 The hybrid backend changes the role of the calibrated physical surrogate. Instead of rolling out the policy on v3.5 directly, PPO rolls out on v3 and evaluates frozen v3.5 in parallel on the same state-action pair. The per-step reward is augmented by a disagreement penalty:
@@ -437,7 +543,7 @@ For the canonical thermostatic hybrid, $\lambda_T=0.10$ and $\lambda_P=5.0\times
   \label{{fig:hybrid_reward}}
 \end{{figure}}
 
-\section{{Thermostatic PPO: direct-v3.5 failure and hybrid success}}
+\section{{Thermostatic PPO: direct-v3.5 failure and hybrid success (roadmap \S4--\S5)}}
 
 Table~\ref{{tab:main_kpi}} and Figure~\ref{{fig:live_kpi}} summarize the main Block 2 controller result. Pure v3 PPO is already usable ($m_s={ctx['pure_peak_ms']}$ peak, ${ctx['pure_typ_ms']}$ typical). Direct v3.5 PPO fails catastrophically despite v3.5's superior Block 1 predictive fidelity: live violation reaches {ctx['dv_peak_viol']}\% on peak and {ctx['dv_typ_viol']}\% on typical, with RMSE above $4.3\,^\circ$C. The hybrid backend resolves the conflict: $m_s={ctx['hyb_peak_ms']}$ on peak and ${ctx['hyb_typ_ms']}$ on typical, with violation below $5\%$ on both windows and lower energy than pure v3 on the peak window.
 
@@ -462,6 +568,15 @@ Policy/backend & Scenario & $m_s$ & Violation (\%) & RMSE$_T$ ($^\circ$C) & Ener
   \label{{fig:live_kpi}}
 \end{{figure}}
 
+\paragraph{{Reading $m_s$ step by step.}} The decomposition $m_s=r_{{\mathrm{{time}}}}+r_{{\mathrm{{sev}}}}$ (Eq.~\ref{{eq:ms}}) exposes the failure structure directly (Figure~\ref{{fig:ms_decomp}}). Direct v3.5's peak $m_s=1.046$ is dominated by $r_{{\mathrm{{time}}}}\approx 0.77$ (out of band 77\% of the time) plus a large worst-case severity $r_{{\mathrm{{sev}}}}\approx 0.28$; the hybrid's peak $m_s=0.087$ is almost entirely a small $r_{{\mathrm{{sev}}}}$ with $r_{{\mathrm{{time}}}}<0.05$. The hybrid therefore does not merely lower the average error --- it removes the sustained band departures that dominate the direct-v3.5 score.
+
+\begin{{figure}}[t]
+  \centering
+  \includegraphics[width=0.82\linewidth]{{fig_block2_ms_decomposition.pdf}}
+  \caption{{Data-driven decomposition $m_s=r_{{\mathrm{{time}}}}+r_{{\mathrm{{sev}}}}$ on the live BOPTEST windows. Direct v3.5 fails through sustained violation ($r_{{\mathrm{{time}}}}$); pure v3 and the hybrid keep both terms small.}}
+  \label{{fig:ms_decomp}}
+\end{{figure}}
+
 The time-series and action diagnostics in Figures~\ref{{fig:closed_loop_traces}} and~\ref{{fig:action_phase}} explain the mechanism. Direct v3.5 learns a bang-bang-like control law that drives the live simulator outside the comfort band; in phase space it places extreme actions in temperature-error regimes the live building does not support. We note explicitly that this destabilization mechanism is \emph{{hypothesized}} (higher advantage-estimator variance under sharper surrogate predictions, and/or overfitting to sub-step physical structure unusable at the 15-min cadence) and is not directly measured here; discriminating the two is deferred to future work.
 
 \begin{{figure}}[t]
@@ -478,7 +593,7 @@ The time-series and action diagnostics in Figures~\ref{{fig:closed_loop_traces}}
   \label{{fig:action_phase}}
 \end{{figure}}
 
-\section{{Warm-start negative control}}
+\section{{Warm-start negative control (roadmap \S4.5)}}
 
 A second negative control tests whether v3.5 is useful as a policy initializer rather than a reward-shaping censor: pretrain on direct v3.5, then warm-start on the hybrid backend. It does not help. Warm-started policies are markedly worse than scratch-trained hybrid policies (Table~\ref{{tab:warmstart}}), raising $m_s$ by roughly two to three times. The problem is the role assigned to the surrogate during early policy formation, not a lack of fine-tuning.
 
@@ -503,7 +618,7 @@ Mode & Scenario & $m_s$ & Violation (\%) \\
   \label{{fig:warmstart}}
 \end{{figure}}
 
-\section{{Transfer-gap diagnostics}}
+\section{{Transfer-gap diagnostics (roadmap \S5.5)}}
 
 The transfer-gap diagnostic pairs surrogate-side and live-BOPTEST metrics for the same policy:
 \begin{{equation}}
@@ -535,7 +650,7 @@ Variant & Scenario & $\Delta m_s$ & Action gap & First div. step & Top driver \\
   \label{{fig:transfer_gap}}
 \end{{figure}}
 
-\section{{HDRL sensitivity: the hybrid weight is controller-family specific}}
+\section{{HDRL sensitivity: the hybrid weight is controller-family specific (roadmap \S6)}}
 
 The HDRL experiment asks whether the thermostatic hybrid setting $\lambda_T=0.10$ transfers to a hierarchical controller. It does not (Table~\ref{{tab:hdrl}}). HDRL performs best at $\lambda_T=0.00$ on both windows and degrades monotonically as temperature-disagreement regularization is increased. This shows the correct physical-censor strength depends on the controller family and its action decomposition, not on a universal weight.
 
@@ -560,7 +675,7 @@ $\lambda_T$ & Scenario & $m_s$ & Violation (\%) & RMSE$_T$ ($^\circ$C) & Energy 
   \label{{fig:hdrl_sweep}}
 \end{{figure}}
 
-\section{{MORL observation ablation: 5D failure to 17D success}}
+\section{{MORL observation ablation: 5D failure to 17D success (roadmap \S6.5--\S7)}}
 
 MORL uses a four-stage pipeline that differs from the single-stage PPO families (roadmap Section 7): (1) a 2M-step surrogate \emph{{pretrain}} on the 17D hybrid backend with canonical $(w_c,w_e,w_s)=(0.80,0.20,0.00)$; (2) an \emph{{ERAM}} weight-adaptation stage (20 iterations of 100k steps from initial weights $0.34/0.33/0.33$); (3) a 100k-step \emph{{finetune}} on the live BOPTEST RTE at learning rate $10^{{-4}}$ with $\pm3$-day episode-start jitter; and (4) a 12-month \emph{{yearly evaluation}}. MORL is the only family with a live-BOPTEST finetune; the thermostatic/HDRL families are evaluated zero-shot after surrogate-only training, which is a strictly harder transfer.
 
@@ -587,7 +702,7 @@ Variant & Obs dim & RMSE$_T$ ($^\circ$C) & Violation (\%) & $m_s$ \\
   \label{{fig:morl5d17d}}
 \end{{figure}}
 
-\section{{MORL Pareto front and N=5 seed variance}}
+\section{{MORL Pareto front and N=5 seed variance (roadmap \S8--\S9)}}
 
 The MORL Pareto sweep varies comfort/energy weights with safety weight zero (Table~\ref{{tab:morl_pareto_seed}}). Energy-only control collapses comfort ($m_s={ctx['p0_ms']}$, violation ${ctx['p0_viol']}\%$); comfort-leaning settings are far more stable. The single-seed (seed 42) Pareto points are reported separately from the $N=5$ canonical extensions, because the seed analysis is the central audit result: the neutral 50/50 canonical has $m_s={ctx['n50_ms']}\pm{ctx['n50_std']}$ (CV ${ctx['n50_cv']}$, 95\% $t$-CI $[{ctx['n50_ci_lo']},{ctx['n50_ci_hi']}]$) and the practical 75/25 canonical has $m_s={ctx['n75_ms']}\pm{ctx['n75_std']}$ (CV ${ctx['n75_cv']}$, 95\% $t$-CI $[{ctx['n75_ci_lo']},{ctx['n75_ci_hi']}]$). Seed 46 is an outlier in both groups (Table~\ref{{tab:morl_per_seed}}). Because the replay audit produced bit-identical BOPTEST trajectories for a fixed policy, this variance is attributed to PPO/ERAM training stochasticity, not simulator noise. The single-seed canonical ($m_s\approx0.10$) is therefore the \emph{{best}} of five, not the median.
 
@@ -626,7 +741,7 @@ Pair (c/e) & Seed & RMSE$_T$ & Within 1$^\circ$C (\%) & Violation (\%) & Energy 
 \end{{tabular}}
 \end{{table}}
 
-\section{{Seasonal variance falsification}}
+\section{{Seasonal variance falsification (roadmap \S9; audit \S13)}}
 
 At $N=3$, the practical canonical appeared to show near-deterministic winter behavior and a seasonal inversion relative to the neutral canonical, motivating a pre-registered falsification test before seeds 45 and 46 were trained. The direction-specific predictions (February winter $\sigma(m_s)<0.005$; June summer $\sigma(m_s)>0.05$; winter neutral/practical variance ratio $>20$) failed at $N=5$: February practical $\sigma(m_s)$ rose to order $0.17$ and the winter variance ratio collapsed to order one. This is a success of the pre-registration protocol (audit anchors \texttt{{93df9b3}} pre-registration, \texttt{{62dc859}} post-N=5 falsification), not a project failure. The honest, narrower conclusion: MORL is promising in mean performance, especially at comfort-leaning preferences, but is \emph{{not}} deployment-stable without explicit stabilization (validation-based checkpoint selection, early stopping, or ensemble selection), which is left as future work because the canonical protocol fixes final-epoch evaluation.
 
@@ -644,7 +759,7 @@ At $N=3$, the practical canonical appeared to show near-deterministic winter beh
   \label{{fig:seasonal_falsification}}
 \end{{figure}}
 
-\section{{PI reference and synthesis}}
+\section{{PI reference and synthesis (roadmap \S10--\S11)}}
 
 The BOPTEST built-in PI controller is a reproducible reference, not a tuned strong baseline. On the 12-month yearly evaluation it is comfort-poor but energy-frugal: mean RMSE$_T={ctx['pi_rmse']}\,^\circ$C, mean violation ${ctx['pi_viol']}\%$, mean monthly energy ${ctx['pi_energy']}$ kWh, mean $m_s={ctx['pi_ms']}$. All Block 2 RL/MORL agents reach $m_s$ well below PI's ${ctx['pi_ms']}$, dominating it on comfort at comparable or lower energy after accounting for the comfort/energy trade-off.
 
@@ -735,7 +850,30 @@ def main() -> None:
         "n50_ms": f(n50.ms_mean, 3), "n50_std": f(n50.ms_std, 3), "n50_cv": f(n50.ms_cv, 2),
         "n75_ms": f(n75.ms_mean, 3), "n75_std": f(n75.ms_std, 3), "n75_cv": f(n75.ms_cv, 2),
         "pi_rmse": pi["rmse"], "pi_viol": pi["viol"], "pi_energy": pi["energy"], "pi_ms": pi["ms"],
+        "lam_T": "0.10", "lam_P": "5{\\times}10^{-5}",
     }
+
+    # Data-driven m_s = r_time + r_sev decomposition rows for the three backends.
+    arch = d["arch"]; tr = d["transfer"]
+    v35 = arch[arch.variant == "v35_calibrated"].iloc[0]
+    dec_rows = []
+    for scen, sl in [("peak_heat_window", "peak"), ("typical_heat_window", "typical")]:
+        pv = _scen_row(d["pure"], scen, controller="thermostatic")
+        hy = _scen_row(d["hybrid"], scen)
+        dv_ms = v35["peak_control_m_s"] if scen == "peak_heat_window" else v35["typical_control_m_s"]
+        dv_v = tr[(tr.variant == "direct_v35") & (tr.scenario == scen)].iloc[0]["boptest_violation_pct"]
+        for label, ms, viol in [(f"pure v3\n({sl})", pv.m_s, pv.violation_pct),
+                                (f"direct v3.5\n({sl})", dv_ms, dv_v),
+                                (f"hybrid\n({sl})", hy.m_s, hy.violation_pct)]:
+            rt = float(viol) / 100.0
+            dec_rows.append((label, rt, max(float(ms) - rt, 0.0)))
+
+    try:
+        fig_reward_shaping(ctx)
+        fig_ms_decomposition(dec_rows)
+    except Exception as exc:
+        print(f"[warn] figure regeneration skipped: {exc}")
+
     write_tex(ctx)
     print(f"Wrote {BASE / 'main.tex'}")
 
