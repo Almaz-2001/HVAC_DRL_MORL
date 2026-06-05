@@ -42,7 +42,23 @@ and every surrogate exposes the same transition signature
 \end{equation}
 with \(\widehat{P}\ge 0\) enforced by a Softplus output and capped at \(P_{\max}=5500~\mathrm{W}\). A single adapter wraps four interchangeable backends behind \eqref{eq:tsup-signature}---legacy v3, raw v3.5, calibrated v3.5, and the hybrid pairing---which is what makes the like-for-like fidelity comparisons in this section well posed: only the internal dynamics change, never the control interface or the observation map.
 
-
+\begin{table}[H]
+\centering
+\small
+\caption{Modelling assumptions of the direct-\Tsupply{} control interface.}
+\label{tab:tsup-assumptions}
+\begin{tabularx}{\linewidth}{lX}
+\toprule
+Assumption & Statement \\
+\midrule
+Actuator abstraction & Supply-air temperature is commanded directly; valve/coil dynamics are not modelled beyond the Stage A latency term. \\
+Command bounds & \(\Tsupply\in[18,35]\,^\circ\)C; fan command \(u_{\mathrm{fan}}\in[0,1]\). \\
+Power non-negativity & \(\widehat{P}=\mathrm{Softplus}(\cdot)\ge 0\), capped at \(P_{\max}=5500\)~W. \\
+State support & Zone and ambient temperatures normalized to \([-1,1]\) over \([15,35]\) and \([-10,40]\,^\circ\)C. \\
+Interface invariance & All four backends obey \eqref{eq:tsup-signature}; only the internal dynamics differ. \\
+\bottomrule
+\end{tabularx}
+\end{table}
 
 \subsection{Control-Oriented Surrogate Architecture (v3)}
 \label{ssec:block1-v3}

@@ -38,7 +38,9 @@ SECTIONS = [
 # Supplementary Material (matched by a distinctive caption substring). Their
 # \label travels with them, so in-text \ref calls still resolve (to S-numbers).
 SUPP_TABLE_KEYS = [
-    "Modelling assumptions of the direct",          # R1 tab:tsup-assumptions
+    # NB: only tables that are self-contained (no \ref/\eqref into the main text)
+    # may be relocated. tab:tsup-assumptions is intentionally NOT here because it
+    # \eqref's the supply-temperature signature equation in Results I.
     "v3 configuration from the active model class", # R1 tab:v3-config
     "Feature scaling and physical constraints",     # R1 tab:v3-scaling
     "PPO training configuration",                   # R2 tab:ppo_hparams
@@ -146,6 +148,8 @@ MASTER = r"""\documentclass[11pt,a4paper]{article}
 \newcommand{\Czon}{\ensuremath{C_{\mathrm{zon}}}}
 \newcommand{\Tsupply}{\ensuremath{T_{\mathrm{sup}}}}
 \newcommand{\That}{\ensuremath{\widehat{T}}}
+% fixed pointer to a table in the separate Supplementary Material PDF
+\newcommand{\suppref}[1]{#1}
 
 \title{Predictive Fidelity is Not Control Utility: A Hybrid Surrogate Recipe for
 Reinforcement-Learning HVAC Control and Its Pre-registered Transferability}
@@ -707,18 +711,13 @@ regenerate every figure and table --- are organised under the project's
 each reported quantity by per-section provenance tables (one for each of Results~I,
 II, and III). They are available from the authors on reasonable request.
 
-\section*{Supplementary Material}
+\section*{Supplementary material}
 Every figure, table, and inline number in Results~I--III is read directly from the
-versioned \texttt{reports/} and \texttt{outputs/} artefacts; no manuscript build is
-required to inspect the evidence. Tables~\ref{tab:prov-r1}--\ref{tab:prov-r3} give
-the complete content-to-artefact provenance map for the three evidence blocks, so
-that each reported quantity can be traced to the exact source file that produced it.
-A small set of parameter and configuration tables is also collected here to keep the
-main text focused on results.
-
-%%PROVENANCE_TABLES%%
-
-%%SUPPLEMENTARY_TABLES%%
+versioned \texttt{reports/} and \texttt{outputs/} artefacts. The separate
+Supplementary Material document provides the complete content-to-artefact
+provenance maps for the three evidence blocks (Supplementary Tables~S1--S3) together
+with the parameter, configuration, and interface tables referenced from the main
+text (Supplementary Tables~S4--S9).
 
 \bibliographystyle{unsrtnat}
 \bibliography{references}
@@ -791,6 +790,59 @@ def build_provenance_supplementary() -> str:
     return "\n".join(out)
 
 
+SUPP_DOC = r"""\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{geometry}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{siunitx}
+\usepackage{longtable}
+\usepackage{float}
+\usepackage{xcolor}
+\usepackage{caption}
+\usepackage{hyperref}
+\geometry{margin=2.0cm}
+\captionsetup{font=small,labelfont=bf}
+\newcommand{\RMSE}{\ensuremath{\mathrm{RMSE}}}
+\newcommand{\MAE}{\ensuremath{\mathrm{MAE}}}
+\newcommand{\Czon}{\ensuremath{C_{\mathrm{zon}}}}
+\newcommand{\Tsupply}{\ensuremath{T_{\mathrm{sup}}}}
+\newcommand{\That}{\ensuremath{\widehat{T}}}
+\renewcommand{\thetable}{S\arabic{table}}
+\renewcommand{\thefigure}{S\arabic{figure}}
+\title{Supplementary Material for\\[2pt]
+\emph{Predictive Fidelity is Not Control Utility: A Hybrid Surrogate Recipe for
+Reinforcement-Learning HVAC Control and Its Pre-registered Transferability}}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\noindent This document is the Supplementary Material for the above manuscript. It
+provides the complete content-to-artefact provenance maps for the three evidence
+blocks (Supplementary Tables~S1--S3) and the parameter, configuration, and
+interface tables referenced from the main text (Supplementary Tables~S4--S9).
+Every figure, table, and inline number in the main text can be traced through these
+maps to the exact versioned source file in the project's \texttt{reports/} and
+\texttt{outputs/} trees.
+
+%%SUPP_BODY%%
+
+\end{document}
+"""
+
+
+def build_supplementary_document(relocated) -> str:
+    body = build_provenance_supplementary() + "\n\n" + build_supplementary_tables(relocated)
+    return SUPP_DOC.replace("%%SUPP_BODY%%", body)
+
+
 def main() -> None:
     paper_dir = DOCS / "paper_combined"
     figdir = paper_dir / "figures"
@@ -803,26 +855,41 @@ def main() -> None:
     )
     n_fig = 0
     relocated = []
+    combined = []  # (index, reduced_body)
+    # Pass 1: strip each section, write the full standalone copy, and pull the
+    # auxiliary parameter/config tables out for the separate Supplementary PDF.
     for i, (section_dir, _) in enumerate(SECTIONS, start=1):
         d = DOCS / section_dir
         body = header + strip_to_body((d / "main.tex").read_text(encoding="utf-8"))
-        # keep a full copy in the section folder (for the --integrated flag) ...
-        (d / "section_body.tex").write_text(body, encoding="utf-8")
-        # ... and a self-contained copy inside the combined bundle, with the
-        # auxiliary parameter/config tables relocated to the Supplementary.
+        (d / "section_body.tex").write_text(body, encoding="utf-8")  # full copy
         body_combined, moved = extract_supp_tables(body)
         relocated.extend(moved)
-        (paper_dir / f"results{i}_body.tex").write_text(body_combined, encoding="utf-8")
+        combined.append((i, body_combined))
         for pattern in ("*.pdf", "*.png"):
             for fig in (d / "figures").glob(pattern):
                 shutil.copy2(fig, figdir / fig.name)
                 n_fig += 1
-        print(f"Wrote results{i}_body.tex ({len(moved)} tables -> supplementary)")
-    master = MASTER.replace("%%PROVENANCE_TABLES%%", build_provenance_supplementary())
-    master = master.replace("%%SUPPLEMENTARY_TABLES%%", build_supplementary_tables(relocated))
-    (paper_dir / "main_paper.tex").write_text(master, encoding="utf-8")
-    print(f"Wrote {paper_dir / 'main_paper.tex'} (self-contained; {n_fig} figure files "
-          f"copied; {len(relocated)} tables relocated to supplementary)")
+    # Map each relocated table's \label to its fixed Supplementary number. The
+    # supplement renders 3 provenance tables (S1--S3) first, then the relocated
+    # ones, so they start at S4 in extraction order.
+    label2num = {}
+    for k, blk in enumerate(relocated):
+        m = re.search(r"\\label\{([^}]+)\}", blk)
+        if m:
+            label2num[m.group(1)] = f"S{4 + k}"
+    # Pass 2: rewrite the now-dangling \ref to relocated tables as fixed \suppref
+    # pointers, then write the combined bodies.
+    for i, body_combined in combined:
+        for label, num in label2num.items():
+            body_combined = body_combined.replace(r"\ref{" + label + "}", r"\suppref{" + num + "}")
+        (paper_dir / f"results{i}_body.tex").write_text(body_combined, encoding="utf-8")
+        print(f"Wrote results{i}_body.tex")
+    (paper_dir / "main_paper.tex").write_text(MASTER, encoding="utf-8")
+    (paper_dir / "supplementary.tex").write_text(
+        build_supplementary_document(relocated), encoding="utf-8")
+    print(f"Wrote main_paper.tex + supplementary.tex (self-contained; {n_fig} figure "
+          f"files copied; {len(relocated)} tables -> supplementary as "
+          f"{'/'.join(label2num.values())})")
 
 
 if __name__ == "__main__":
