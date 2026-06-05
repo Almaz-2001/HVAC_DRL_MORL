@@ -272,7 +272,7 @@ here we fix notation and cite the methods on which the design rests.
 The plant is a single-zone building emulator with electric heating, drawn from the
 BOPTEST family of Modelica-based test cases \citep{Blum2021BOPTEST,Wetter2014Modelica}
 and served to the controller through BOPTEST's uniform HTTP interface
-\citep{Arroyo2022BOPTESTService}. Formally the emulator is a continuous-time
+\citep{Arroyo2021GymBOPTEST}. Formally the emulator is a continuous-time
 dynamical system whose latent thermal state evolves under a scalar heating command
 $a_t\in[0,1]$ and an exogenous disturbance stream $d_t$ (ambient weather,
 solar gain, occupancy, and time-varying comfort set-points). We interact with it
@@ -409,7 +409,7 @@ Sections~\ref{sec:results1-digital-twin}--\ref{sec:results3-transfer}.
 All controllers are evaluated on the Building Optimization Testing Framework
 (BOPTEST), an open, Modelica-based runtime that exposes building emulators through
 a uniform HTTP interface for simulation-based benchmarking of control strategies
-\citep{Blum2021BOPTEST,Wetter2014Modelica,Arroyo2022BOPTESTService}; we use the
+\citep{Blum2021BOPTEST,Wetter2014Modelica,Arroyo2021GymBOPTEST}; we use the
 \texttt{bestest\_air} testcase as the primary environment and a hydronic family
 (\texttt{bestest\_hydronic} variants) for the transferability study of
 Section~\ref{sec:results3-transfer}. The controller interacts with the plant at a
