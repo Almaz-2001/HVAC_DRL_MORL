@@ -111,10 +111,18 @@ Reinforcement-Learning HVAC Control and Its Pre-registered Transferability}
 \maketitle
 
 \begin{abstract}
-TODO abstract.
+Deep Reinforcement Learning (DRL) controllers for HVAC systems are typically trained against neural-network surrogates because high-fidelity physical simulators are computationally prohibitive for the millions of environment steps required by policy-gradient algorithms. A natural assumption in building energy modeling is that a predictively superior surrogate yields a more effective training environment. We systematically test this assumption on the BOPTEST \texttt{bestest\_air} testcase and report a critical negative result: the \emph{fidelity--utility paradox}.
+
+A physically structured grey-box surrogate (v3.5) utilizing a Neural Ordinary Differential Equation (Neural ODE) backbone with an identified zone thermal capacitance of $C_{\mathrm{zon}} = 4.413\times10^{5}$~J/K achieves a 24-hour rollout RMSE of $0.644\,^{\circ}$C, significantly outperforming a black-box control-oriented surrogate (v3, $1.557\,^{\circ}$C rollout RMSE) in offline predictive accuracy. However, when v3.5 is used directly as the training environment, the resulting policy collapses to a maintenance score of $m_s = 1.046$ on the live BOPTEST Runtime Environment (RTE), exhibiting comfort violations above $77\%$ and a live RMSE exceeding $4\,^{\circ}$C. Conversely, training on the predictively inferior v3 surrogate yields a highly functional policy, achieving $m_s = 0.073$ on the peak window and $m_s = 0.095$ on the typical winter window.
+
+We resolve this paradox by establishing a hybrid training architecture in which v3 provides smooth gradient fields for policy rollouts, while the calibrated v3.5 physical twin acts as a frozen per-step reward-shaping censor. Subtracted disagreement penalties with $\lambda_{\mathrm{temp}} = 0.10$ and $\lambda_{\mathrm{pwr}} = 5\times10^{-5}$ enable the hybrid backend to sustain $1{,}786.8$ steps/s on a single CPU thread, corresponding to an $85.0\times$ acceleration relative to BOPTEST, while achieving $m_s = 0.087$ on the peak window and $m_s = 0.041$ on the typical winter window with comfort violations below $5\%$.
+
+We further demonstrate that the disagreement censor is controller-family-specific. Thermostatic PPO performs best with $\lambda_{\mathrm{temp}} = 0.10$, whereas a dedicated sweep shows that Hierarchical Reinforcement Learning (HDRL) is best at $\lambda_{\mathrm{temp}} = 0.00$; the 17-dimensional Multi-Objective Reinforcement Learning (MORL) controller is consequently run under the same power-only setting ($\lambda_{\mathrm{temp}} = 0.00$, $\lambda_{\mathrm{pwr}} = 5\times10^{-5}$). No single regularization weight is therefore optimal across controller families.
+
+A pre-registered transferability study, identified by Git manifest anchor \texttt{1861e48}, evaluates the framework across three distinct hydronic systems. The proposed Stage~A/B/C inverse-calibration pipeline generalizes robustly, providing rollout-RMSE reductions of $60.2\%$, $87.4\%$, and $87.8\%$, respectively, and consistently re-identifying the zone thermal capacitance at $1.918\pm0.032$ times the baseline value despite an order-of-magnitude variation in zone volume. Frozen-policy transfer, however, remains strongly regime-dependent: the residential hydronic testcases fail the $1.25\times$ PI comfort-safety threshold, whereas the commercial stretch testcase satisfies the safety criterion but incurs a $35.3\%$ energy penalty relative to the baseline controller. All numerical findings are linked to pre-registration audit anchors and reported at Hou--Evins Level~3 (Sufficiently reported) completeness.
 \end{abstract}
 
-\textbf{Keywords:} TODO; reinforcement learning; HVAC; digital twin; surrogate model; transfer.
+\textbf{Keywords:} reinforcement learning; HVAC control; building energy; digital twin; surrogate model; Neural ODE; physics-informed calibration; transfer learning; BOPTEST; pre-registration.
 
 \section*{Nomenclature}
 TODO consolidated nomenclature (merge the per-section symbol tables from the
