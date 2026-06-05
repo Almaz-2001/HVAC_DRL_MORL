@@ -551,9 +551,12 @@ distribution-shift phenomenon \citep{Quinonero2009DatasetShift,RiahiSamani2026OO
 a policy that exploits the sharply physics-constrained surface of v3.5 saturates
 into a near bang-bang law that does not survive transfer to the live plant. The
 hybrid resolution --- v3 for smooth dynamics, a frozen v3.5 as a reward-shaping
-censor --- recovers the best controller of the study ($m_s = 0.087$/$0.041$,
-violation below $5\%$) while retaining an $85\times$ training speed-up, which is the
-practical pay-off of separating the two roles rather than seeking one maximally
+censor --- recovers the best controller overall ($m_s = 0.087$/$0.041$ on the
+peak/typical windows): although pure v3 edges it on the peak-window score alone
+($0.073$ vs $0.087$), the hybrid is the only backend with sub-$5\%$ comfort
+violation on \emph{both} windows, the lowest typical-window score ($0.041$), and
+lower energy than pure v3, all while retaining an $85\times$ training speed-up ---
+the practical pay-off of separating the two roles rather than seeking one maximally
 faithful model.
 
 \subsection{Controller-family specificity of the physical censor}
@@ -663,16 +666,83 @@ each reported quantity by per-section provenance tables (one for each of Results
 II, and III). They are available from the authors on reasonable request.
 
 \section*{Supplementary Material}
-A supplementary appendix collects the per-section provenance tables (the artefact
-and command mapping for every figure and table) and the extended Hou--Evins-style
-numerical reporting artefacts that underlie the surrogate-fidelity claims of
-Section~\ref{sec:results1-digital-twin}.
+Every figure, table, and inline number in Results~I--III is read directly from the
+versioned \texttt{reports/} and \texttt{outputs/} artefacts; no manuscript build is
+required to inspect the evidence. Tables~\ref{tab:prov-r1}--\ref{tab:prov-r3} give
+the complete content-to-artefact provenance map for the three evidence blocks, so
+that each reported quantity can be traced to the exact source file that produced it.
+
+%%PROVENANCE_TABLES%%
 
 \bibliographystyle{unsrtnat}
 \bibliography{references}
 
 \end{document}
 """
+
+
+def _tex_escape(s: str) -> str:
+    for a, b in (("\\", ""), ("{", r"\{"), ("}", r"\}"), ("&", r"\&"),
+                 ("%", r"\%"), ("#", r"\#"), ("_", r"\_"), ("$", r"\$"),
+                 ("^", r"\textasciicircum{}"), ("~", r"\textasciitilde{}")):
+        s = s.replace(a, b)
+    return s
+
+
+def _artefact_cell(s: str) -> str:
+    """Escape an artefact path/command and allow line breaks at / and _."""
+    esc = _tex_escape(s).replace("/", r"/\allowbreak ").replace(r"\_", r"\_\allowbreak ")
+    return r"\texttt{" + esc + "}"
+
+
+def _provenance_block(header_prefix: str):
+    """Parse the first ```text fenced provenance map after a roadmap header into
+    a list of (content, artefact) rows (continuation lines are appended)."""
+    lines = (DOCS.parent / "roadmap.md").read_text(encoding="utf-8").splitlines()
+    i = next(k for k, l in enumerate(lines) if l.startswith(header_prefix))
+    j = next(k for k in range(i, len(lines)) if lines[k].strip().startswith("```text"))
+    end = next(k for k in range(j + 1, len(lines)) if lines[k].strip() == "```")
+    rows = []
+    for raw in lines[j + 1:end]:
+        if not raw.strip() or set(raw.strip()) <= {"-", " "}:
+            continue
+        if "->" in raw:
+            content, art = raw.split("->", 1)
+            content, art = content.strip(), art.strip()
+            if content.lower().endswith("content") and "source" in art.lower():
+                continue  # header row
+            rows.append([content, art])
+        elif rows:  # continuation of the previous artefact
+            rows[-1][1] += " " + raw.strip()
+    return rows
+
+
+def build_provenance_supplementary() -> str:
+    blocks = [
+        ("### 3.2", "Results~I", "tab:prov-r1",
+         r"python3 -B docs/results1\_digital\_twin\_overleaf/build\_results1\_overleaf.py"),
+        ("### 11.1", "Results~II", "tab:prov-r2",
+         r"python3 -B evaluation/run\_block2.py build-reports"),
+        ("### 15.7", "Results~III", "tab:prov-r3",
+         r"Block~3 evaluation scripts (see manifests below)"),
+    ]
+    out = [r"\renewcommand{\thetable}{S\arabic{table}}", r"\setcounter{table}{0}"]
+    for hdr, label, tabid, cmd in blocks:
+        rows = _provenance_block(hdr)
+        out.append("")
+        out.append(r"\footnotesize")
+        out.append(r"\begin{longtable}{@{}p{0.40\linewidth} p{0.52\linewidth}@{}}")
+        out.append(r"\caption{%s content-to-artefact provenance map (rebuild: \texttt{%s}).}\label{%s}\\"
+                    % (label, cmd, tabid))
+        head = r"\textbf{Content} & \textbf{Source artefact}\\ \midrule"
+        out.append(head + r" \endfirsthead")
+        out.append(head + r" \endhead")
+        for content, art in rows:
+            out.append(_tex_escape(content) + " & " + _artefact_cell(art) + r" \\")
+        out.append(r"\bottomrule")
+        out.append(r"\end{longtable}")
+        out.append(r"\normalsize")
+    return "\n".join(out)
 
 
 def main() -> None:
@@ -698,7 +768,8 @@ def main() -> None:
                 shutil.copy2(fig, figdir / fig.name)
                 n_fig += 1
         print(f"Wrote results{i}_body.tex")
-    (paper_dir / "main_paper.tex").write_text(MASTER, encoding="utf-8")
+    master = MASTER.replace("%%PROVENANCE_TABLES%%", build_provenance_supplementary())
+    (paper_dir / "main_paper.tex").write_text(master, encoding="utf-8")
     print(f"Wrote {paper_dir / 'main_paper.tex'} (self-contained; {n_fig} figure files copied into figures/)")
 
 
