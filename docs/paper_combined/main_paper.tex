@@ -402,12 +402,92 @@ table are listed under Data availability.
 \input{results3_body.tex}
 
 \section{Discussion}\label{sec:discussion}
-\subsection{Predictive validity vs RL training utility} TODO
-\subsection{Controller-family specificity} TODO
-\subsection{Transferability boundary} TODO
-\subsection{Step-size, first-divergence horizon, and pre-registration discipline} TODO
-\subsection{Positioning relative to related work} TODO
-\subsection{Threats to validity}\label{ssec:block1-limitations}\label{ssec:b3lim} TODO (absorb the per-section Limitations bullets; these labels also catch the refs that the stripped per-section Limitations used to carry)
+
+\subsection{Predictive validity versus RL training utility}
+The central finding is that predictive fidelity and training utility are distinct,
+and over part of the range opposed. The calibrated physical twin v3.5 is the better
+predictor by a wide margin --- a 24-hour rollout \RMSE{} of $0.644\,^{\circ}$C
+against $1.557\,^{\circ}$C for the black-box v3 --- yet used directly as the
+training environment it produces an unusable controller ($m_s = 1.046$ live, comfort
+violation above $77\%$), whereas the weaker v3 yields a usable one
+($m_s = 0.073$/$0.095$). This inverts the working assumption of the surrogate
+literature, whose protocols and accelerators are optimised for predictive accuracy
+\citep{HouEvins2024} or raw throughput \citep{Mshragi2026FastML} on the implicit
+premise that a better model is a better basis for control. Our matched-corpus
+ablation further shows the fidelity gain itself is only $25.4\%$ physical
+calibration against $74.6\%$ data resolution, so even the predictive improvement is
+mostly an artefact of sampling rate rather than physics. We read the paradox as a
+distribution-shift phenomenon \citep{Quinonero2009DatasetShift,RiahiSamani2026OOD}:
+a policy that exploits the sharply physics-constrained surface of v3.5 saturates
+into a near bang-bang law that does not survive transfer to the live plant. The
+hybrid resolution --- v3 for smooth dynamics, a frozen v3.5 as a reward-shaping
+censor --- recovers the best controller of the study ($m_s = 0.087$/$0.041$,
+violation below $5\%$) while retaining an $85\times$ training speed-up, which is the
+practical pay-off of separating the two roles rather than seeking one maximally
+faithful model.
+
+\subsection{Controller-family specificity of the physical censor}
+The physics-regularisation recipe is not universal across controllers, which
+falsifies the natural expectation that one censor weight should serve all agents.
+The optimal disagreement weight is $\lambda_{\mathrm{temp}}=0.10$ for the
+thermostatic PPO agent but $\lambda_{\mathrm{temp}}=0$ for both the hierarchical
+controller and the $17$-dimensional MORL controller: the latter two already see
+enough forecast and structural context that an external physical censor only
+over-constrains them. This is consistent with the view that hierarchical and
+preference-conditioned agents shape their own effective dynamics through temporal
+abstraction or preference conditioning \citep{Bacon2017Options,Nachum2018HIRO,Liao2025HDRL,Byeon2025MaxMinMORL},
+and it cautions against reporting a single ``best'' regularisation strength without
+stating the controller family it was tuned on.
+
+\subsection{The transferability boundary}
+Transfer succeeds at the level of the calibration \emph{pipeline} but not the frozen
+\emph{policy}. Re-running the Stage~A/B/C inverse calibration on the hydronic family
+reduces rollout \RMSE{} by $60.2$--$87.8\%$, and the zone capacitance re-identifies
+as a near-uniform structural invariant ($\Czon$ scales by $1.918\pm0.032\times$ the
+source value), so the physical parameterisation is portable in a precise,
+quantified sense. Zero-shot transfer of the frozen controller, by contrast, is
+regime-dependent and either fails or passes only with an energy penalty. This is a
+sharper, component-level statement than the usual ``transfer reduces training
+cost'' claim \citep{Hou2024MultiSource}: it identifies \emph{what} transfers (the
+identified physics) and \emph{what} does not (the control law), rather than
+reporting an aggregate transfer benefit.
+
+\subsection{Methodological implications and positioning}
+Three methodological points follow. First, the choice of \emph{training environment}
+--- not only the algorithm --- determines the resulting policy, so surrogate design
+should be evaluated by downstream control utility and not predictive accuracy
+alone; this complements, rather than contradicts, accuracy-oriented surrogate
+protocols \citep{HouEvins2024} and the forecast-augmentation results that improve
+RL-HVAC control \citep{Gao2024Predictive}. Second, because the failure mode is a
+distribution shift between surrogate and live plant, the live-plant score must be
+the reported metric, and safe-exploration framing \citep{Garcia2015SafeRL} applies
+even when training is entirely in simulation. Third, the pre-registered, audit-
+anchored protocol is what lets us state H1 and H3 as \emph{falsified} rather than
+quietly dropped; binding each hypothesis to a versioned anchor before the runs is a
+discipline we recommend for surrogate-trained control studies, where the
+temptation to report only the favourable configuration is strong. Relative to the
+broader DRL-for-HVAC literature, which still reaches real-building deployment only
+rarely \citep{AlSayed2024Review} and typically benchmarks against rule-based or
+guideline baselines \citep{Savino2025ASHRAE}, our contribution is less a new
+controller than a corrected account of \emph{why} surrogate-trained controllers
+succeed or fail.
+
+\subsection{Threats to validity}\label{ssec:block1-limitations}\label{ssec:b3lim}
+Several limitations bound these claims. (i)~The primary testbed is a single-zone
+\texttt{bestest\_air} emulator; multi-zone coupling and richer HVAC topologies are
+not exercised, and the transferability evidence covers a hydronic family rather
+than an arbitrary building stock. (ii)~The surrogate models are validated on the
+temperature channel, where the calibration metrics are strong; the heating-power
+channel is reproduced less accurately and we treat it as a known limitation rather
+than a validated output. (iii)~The mechanism of the fidelity--utility paradox is
+established \emph{in direction} --- we observe action saturation and attribute it
+to policy-gradient exploitation of flat-gradient regions --- but a formal
+loss-landscape analysis is left to future work. (iv)~All controller scores are
+means over $N=5$ seeds; the seed-to-seed variance is reported honestly and is
+non-negligible, so the controller rankings should be read together with that
+spread. (v)~Evaluation is entirely in simulation: no live-building deployment is
+claimed, and the sim-to-real gap beyond BOPTEST remains open. These bounds motivate
+the Block~4 directions noted in the conclusion.
 
 \section{Conclusion}\label{sec:conclusion}
 TODO (absorb the per-section conclusions; state Block 4 future work).
