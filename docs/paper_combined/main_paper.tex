@@ -490,13 +490,53 @@ claimed, and the sim-to-real gap beyond BOPTEST remains open. These bounds motiv
 the Block~4 directions noted in the conclusion.
 
 \section{Conclusion}\label{sec:conclusion}
-TODO (absorb the per-section conclusions; state Block 4 future work).
+We asked whether a surrogate with higher predictive fidelity is automatically a
+better environment in which to train a reinforcement-learning HVAC controller, and
+tested the question across three controller families and a hydronic family of
+transfer testcases under a pre-registered, audit-anchored protocol. The answer is
+no. The most accurate physical twin (v3.5; $0.644\,^{\circ}$C 24-hour rollout
+\RMSE) trains the worst controller ($m_s = 1.046$, comfort violation above $77\%$),
+while a weaker black-box surrogate trains a usable one --- a fidelity--utility
+paradox (H1 falsified) that a matched-corpus ablation shows is, moreover, $74.6\%$
+data-resolution and only $25.4\%$ physical calibration. Separating the two roles
+resolves it: using the black-box surrogate for smooth rollout dynamics and a frozen
+physical twin as a reward-shaping censor (H2 supported) recovers the best
+controller of the study ($m_s = 0.041$, violation below $5\%$) at an $85\times$
+training speed-up. The censor strength is controller-family specific
+($\lambda_{\mathrm{temp}}=0.10$ for thermostatic PPO, $0$ for the hierarchical and
+MORL agents; H3 falsified), and transferability resolves into a component-level
+boundary (H4): the inverse-calibration pipeline transfers --- rollout \RMSE{} falls
+by $60.2$--$87.8\%$ and the zone capacitance re-identifies as a near-uniform
+invariant ($1.918\pm0.032\times$ the source) --- whereas the frozen control policy
+does not transfer zero-shot. The contribution is therefore less a new controller
+than a corrected, quantified account of why surrogate-trained controllers succeed
+or fail, together with a reusable role-separating recipe.
+
+Several directions (the project's Block~4) follow directly from the limitations of
+Section~\ref{ssec:b3lim}: extending the study from a single zone to multi-zone and
+mixed-topology buildings; a formal loss-landscape analysis to turn the
+hypothesised flat-gradient mechanism of the paradox into an established one;
+improving the heating-power channel of the surrogate so it is a validated rather
+than an auxiliary output; broadening transfer beyond the hydronic family and
+pairing the transferable calibration pipeline with light policy adaptation instead
+of zero-shot reuse; and, ultimately, closing the remaining sim-to-real gap through
+deployment on a physical building.
 
 \section*{Data availability}
-TODO (cite roadmap provenance maps: Sections 3.2, 11.1, 15.7; reports/ and outputs/ artifacts).
+The building emulators used in this study are openly available as part of the
+BOPTEST project \citep{Blum2021BOPTEST}. The artefacts generated for this work ---
+the training and calibration corpora, the trained surrogate and controller
+checkpoints, the calibration and evaluation outputs, and the scripts that
+regenerate every figure and table --- are organised under the project's
+\texttt{data/}, \texttt{outputs/}, and \texttt{reports/} trees and are mapped to
+each reported quantity by per-section provenance tables (one for each of Results~I,
+II, and III). They are available from the authors on reasonable request.
 
-\section*{Supplementary Material: Hou and Evins Numerical Artifacts}
-TODO (S1--S11 tables).
+\section*{Supplementary Material}
+A supplementary appendix collects the per-section provenance tables (the artefact
+and command mapping for every figure and table) and the extended Hou--Evins-style
+numerical reporting artefacts that underlie the surrogate-fidelity claims of
+Section~\ref{sec:results1-digital-twin}.
 
 \bibliographystyle{unsrtnat}
 \bibliography{references}
