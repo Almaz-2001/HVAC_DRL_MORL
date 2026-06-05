@@ -88,6 +88,7 @@ MASTER = r"""\documentclass[11pt,a4paper]{article}
 \usepackage{enumitem}
 \usepackage{float}
 \usepackage{placeins}
+\usepackage[numbers,sort&compress]{natbib}
 \usepackage{hyperref}
 
 \geometry{margin=2.0cm}
@@ -170,7 +171,40 @@ The remainder of this paper is organized as follows. Section~\ref{sec:related} r
 
 \section{Related Work}\label{sec:related}
 \subsection{Deep reinforcement learning and MORL for HVAC control} TODO
-\subsection{Surrogate models and digital twins for building simulation} TODO
+\subsection{Surrogate models and fast simulators for building control}
+Because high-fidelity building simulators are too slow to supply the millions of
+interactions that data-driven controllers require, a now-standard response is to
+replace --- or accelerate --- the physical model with a learned surrogate.
+\citet{HouEvins2024} formalize this practice into a reproducible protocol for
+developing and evaluating neural-network surrogate models of building energy
+behaviour, establishing reporting and justification levels that we adopt as an
+audit standard in this work. At the extreme of the throughput axis,
+\citet{Mshragi2026FastML} implement a random-forest surrogate as an FPGA hardware
+accelerator, reaching over $1.67$ million predictions per second so that an
+evolutionary optimizer can re-tune airflow and supply-temperature set-points in
+real time. Such fast surrogates are what make learning-based supervisory control
+tractable at building scale: multi-agent deep reinforcement learning has been
+applied to smart-building energy management under chance constraints
+\citep{Deng2025MultiAgent}, and context-aware reinforcement-learning controllers
+coupled to IoT telemetry have been reported to jointly improve energy efficiency
+and thermal comfort \citep{Alotaibi2025ContextAware}. In every case the surrogate
+or fast model is the substrate on which the controller is trained and tuned.
+
+This body of work, however, optimizes the surrogate almost exclusively along two
+axes --- predictive accuracy and inference throughput --- and treats the
+\emph{use} of that surrogate as a downstream concern. In parallel, the
+reinforcement-learning literature studies how training data should be
+\emph{collected} from a simulator: \citet{Mayor2025Parallelized} analyze how
+on-policy parallelized data collection shapes the optimization stability and final
+performance of PPO agents, while \citet{Radac2025OnlineRL} examine the software
+mechanics of interleaving environment stepping with learning updates for
+near-real-time online RL. What neither strand asks is whether a surrogate that is
+\emph{more accurate} as a predictor is thereby a \emph{better environment} in
+which to train a controller. We make exactly this question explicit and answer it
+in the negative (Section~\ref{sec:results2-control}): the surrogate's predictive
+fidelity and its downstream control utility are distinct, and can even be
+opposed --- a gap the accuracy-and-throughput framing of the surrogate literature
+leaves unexamined.
 \subsection{Physics-informed, Neural ODE, and hybrid models} TODO
 \subsection{Benchmark environments and building-simulation infrastructure} TODO
 \subsection{Predictive information, distribution shift, and transfer gap} TODO
@@ -217,6 +251,9 @@ TODO (cite roadmap provenance maps: Sections 3.2, 11.1, 15.7; reports/ and outpu
 
 \section*{Supplementary Material: Hou and Evins Numerical Artifacts}
 TODO (S1--S11 tables).
+
+\bibliographystyle{unsrtnat}
+\bibliography{references}
 
 \end{document}
 """
