@@ -234,7 +234,7 @@ duration-and-severity maintenance score
 m_s = r_{\mathrm{time}} + r_{\mathrm{sev}},
 \label{eq:m-ms}
 \end{equation}
-the time-in-violation plus violation-severity metric of \citet{Wang2025SafetyMetric};
+the time-in-violation plus violation-severity metric of \citet{Wang2025SafeDRL};
 lower is better and $m_s>1$ marks an unacceptable controller. This separation of a
 shaped training reward~\eqref{eq:m-return} from an unshaped safety score~\eqref{eq:m-ms}
 follows standard practice in safe reinforcement learning \citep{Garcia2015SafeRL}.
@@ -271,7 +271,7 @@ disturbance gains. Embedding this conservation law in the network makes it
 physics-informed in the sense of \citet{Raissi2019PINN,Karpatne2017TheoryGuided,Willard2022PIML},
 so its parameters retain physical meaning. The parameters are recovered by a
 staged inverse calibration (Stages~A/B/C) in the spirit of staged grey-box
-calibration \citep{Coraci2025StageCalibration}, and the identifiability of $\Czon$
+calibration \citep{Bacher2011RCIdentification}, and the identifiability of $\Czon$
 is checked with a Fisher/Laplace confidence interval; the staged protocol and the
 resulting calibrated values are detailed in Section~\ref{sec:results1-digital-twin}.
 
@@ -317,9 +317,9 @@ spaces of each family are specified in Section~\ref{sec:results2-control}.
 \subsection{Evaluation protocol and transferability methodology}\label{ssec:m-eval}
 Surrogate predictive fidelity is reported with the ASHRAE-style calibration
 statistics CV(\RMSE) and NMBE over multi-step rollouts, the standard accuracy
-measures for calibrated building models \citep{Coraci2025StageCalibration}.
+measures for calibrated building models \citep{Bacher2011RCIdentification}.
 Downstream control utility is reported with the maintenance score~\eqref{eq:m-ms}
-\citep{Wang2025SafetyMetric}, the comfort-violation fraction, and heating energy,
+\citep{Wang2025SafeDRL}, the comfort-violation fraction, and heating energy,
 each benchmarked against BOPTEST's built-in baseline controller. Because a policy
 trained on a surrogate is deployed on a different (live) system, the central
 methodological risk is dataset/distribution shift \citep{Quinonero2009DatasetShift};
@@ -372,7 +372,7 @@ supervision.
 The black-box surrogate v3 ($8{,}482$ parameters) is fit by supervised
 multi-step rollout regression on the canonical corpus. The physically informed
 v3.5 is identified by the staged inverse calibration of
-Section~\ref{ssec:m-surrogate} \citep{Coraci2025StageCalibration}: Stage~A/B/C
+Section~\ref{ssec:m-surrogate} \citep{Bacher2011RCIdentification}: Stage~A/B/C
 recover the RC parameters from the calibration corpus, yielding a zone capacitance
 $\Czon = \SI{4.413e5}{\joule\per\kelvin}$ ($+5.1\%$ relative to the
 $\SI{4.200e5}{\joule\per\kelvin}$ physical prior) subject to a capacitance floor
@@ -388,7 +388,7 @@ Every controller score is reported as the mean over $N=5$ random seeds with the
 seed-to-seed variance stated explicitly, and is benchmarked against BOPTEST's
 built-in PI controller; the predictive-fidelity and control-utility metrics
 themselves (CV(\RMSE), NMBE, and the maintenance score $m_s$ of
-Eq.~\eqref{eq:m-ms} \citep{Wang2025SafetyMetric}) are defined once in
+Eq.~\eqref{eq:m-ms} \citep{Wang2025SafeDRL}) are defined once in
 Section~\ref{ssec:m-eval} and not repeated here. The transferability study follows
 a pre-registered, Popperian discipline: each hypothesis (H1--H4) is bound to a
 versioned audit anchor committed \emph{before} the corresponding runs, so that an
