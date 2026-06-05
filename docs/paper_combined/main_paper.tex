@@ -191,14 +191,148 @@ tests whether one physics-regularisation recipe holds across controller families
 pre-registered anchors (Section~\ref{sec:results3-transfer}).
 
 \section{Methodology}\label{sec:methodology}
-\subsection{Reference environment} TODO
-\subsection{Problem formulation}   TODO
-\subsection{Surrogate model design}
-\subsubsection{Control-oriented surrogate v3} TODO (relocate the v3 architecture/training math from Results I)
-\subsubsection{Physically informed surrogate v3.5 and Stage A/B/C calibration} TODO (relocate from Results I)
-\subsubsection{Hybrid surrogate and loss coupling} TODO (relocate the hybrid-reward math from Results II)
-\subsection{DRL controller} TODO (relocate the PPO interface / reward / observation from Results II)
-\subsection{Evaluation protocol and transferability methodology} TODO (relocate metrics/adapter spec from Results III)
+This section gives the formal, self-contained statement of the control problem,
+the three surrogate models, the controller families, and the evaluation protocol.
+The detailed numerical instantiation of every quantity defined here --- network
+sizes, calibrated parameters, hyperparameters, and measured scores --- is reported
+with the corresponding evidence in Sections~\ref{sec:results1-digital-twin}--\ref{sec:results3-transfer};
+here we fix notation and cite the methods on which the design rests.
+
+\subsection{Reference environment}\label{ssec:m-env}
+The plant is a single-zone building emulator with electric heating, drawn from the
+BOPTEST family of Modelica-based test cases \citep{Blum2021BOPTEST,Wetter2014Modelica}
+and served to the controller through BOPTEST's uniform HTTP interface
+\citep{Arroyo2022BOPTESTService}. Formally the emulator is a continuous-time
+dynamical system whose latent thermal state evolves under a scalar heating command
+$a_t\in[0,1]$ and an exogenous disturbance stream $d_t$ (ambient weather,
+solar gain, occupancy, and time-varying comfort set-points). We interact with it
+at a fixed control period $\Delta t = \SI{900}{\second}$ (15 minutes), yielding the
+discrete-time transition $s_{t+1}=\Phi(s_t,a_t,d_t)$ that all surrogates are trained
+to approximate. The primary test case is \texttt{bestest\_air}; a hydronic family of
+related test cases is held out for the transferability study (Section~\ref{sec:results3-transfer}).
+
+\subsection{Problem formulation}\label{ssec:m-pomdp}
+Because the controller never observes the full latent state, control is a partially
+observable Markov decision process (POMDP)
+$\langle \mathcal{S},\mathcal{A},\mathcal{O},\Phi,R,\gamma\rangle$, where the agent
+receives an observation $o_t=h(s_t,d_t)\in\mathcal{O}$ and selects $a_t\sim\pi(\cdot\mid o_t)$
+so as to maximise the expected discounted return
+\begin{equation}
+J(\pi)=\mathbb{E}_{\pi}\!\left[\sum_{t=0}^{T-1}\gamma^{t}\,r_t\right],
+\qquad
+r_t = -\big(w_{\mathrm{c}}\,c_t + w_{\mathrm{e}}\,e_t\big),
+\label{eq:m-return}
+\end{equation}
+with $c_t$ a thermal-discomfort term, $e_t$ the heating energy over the step, and
+$w_{\mathrm{c}},w_{\mathrm{e}}$ trade-off weights. Partial observability is the
+methodological reason a five-dimensional instantaneous observation is insufficient
+and a forecast-augmented observation is required \citep{Gao2024Predictive}; the
+exact channel sets are given in Section~\ref{sec:results2-control}. For
+\emph{evaluation} (as opposed to training) we score deployed controllers with the
+duration-and-severity maintenance score
+\begin{equation}
+m_s = r_{\mathrm{time}} + r_{\mathrm{sev}},
+\label{eq:m-ms}
+\end{equation}
+the time-in-violation plus violation-severity metric of \citet{Wang2025SafetyMetric};
+lower is better and $m_s>1$ marks an unacceptable controller. This separation of a
+shaped training reward~\eqref{eq:m-return} from an unshaped safety score~\eqref{eq:m-ms}
+follows standard practice in safe reinforcement learning \citep{Garcia2015SafeRL}.
+
+\subsection{Surrogate model design}\label{ssec:m-surrogate}
+All three surrogates are fast approximations of $\Phi$ used as the training
+environment in place of the slow emulator, in the model-based / Dyna tradition of
+learning a model and planning or training a policy against it
+\citep{Sutton1991Dyna,Hafner2025Dreamer}. They differ in how much building physics
+is hard-wired into their structure.
+
+\subsubsection{Control-oriented surrogate v3}
+v3 is a compact black-box neural one-step predictor
+$\hat{s}_{t+1}=f_\theta(s_t,a_t,d_t)$, trained by supervised minimisation of a
+multi-step rollout error so that long-horizon trajectories --- not just one-step
+residuals --- stay accurate. Its design goal is not maximal predictive accuracy but
+a \emph{smooth, well-conditioned} response surface for policy-gradient search; the
+architecture and parameter count are reported in Section~\ref{sec:results1-digital-twin}.
+
+\subsubsection{Physically informed surrogate v3.5 and Stage A/B/C calibration}
+v3.5 replaces the black box with a grey-box resistance--capacitance (RC) thermal
+network integrated as a Neural ODE \citep{Chen2018NeuralODE}, the learning-based
+descendant of classical RC building identification
+\citep{Bunning2020RC,Berthou2014RC,Bacher2011RCIdentification,Picard2017WhiteBox}.
+Writing the zone capacitance as $\Czon$ and a lumped envelope resistance as $R$, the
+core balance is
+\begin{equation}
+\Czon\,\frac{\mathrm{d}T}{\mathrm{d}t}
+= \frac{T_{\mathrm{amb}}-T}{R} + \eta\,a_t\,\dot{Q}_{\max} + q_d,
+\label{eq:m-rc}
+\end{equation}
+with $\eta\,a_t\,\dot{Q}_{\max}$ the delivered heating power and $q_d$ aggregated
+disturbance gains. Embedding this conservation law in the network makes it
+physics-informed in the sense of \citet{Raissi2019PINN,Karpatne2017TheoryGuided,Willard2022PIML},
+so its parameters retain physical meaning. The parameters are recovered by a
+staged inverse calibration (Stages~A/B/C) in the spirit of staged grey-box
+calibration \citep{Coraci2025StageCalibration}, and the identifiability of $\Czon$
+is checked with a Fisher/Laplace confidence interval; the staged protocol and the
+resulting calibrated values are detailed in Section~\ref{sec:results1-digital-twin}.
+
+\subsubsection{Hybrid surrogate and reward-shaping censor}
+The hybrid backend assigns the two models orthogonal roles: v3 supplies the smooth
+rollout dynamics, while a \emph{frozen} v3.5 acts as a per-step reward-shaping
+censor. Training uses the shaped reward
+\begin{equation}
+\tilde{r}_t = r_t - \lambda\,\delta\!\left(f_\theta(s_t,a_t,d_t),\,g_\phi(s_t,a_t,d_t)\right),
+\label{eq:m-hybrid}
+\end{equation}
+where $g_\phi$ is the frozen physical twin, $\delta$ a disagreement penalty, and
+$\lambda\ge 0$ a censor weight. Crucially the penalty enters the \emph{reward},
+not the policy loss, so the well-conditioned v3 gradient field of
+Section~\ref{ssec:m-surrogate} is preserved while physically implausible
+state--action regions are discouraged --- a model-based shaping that keeps the
+benefits of Dyna-style training \citep{Sutton1991Dyna} without inheriting the
+sharp gradients of the physical twin. The calibrated form of $\delta$ and the
+swept values of $\lambda$ are given in Section~\ref{sec:results2-control}.
+
+\subsection{Controller families}\label{ssec:m-controllers}
+All policies are optimised with proximal policy optimization (PPO)
+\citep{Schulman2017PPO} using generalized advantage estimation
+\citep{Schulman2016GAE} and the Stable-Baselines3 implementation
+\citep{Raffin2021SB3}; PPO maximises the clipped surrogate objective
+\begin{equation}
+L^{\mathrm{CLIP}}(\theta)=\mathbb{E}_t\!\left[\min\!\big(\rho_t(\theta)\,\hat{A}_t,\;
+\operatorname{clip}(\rho_t(\theta),1-\epsilon,1+\epsilon)\,\hat{A}_t\big)\right],
+\qquad \rho_t(\theta)=\frac{\pi_\theta(a_t\mid o_t)}{\pi_{\theta_{\mathrm{old}}}(a_t\mid o_t)},
+\label{eq:m-ppo}
+\end{equation}
+with $\hat{A}_t$ the GAE advantage. We evaluate the surrogate recipe across three
+controller families of increasing structure: (i) a \emph{thermostatic} PPO agent on
+a compact observation; (ii) a \emph{hierarchical} DRL controller (HDRL) that
+decomposes control across timescales, in the options/feudal tradition
+\citep{Bacon2017Options,Nachum2018HIRO} as recently applied to year-round HVAC
+operation \citep{Liao2025HDRL}; and (iii) a \emph{preference-conditioned}
+multi-objective controller (MORL) that conditions on a comfort--energy preference
+vector \citep{Yang2019MORL,Roijers2013MOSurvey,Hayes2022MOSurvey,Byeon2025MaxMinMORL}
+and acts on the forecast-augmented observation. The exact observation and action
+spaces of each family are specified in Section~\ref{sec:results2-control}.
+
+\subsection{Evaluation protocol and transferability methodology}\label{ssec:m-eval}
+Surrogate predictive fidelity is reported with the ASHRAE-style calibration
+statistics CV(\RMSE) and NMBE over multi-step rollouts, the standard accuracy
+measures for calibrated building models \citep{Coraci2025StageCalibration}.
+Downstream control utility is reported with the maintenance score~\eqref{eq:m-ms}
+\citep{Wang2025SafetyMetric}, the comfort-violation fraction, and heating energy,
+each benchmarked against BOPTEST's built-in baseline controller. Because a policy
+trained on a surrogate is deployed on a different (live) system, the central
+methodological risk is dataset/distribution shift \citep{Quinonero2009DatasetShift};
+we therefore always report the \emph{live}-emulator score, never only the
+surrogate-internal score. For transferability we adopt a pre-registered, Popperian
+protocol: each hypothesis (H1--H4 of Section~\ref{sec:related}) is bound to a
+versioned audit anchor \emph{before} the corresponding runs, and cross-test-case
+transfer is realised through a light recalibration adapter rather than assumed
+zero-shot, following the evidence that transfer is source-dependent
+\citep{Hou2024MultiSource}. All controller scores are reported as the mean over
+$N=5$ random seeds with the seed variance stated explicitly; the full statistical
+and audit protocol is given in Section~\ref{sec:setup} and the results in
+Sections~\ref{sec:results1-digital-twin}--\ref{sec:results3-transfer}.
 
 \section{Experimental Setup}\label{sec:setup}
 \subsection{Testbeds and serving layer}
