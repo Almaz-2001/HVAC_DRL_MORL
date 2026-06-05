@@ -16,6 +16,7 @@
 \usepackage{caption}
 \usepackage{subcaption}
 \usepackage{enumitem}
+\usepackage{longtable}
 \usepackage{float}
 \usepackage{placeins}
 \usepackage[numbers,sort&compress]{natbib}
@@ -57,9 +58,68 @@ A pre-registered transferability study, identified by Git manifest anchor \textt
 \textbf{Keywords:} reinforcement learning; HVAC control; building energy; digital twin; surrogate model; Neural ODE; physics-informed calibration; transfer learning; BOPTEST; pre-registration.
 
 \section*{Nomenclature}
-TODO consolidated nomenclature (merge the per-section symbol tables from the
-standalone Results packages: $m_s$, RMSE$_T$, $\Czon$, $\Tsupply$, $\lambda_T$,
-$\lambda_P$, $\rho_C$, $\tau_k$, $\Delta E$, etc.).
+\renewcommand{\arraystretch}{1.15}
+\begin{longtable}{@{}l l p{0.62\linewidth}@{}}
+\textbf{Symbol} & \textbf{Unit} & \textbf{Meaning} \\
+\midrule
+\endfirsthead
+\textbf{Symbol} & \textbf{Unit} & \textbf{Meaning} \\
+\midrule
+\endhead
+\multicolumn{3}{@{}l}{\emph{Thermophysical quantities}}\\
+$T_{\mathrm{zone}}$ & \si{\celsius} & zone air temperature \\
+$T_{\mathrm{amb}}$ & \si{\celsius} & ambient air temperature \\
+$\Tsupply$ & \si{\celsius} & supply-air temperature command \\
+$\Czon$ & \si{\joule\per\kelvin} & zone thermal capacitance \\
+$R$ & \si{\kelvin\per\watt} & lumped envelope thermal resistance \\
+$\eta$ & -- & heating power conversion efficiency \\
+$\dot{Q}$ & \si{\watt} & net zone heat flow \\
+$P$ & \si{\watt} & total HVAC electrical power \\
+$\Delta t$ & \si{\second} & control / integration step (\SI{900}{\second}) \\[2pt]
+\multicolumn{3}{@{}l}{\emph{Reinforcement-learning formulation}}\\
+$s_t,\,a_t,\,o_t,\,d_t$ & -- & state, action, observation, disturbance at step $t$ \\
+$\Phi$ & -- & one-step plant (emulator) transition map \\
+$f_\theta,\,g_\phi$ & -- & black-box surrogate (v3) and frozen physical twin (v3.5) \\
+$r_t$ & -- & per-step (shaped) reward \\
+$\tilde{r}_t$ & -- & hybrid reward with disagreement censor \\
+$J(\pi)$ & -- & expected discounted return \\
+$\gamma$ & -- & discount factor \\
+$w_c,\,w_e,\,w_s$ & -- & comfort / energy / safety preference weights \\
+$\hat{A}_t$ & -- & generalized advantage estimate \\
+$\rho_t$ & -- & PPO probability ratio \\
+$\epsilon$ & -- & PPO clipping parameter \\
+$\delta$ & -- & surrogate--twin disagreement penalty \\
+$\lambda_T,\,\lambda_P$ & -- & hybrid temperature / power censor weights \\[2pt]
+\multicolumn{3}{@{}l}{\emph{Evaluation metrics}}\\
+$m_s$ & -- & BOPTEST maintenance score (lower is better) \\
+$r_{\mathrm{time}},\,r_{\mathrm{sev}}$ & -- & time-in-violation and severity components of $m_s$ \\
+$m_{s,\mathrm{RL}},\,m_{s,\mathrm{PI}}$ & -- & maintenance score of the RL and built-in PI controller \\
+$\RMSE_T$ & \si{\celsius} & live closed-loop zone-temperature RMSE \\
+CV(\RMSE) & \si{\percent} & coefficient of variation of the RMSE \\
+NMBE & \si{\percent} & normalized mean bias error \\
+$R^2$ & -- & coefficient of determination \\
+Violation & \si{\percent} & fraction of steps outside the comfort band \\
+CV & -- & coefficient of variation (std/mean) over seeds \\
+$g_a$ & -- & $L_2$ action-gap norm (surrogate vs live) \\
+$\Delta m_s$ & -- & live-minus-surrogate $m_s$ transfer gap \\[2pt]
+\multicolumn{3}{@{}l}{\emph{Transferability (testcase $k$)}}\\
+$\tau_k$ & -- & pre-registered pass threshold $1.25\,m_{s,\mathrm{PI},k}$ \\
+$\Delta E_k$ & \si{\percent} & energy change of the RL controller vs PI \\
+$G^{\mathrm{RMSE}}_k$ & \si{\percent} & rollout-RMSE improvement after Stage~A/B/C recalibration \\
+$\rho_{C,k}$ & -- & re-identified $\Czon$ ratio vs the \texttt{bestest\_air} baseline \\
+$\mathcal{A}_k$ & -- & pre-registered actuator adapter \\[2pt]
+\multicolumn{3}{@{}l}{\emph{Abbreviations}}\\
+BOPTEST & -- & Building Optimization Testing Framework \\
+RTE & -- & (BOPTEST) Run-Time Environment \\
+DRL / PPO & -- & deep RL / proximal policy optimization \\
+GAE & -- & generalized advantage estimation \\
+HDRL & -- & hierarchical deep reinforcement learning \\
+MORL & -- & multi-objective reinforcement learning \\
+POMDP & -- & partially observable Markov decision process \\
+RC / ODE & -- & resistance--capacitance / ordinary differential equation \\
+PI / RBC / MPC & -- & proportional--integral / rule-based / model predictive control \\
+\bottomrule
+\end{longtable}
 
 % Introduction -- citations resolved from docs/introduction/ PDFs and wired
 % via natbib (\citep) against references.bib; all placeholders resolved.
