@@ -100,8 +100,27 @@ This paper makes three pre-registered, audit-anchored contributions, organized a
 The remainder of this paper is organized as follows. Section~\ref{sec:related} reviews related work; Section~\ref{sec:methodology} details the methodology; Section~\ref{sec:setup} describes the experimental setup; Sections~\ref{sec:results1-digital-twin}, \ref{sec:results2-control}, and~\ref{sec:results3-transfer} present Results~I, II, and III; Section~\ref{sec:discussion} discusses the findings; and Section~\ref{sec:conclusion} concludes.
 
 \section{Related Work}\label{sec:related}
-\subsection{Deep reinforcement learning and MORL for HVAC control} TODO
-\subsection{Surrogate models and fast simulators for building control}
+\subsection{Deep and multi-objective reinforcement learning for HVAC control}
+Deep reinforcement learning (DRL) has become the dominant learning-based approach
+to supervisory HVAC control, yet the review of \citet{AlSayed2024Review} finds
+that only a minority of studies reach real-building deployment and that agents are
+typically trained on a single testbed with limited exposure to exogenous
+variation. Concrete controllers illustrate both the promise and this narrowness:
+phasic policy-gradient control improves adaptivity and convergence on a
+building-energy task \citep{Nguyen2024Modelling}; low-level multi-zone DRL has been
+benchmarked directly against ASHRAE Guideline~36 sequences \citep{Savino2025ASHRAE};
+and multi-agent formulations address energy management under chance constraints
+\citep{Deng2025MultiAgent} or couple DRL to IoT telemetry for context-aware
+operation \citep{Alotaibi2025ContextAware}. Because comfort and energy are
+competing objectives, HVAC control is naturally multi-objective: hierarchical DRL
+decomposes the problem across timescales to trade indoor-air-quality against
+consumption \citep{Liao2025HDRL}, while the broader multi-objective RL (MORL)
+literature studies preference-conditioned policies and their convergence
+guarantees \citep{Byeon2025MaxMinMORL}. What this body of work does not isolate is
+whether a single training recipe holds \emph{across} these controller families, or
+how the choice of training environment --- rather than the algorithm --- shapes the
+resulting policy; both are central questions in this paper.
+\subsection{Surrogate and physics-informed models for building control}
 Because high-fidelity building simulators are too slow to supply the millions of
 interactions that data-driven controllers require, a now-standard response is to
 replace --- or accelerate --- the physical model with a learned surrogate.
@@ -119,6 +138,11 @@ applied to smart-building energy management under chance constraints
 coupled to IoT telemetry have been reported to jointly improve energy efficiency
 and thermal comfort \citep{Alotaibi2025ContextAware}. In every case the surrogate
 or fast model is the substrate on which the controller is trained and tuned.
+These surrogates span a fidelity spectrum, from purely data-driven black-box
+networks to physics-informed digital twins --- resistance--capacitance or Neural
+ODE structures whose parameters carry physical meaning --- and the protocol of
+\citet{HouEvins2024} is, to date, oriented toward the predictive accuracy of such
+models rather than their suitability as a training environment.
 
 This body of work, however, optimizes the surrogate almost exclusively along two
 axes --- predictive accuracy and inference throughput --- and treats the
@@ -135,11 +159,36 @@ in the negative (Section~\ref{sec:results2-control}): the surrogate's predictive
 fidelity and its downstream control utility are distinct, and can even be
 opposed --- a gap the accuracy-and-throughput framing of the surrogate literature
 leaves unexamined.
-\subsection{Physics-informed, Neural ODE, and hybrid models} TODO
-\subsection{Benchmark environments and building-simulation infrastructure} TODO
-\subsection{Predictive information, distribution shift, and transfer gap} TODO
-\subsection{Transfer learning and cross-testcase generalization} TODO
-\subsection{Research gap and positioning of this paper} TODO
+\subsection{Distribution shift and transfer in learning-based control}
+A policy is only as good as the states it was trained to see, and two failure
+modes follow. The first is informational: a controller acting on an instantaneous
+observation cannot anticipate demand, and augmenting the state with predictive
+(forecast) information has been shown to improve both cost and comfort in
+office-building HVAC control \citep{Gao2024Predictive}. The second is
+distributional: policies optimised on a fixed simulator or offline dataset degrade
+when the deployment distribution differs, the out-of-distribution problem
+catalogued for offline RL by \citet{RiahiSamani2026OOD}. The standard remedy for
+the cost of re-training is transfer learning --- \citet{Hou2024MultiSource}, for
+example, transfer pre-trained DRL parameters across building zones and weather
+conditions to cut training time --- but they also show that an ill-chosen source
+domain degrades performance, so transfer is neither automatic nor uniformly
+beneficial. This motivates treating cross-testcase transfer as a hypothesis to be
+\emph{tested} rather than assumed, which is the stance of our transferability study
+(Section~\ref{sec:results3-transfer}).
+
+\medskip
+\noindent\textbf{Positioning.} Across these strands the literature optimises the
+controller, the surrogate, and the transfer procedure largely in isolation, and
+evaluates each on the axis most natural to it --- algorithmic return, predictive
+accuracy, or training-time reduction. The assumption that ties them together ---
+that a more accurate or higher-fidelity model is a better basis for control, and
+that a recipe tuned on one controller or testcase carries over --- is rarely made
+explicit and almost never pre-registered and falsified. This paper isolates that
+assumption: it separates surrogate predictive fidelity from downstream control
+utility (Section~\ref{sec:results1-digital-twin}--\ref{sec:results2-control}),
+tests whether one physics-regularisation recipe holds across controller families
+(Section~\ref{sec:results2-control}), and audits cross-testcase transfer against
+pre-registered anchors (Section~\ref{sec:results3-transfer}).
 
 \section{Methodology}\label{sec:methodology}
 \subsection{Reference environment} TODO
@@ -152,7 +201,13 @@ leaves unexamined.
 \subsection{Evaluation protocol and transferability methodology} TODO (relocate metrics/adapter spec from Results III)
 
 \section{Experimental Setup}\label{sec:setup}
-\subsection{Testbeds and serving layer} TODO
+\subsection{Testbeds and serving layer}
+All controllers are evaluated on the Building Optimization Testing Framework
+(BOPTEST), an open, Modelica-based runtime that exposes building emulators through
+a uniform HTTP interface for simulation-based benchmarking of control strategies
+\citep{Blum2021BOPTEST}; we use the \texttt{bestest\_air} testcase as the primary
+environment and a hydronic family of testcases for the transferability study.
+TODO (serving layer, surrogate backends, hardware).
 \subsection{Data generation and preprocessing} TODO
 \subsection{Training and calibration workflow} TODO
 \subsection{Runtime characteristics} TODO
