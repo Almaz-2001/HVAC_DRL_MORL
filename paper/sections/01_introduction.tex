@@ -21,7 +21,7 @@ however. Modern policy-gradient algorithms such as PPO consume on the
 order of $10^{6}$--$10^{7}$ environment steps before they converge
 \citep{Schulman2017PPO,Henderson2018Reproducibility}, and high-fidelity
 building simulators are far too slow to provide those steps. The
-BOPTEST testbed \citep{Blum2021BOPTEST,Arroyo2022BOPTESTService}
+BOPTEST testbed \citep{Blum2021BOPTEST}
 addresses reproducibility by exposing a standardised HTTP API on top of
 the IBPSA Modelica Buildings library \citep{Wetter2014Modelica}, but
 on commodity hardware that API delivers fewer than two-dozen
@@ -40,7 +40,7 @@ under-tested in the literature. Most surrogate-vs.-RL studies report
 either predictive validity (one-step or multi-horizon root-mean-square
 error against held-out trajectories) or closed-loop controller
 performance, not the relationship between the two
-\citep{HouEvins2024,Coraci2025StageCalibration}. In
+\citep{HouEvins2024,Bacher2011RCIdentification}. In
 Section~\ref{sec:results_fidelity} we test the assumption explicitly
 on BOPTEST \texttt{bestest\_air} and report a clear negative result.
 
