@@ -129,14 +129,32 @@ TODO consolidated nomenclature (merge the per-section symbol tables from the
 standalone Results packages: $m_s$, RMSE$_T$, $\Czon$, $\Tsupply$, $\lambda_T$,
 $\lambda_P$, $\rho_C$, $\tau_k$, $\Delta E$, etc.).
 
+% Introduction -- citations to be inserted (Hou & Evins 2024; BOPTEST; the
+% Article7/14/22/24/27/33 sources under docs/related_works/). Marked [ref].
 \section{Introduction}
-\subsection{Motivation}        TODO
-\subsection{Gap}               TODO
-\subsection{Hypothesis and study design} TODO
-\subsection{Results summary}   TODO
-\subsection{Contributions}     TODO
 
-\section{Related Work}
+\subsection{Motivation}
+People spend up to 90\% of their time indoors, and buildings account for roughly one third of global energy use, of which heating, ventilation, and air-conditioning (HVAC) systems are the dominant share~[ref]. Conventional controllers --- PID loops and rule-based control (RBC) --- are widely deployed but cannot adapt to the nonlinear, multi-zone thermodynamics of modern buildings, while model predictive control (MPC) requires accurate physical models that are costly to identify and maintain~[ref]. Deep reinforcement learning (DRL) is a promising alternative because it learns control policies directly from interaction, without an explicit physical model~[ref]. Its transfer from simulation to operation (sim-to-real), however, is blocked by a deployment gap: training on a real building is unacceptable because of comfort risk and severe sample inefficiency, requiring months of interaction to converge~[ref]. The community therefore trains DRL against fast neural-network surrogates and physics-informed digital twins (e.g.\ RC and Neural-ODE models), which generate state transitions orders of magnitude faster than real time~[ref]. This prevailing paradigm carries an implicit assumption: that a surrogate with higher predictive fidelity is automatically a better DRL training environment.
+
+\subsection{Research gap}
+We show that this assumption can fail, and we call the phenomenon the \emph{fidelity--utility paradox}: the surrogate with the lowest multi-step rollout error can be the worst environment for policy-gradient search. Training a controller directly on the high-fidelity physical twin (v3.5) produces a policy that saturates its actions (a near bang-bang law, with a surrogate-to-live action-gap norm of $2.0$) and fails on the live BOPTEST runtime environment ($m_s>1$, comfort violation above $77\%$), despite v3.5's superior offline accuracy. We \emph{observe} this action saturation directly; we \emph{hypothesize} that it arises because optimizers such as PPO exploit flat-gradient regions of the sharply physics-constrained surrogate, but the precise mechanism is established only in direction here and its origin is left to future work. A second gap is the observation interface: HVAC control is a partially observable Markov decision process (POMDP), and small ($5$-dimensional) observation vectors are insufficient for multi-objective control (MORL) without added predictive/forecast context.
+
+\subsection{Hypothesis and study design}
+We propose a hybrid, role-separating architecture that decouples prediction from training. A compact control-oriented black-box surrogate (v3) supplies smooth, control-friendly Markov rollout dynamics, while an inverse-calibrated physics-informed twin (v3.5), whose zone thermal capacitance $\Czon$ is identified from telemetry, acts as a \emph{frozen per-step reward-shaping censor} --- it adds a disagreement penalty to the reward, not a term to the policy loss. To address the POMDP we widen the interface to a $17$-dimensional, forecast-augmented direct-supply-temperature observation, and we evaluate the recipe across three controller families (thermostatic PPO, hierarchical DRL, and preference-conditioned MORL). Finally, the resulting frozen policies are subjected to a pre-registered transferability study on a hydronic family of BOPTEST testcases. The study is organized as a chain of falsifiable hypotheses: (i) does higher predictive fidelity yield a better training environment? (ii) does role separation recover control utility? (iii) is the physical-censor weight controller-family specific? and (iv) does the recipe transfer to related testcases under documented recalibration?
+
+\subsection{Results summary}
+The evidence answers these questions concretely. Calibrated v3.5 reduces the 24-hour rollout RMSE to $0.644\,^{\circ}$C (versus $1.557\,^{\circ}$C for v3), yet used directly it yields $m_s=1.046$ live; the predictively weaker v3 yields a usable controller ($m_s=0.073$/$0.095$). The hybrid backend recovers the best controller ($m_s=0.087$/$0.041$, violation below $5\%$) while sustaining $85.0\times$ the BOPTEST throughput. The optimal disagreement weight is controller-family specific ($\lambda_{\mathrm{temp}}=0.10$ for thermostatic PPO, $\lambda_{\mathrm{temp}}=0$ for HDRL and the $17$D MORL). On the hydronic family, the inverse calibration transfers ($60.2$--$87.8\%$ rollout-RMSE reduction; $\Czon$ re-identified at $1.918\pm0.032$ times the source value), whereas frozen-policy transfer is regime-dependent.
+
+\subsection{Contributions}
+This paper makes three pre-registered, audit-anchored contributions, organized as the project's three evidence blocks:
+\begin{enumerate}
+  \item \textbf{Inverse-calibration pipeline and a matched-corpus decomposition (Block 1).} A Stage~A/B/C inverse-calibration protocol for the physical twin, with a controlled experiment attributing the predictive-fidelity gain to a $74.6\%$ data-resolution component and a $25.4\%$ physical-calibration component, so the calibration claim is real but bounded.
+  \item \textbf{The fidelity--utility paradox and its hybrid resolution (Block 2).} Empirical evidence that a higher-fidelity physical surrogate is the worse direct RL training environment, resolved by a hybrid role assignment (v3 dynamics + frozen-v3.5 reward-shaping censor); the censor strength is shown to be controller-family specific, and the MORL controller beats the built-in PI baseline in mean (with the $N=5$ seed variance reported honestly).
+  \item \textbf{A pre-registered (Popperian) transferability study (Block 3).} Across a hydronic family of testcases, the identified zone capacitance $\Czon$ transfers as a near-uniform structural invariant (rollout-RMSE improvement up to $88\%$), while zero-shot transfer of the frozen controller fails or passes only with an energy penalty --- establishing a precise component-level transferability boundary rather than a universal generalization claim.
+\end{enumerate}
+The remainder of this paper is organized as follows. Section~\ref{sec:related} reviews related work; Section~\ref{sec:methodology} details the methodology; Section~\ref{sec:setup} describes the experimental setup; Sections~\ref{sec:results1-digital-twin}, \ref{sec:results2-control}, and~\ref{sec:results3-transfer} present Results~I, II, and III; Section~\ref{sec:discussion} discusses the findings; and Section~\ref{sec:conclusion} concludes.
+
+\section{Related Work}\label{sec:related}
 \subsection{Deep reinforcement learning and MORL for HVAC control} TODO
 \subsection{Surrogate models and digital twins for building simulation} TODO
 \subsection{Physics-informed, Neural ODE, and hybrid models} TODO
@@ -145,7 +163,7 @@ $\lambda_P$, $\rho_C$, $\tau_k$, $\Delta E$, etc.).
 \subsection{Transfer learning and cross-testcase generalization} TODO
 \subsection{Research gap and positioning of this paper} TODO
 
-\section{Methodology}
+\section{Methodology}\label{sec:methodology}
 \subsection{Reference environment} TODO
 \subsection{Problem formulation}   TODO
 \subsection{Surrogate model design}
@@ -155,7 +173,7 @@ $\lambda_P$, $\rho_C$, $\tau_k$, $\Delta E$, etc.).
 \subsection{DRL controller} TODO (relocate the PPO interface / reward / observation from Results II)
 \subsection{Evaluation protocol and transferability methodology} TODO (relocate metrics/adapter spec from Results III)
 
-\section{Experimental Setup}
+\section{Experimental Setup}\label{sec:setup}
 \subsection{Testbeds and serving layer} TODO
 \subsection{Data generation and preprocessing} TODO
 \subsection{Training and calibration workflow} TODO
@@ -169,7 +187,7 @@ $\lambda_P$, $\rho_C$, $\tau_k$, $\Delta E$, etc.).
 \input{results2_body.tex}
 \input{results3_body.tex}
 
-\section{Discussion}
+\section{Discussion}\label{sec:discussion}
 \subsection{Predictive validity vs RL training utility} TODO
 \subsection{Controller-family specificity} TODO
 \subsection{Transferability boundary} TODO
@@ -177,7 +195,7 @@ $\lambda_P$, $\rho_C$, $\tau_k$, $\Delta E$, etc.).
 \subsection{Positioning relative to related work} TODO
 \subsection{Threats to validity}\label{ssec:block1-limitations}\label{ssec:b3lim} TODO (absorb the per-section Limitations bullets; these labels also catch the refs that the stripped per-section Limitations used to carry)
 
-\section{Conclusion}
+\section{Conclusion}\label{sec:conclusion}
 TODO (absorb the per-section conclusions; state Block 4 future work).
 
 \section*{Data availability}
