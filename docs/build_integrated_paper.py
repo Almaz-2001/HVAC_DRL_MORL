@@ -34,6 +34,48 @@ SECTIONS = [
     ("results3_transferability_overleaf", "Results III body (Block 3, transferability)"),
 ]
 
+# Auxiliary parameter/configuration tables relocated from the main text to the
+# Supplementary Material (matched by a distinctive caption substring). Their
+# \label travels with them, so in-text \ref calls still resolve (to S-numbers).
+SUPP_TABLE_KEYS = [
+    "Modelling assumptions of the direct",          # R1 tab:tsup-assumptions
+    "v3 configuration from the active model class", # R1 tab:v3-config
+    "Feature scaling and physical constraints",     # R1 tab:v3-scaling
+    "PPO training configuration",                   # R2 tab:ppo_hparams
+    "Extended 17D observation feature groups",      # R2 tab:obs17
+    "Reward-shaping parameters",                    # R2 tab:reward
+    "Per-testcase actuator-adapter mapping",        # R3 tab:adapters
+]
+
+
+def extract_supp_tables(body: str):
+    """Pull the SUPP_TABLE_KEYS table environments out of a section body.
+    Returns (reduced_body, [moved_table_blocks])."""
+    moved = []
+
+    def repl(m):
+        blk = m.group(0)
+        if any(k in blk for k in SUPP_TABLE_KEYS):
+            moved.append(blk)
+            return ""
+        return blk
+
+    reduced = re.sub(r"\\begin\{table\}.*?\\end\{table\}", repl, body, flags=re.DOTALL)
+    return reduced, moved
+
+
+def build_supplementary_tables(relocated) -> str:
+    if not relocated:
+        return ""
+    parts = [
+        r"\subsection*{Additional parameter and configuration tables}",
+        r"The following parameter, configuration, and interface tables are "
+        r"reported here for completeness. They are cited from Results~I--III but "
+        r"are not required to follow the main argument.",
+    ]
+    parts.extend(relocated)
+    return "\n\n".join(parts)
+
 
 def strip_to_body(tex: str) -> str:
     """Return an \\input-able body: section content only, with the standalone
@@ -671,8 +713,12 @@ versioned \texttt{reports/} and \texttt{outputs/} artefacts; no manuscript build
 required to inspect the evidence. Tables~\ref{tab:prov-r1}--\ref{tab:prov-r3} give
 the complete content-to-artefact provenance map for the three evidence blocks, so
 that each reported quantity can be traced to the exact source file that produced it.
+A small set of parameter and configuration tables is also collected here to keep the
+main text focused on results.
 
 %%PROVENANCE_TABLES%%
+
+%%SUPPLEMENTARY_TABLES%%
 
 \bibliographystyle{unsrtnat}
 \bibliography{references}
@@ -756,21 +802,27 @@ def main() -> None:
         "% \\setcounter) stripped for \\input into the combined manuscript.\n"
     )
     n_fig = 0
+    relocated = []
     for i, (section_dir, _) in enumerate(SECTIONS, start=1):
         d = DOCS / section_dir
         body = header + strip_to_body((d / "main.tex").read_text(encoding="utf-8"))
-        # keep a copy in the section folder (for the --integrated flag) ...
+        # keep a full copy in the section folder (for the --integrated flag) ...
         (d / "section_body.tex").write_text(body, encoding="utf-8")
-        # ... and a self-contained copy inside the combined bundle
-        (paper_dir / f"results{i}_body.tex").write_text(body, encoding="utf-8")
+        # ... and a self-contained copy inside the combined bundle, with the
+        # auxiliary parameter/config tables relocated to the Supplementary.
+        body_combined, moved = extract_supp_tables(body)
+        relocated.extend(moved)
+        (paper_dir / f"results{i}_body.tex").write_text(body_combined, encoding="utf-8")
         for pattern in ("*.pdf", "*.png"):
             for fig in (d / "figures").glob(pattern):
                 shutil.copy2(fig, figdir / fig.name)
                 n_fig += 1
-        print(f"Wrote results{i}_body.tex")
+        print(f"Wrote results{i}_body.tex ({len(moved)} tables -> supplementary)")
     master = MASTER.replace("%%PROVENANCE_TABLES%%", build_provenance_supplementary())
+    master = master.replace("%%SUPPLEMENTARY_TABLES%%", build_supplementary_tables(relocated))
     (paper_dir / "main_paper.tex").write_text(master, encoding="utf-8")
-    print(f"Wrote {paper_dir / 'main_paper.tex'} (self-contained; {n_fig} figure files copied into figures/)")
+    print(f"Wrote {paper_dir / 'main_paper.tex'} (self-contained; {n_fig} figure files "
+          f"copied; {len(relocated)} tables relocated to supplementary)")
 
 
 if __name__ == "__main__":

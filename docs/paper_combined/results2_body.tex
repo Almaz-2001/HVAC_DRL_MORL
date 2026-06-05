@@ -69,28 +69,7 @@ H5 & The single-seed MORL canonical ($m_s\approx0.10$) is representative. & \S8-
 
 All Block 2 policies use Proximal Policy Optimization (PPO). The shared PPO settings are learning rate $3\times 10^{-4}$ during surrogate pretraining, discount factor $\gamma=0.99$ (an effective horizon of $\sim$25 h at the 900 s step), and ten optimization epochs per rollout. The families differ in rollout length, minibatch size, and total timestep budget because the training scripts were developed per family rather than as a single hyperparameter ablation.
 
-\begin{table}[H]
-\centering
-\caption{PPO training configuration used in Block 2 (verified from the project training scripts and configuration files).}
-\label{tab:ppo_hparams}
-\small
-\begin{tabular}{lllll}
-\toprule
-Parameter & Thermostatic PPO & HDRL & MORL pretrain & MORL finetune \\
-\midrule
-Algorithm & PPO, MlpPolicy & PPO, MlpPolicy & PPO, MlpPolicy & PPO load+continue \\
-Learning rate & $3.0{\times}10^{-4}$ & $3.0{\times}10^{-4}$ & $3.0{\times}10^{-4}$ & $1.0{\times}10^{-4}$ \\
-\texttt{n\_steps} & 1024 & 1024 & 2048 & inherited \\
-\texttt{batch\_size} & 4096 & 2048 & 64 & inherited \\
-\texttt{n\_epochs} & 10 & 10 & 10 & 10 \\
-$\gamma$ & 0.99 & 0.99 & 0.99 & 0.99 \\
-GAE $\lambda$ & 0.95 & 0.95 & 0.95 & 0.95 \\
-Clip range & 0.20 & 0.20 & 0.20 & 0.20 \\
-Total timesteps & 10M & 12M & 2M & 100k \\
-Seed & 42 & 42 & 42 & 42--46 (N=5) \\
-\bottomrule
-\end{tabular}
-\end{table}
+
 
 \paragraph{Thermostatic PPO baseline (roadmap \S4).} Block 2 opens with the control baseline: a single-level thermostatic PPO controller trained purely on the v3 rollout surrogate (the canonical 1-hour-step checkpoint \texttt{rc\_node\_v3\_tsupply.pt}) with no v3.5 regularization ($\lambda_T=\lambda_P=0$). The actor and critic are separate MLP heads (Stable-Baselines3 \texttt{MlpPolicy}): the actor maps the 17D observation \eqref{eq:obs17} to a tanh-squashed continuous supply-temperature command \eqref{eq:action_map}, while the critic estimates the state value entering the PPO advantage. Training runs for 10M surrogate steps under the shared settings of Table~\ref{tab:ppo_hparams}; with entropy coefficient zero the evaluated policy is deterministic. Crucially, the trained policy is run \emph{zero-shot} on the live BOPTEST RTE with no live finetuning, so the baseline is already a strict surrogate-to-simulator transfer test. It is the reference against which the two negative controls (direct v3.5, warm-start) and the hybrid are measured.
 
@@ -108,24 +87,7 @@ The canonical observation interface is the 17-dimensional extended TSup-style ve
 \end{equation}
 It contains 5 physical states (zone temperature, CO$_2$, clipped-log power, previous supply temperature, ambient), 4 cyclic time features, 5 ambient forecasts ($+1,+3,+6,+12,+24$ h), 2 previous-action terms, and 1 causal-smoothed $\Delta T_{\mathrm{zone}}$. The failed MORL baseline uses only the earlier 5D observation, which lacks sufficient actuation and forecast context.
 
-\begin{table}[H]
-\centering
-\caption{Extended 17D observation feature groups (verified from \texttt{envs/tsup\_features.py}).}
-\label{tab:obs17}
-\small
-\begin{tabularx}{\linewidth}{llX}
-\toprule
-Feature group & Dim. & Contents \\
-\midrule
-Physical state (basic) & 5 & $T_{\mathrm{zone}}$, CO$_2$, clipped-log power, prev. $T_{\mathrm{sup}}$, $T_{\mathrm{amb}}$ \\
-Cyclic time & 4 & hour and day sine/cosine encodings \\
-Ambient forecast & 5 & $T_{\mathrm{amb}}$ at $+1,+3,+6,+12,+24$ h \\
-Previous action & 2 & $(a_{T_{\mathrm{sup}}}, a_{\mathrm{fan}})$ from last step \\
-Temperature delta & 1 & causal-smoothed $\Delta T_{\mathrm{zone}}$ \\
-Total (extended) & 17 & obs\_mode = extended \\
-\bottomrule
-\end{tabularx}
-\end{table}
+
 
 The action is a single normalized supply-temperature command,
 \begin{equation}
@@ -148,28 +110,7 @@ with a 1.0 C deadband and a per-step rate limit; the comfort band is $21$--$24\,
 \end{equation}
 with $T_{\ell}=21\,^\circ$C and $T_{h}=24\,^\circ$C (source: \texttt{evaluation/benchmark\_bestest\_air\_article7\_style.py}). Hence $r_{\mathrm{time}}$ is the fraction of steps outside the band (violation\,$\%=100\,r_{\mathrm{time}}$) and $r_{\mathrm{sev}}$ is the single worst relative band exceedance; lower $m_s$ is better. RMSE$_T$ is reported against the band center $T^{\star}=22.5\,^\circ$C.
 
-\begin{table}[H]
-\centering
-\caption{Reward-shaping parameters (verified from \texttt{configs/env.yaml}).}
-\label{tab:reward}
-\small
-\begin{tabularx}{\linewidth}{llX}
-\toprule
-Component & Value & Role \\
-\midrule
-Comfort band & 21.0 / 24.0 C & comfort interval (band\_low/high) \\
-Comfort deadband & 0.50 C & soft margin around band edges \\
-In-band bonus & 0.050/step & reward for staying inside the band \\
-Undershoot / overshoot weight & 1.15 / 1.15 & generic violation penalties \\
-Cold-ambient asymmetry & 1.60 (amb $<8.0$ C) & extra cold-undershoot penalty \\
-Hot-ambient asymmetry & 1.80 (amb $>24.0$ C) & extra hot-overshoot penalty \\
-Heating action bonus & 0.04 ($T_{\mathrm{sup}}\ge 29.0$ C) & anti-degenerate shaping \\
-Cooling action bonus & 0.06 ($T_{\mathrm{sup}}\le 21.0$ C) & anti-degenerate shaping \\
-MORL weights ($w_c/w_e/w_s$) & 0.80 / 0.20 / 0.00 & canonical scalarization \\
-Energy scale & $2e-4$ (W$\to$reward) & energy-to-reward conversion \\
-\bottomrule
-\end{tabularx}
-\end{table}
+
 
 The per-step comfort term is piecewise linear with an asymmetric, ambient-dependent slope (source \texttt{envs/backends/boptest\_backend.py}):
 \begin{equation}
