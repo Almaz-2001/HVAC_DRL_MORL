@@ -1,11 +1,11 @@
 """Build the data-driven Overleaf package for Results III / Block 3.
 
-The section follows Block 3 of ``roadmap.md`` (Sections 14-15): pre-registered
+The section follows Block 3 of ``roadmap.md`` (Sections 14-15): pre-specified
 transferability of the v3+v3.5 hybrid recipe to three BOPTEST hydronic-family
 testcases under three recalibration regimes (none / partial / full).
 
 Design (identical to Results I/II): every numeric table is read from versioned
-artifacts in ``reports/``; pre-registered hypotheses, predictions, and audit
+artifacts in ``reports/``; pre-specified hypotheses, predictions, and audit
 anchors are verified literals from ``configs/block3_testcase_manifest.yaml`` and
 the git audit chain. Figures are referenced from ``figures/`` (already produced
 by the Block 3 evaluation scripts); this builder writes ``main.tex`` only.
@@ -56,12 +56,12 @@ def _arrow(ax, start, end, color=SLATE):
 
 def fig_adapter(verdicts: dict) -> None:
     """Adapter-mediated transfer schematic: one frozen controller, three
-    pre-registered actuator adapters, three testcase actuator interfaces."""
+    pre-specified actuator adapters, three testcase actuator interfaces."""
     fig, ax = plt.subplots(figsize=(11.2, 5.0))
     ax.set_axis_off(); ax.set_xlim(0, 1); ax.set_ylim(0, 1)
     ax.text(0.5, 0.95, "Adapter-mediated transfer: one frozen controller, three actuator interfaces",
             ha="center", fontsize=12.5, weight="bold", color="#1f2933")
-    ax.text(0.5, 0.885, "the Block 2 hybrid policy is frozen; only the pre-registered adapter $\\mathcal{A}_k$ changes per testcase",
+    ax.text(0.5, 0.885, "the Block 2 hybrid policy is frozen; only the pre-specified adapter $\\mathcal{A}_k$ changes per testcase",
             ha="center", fontsize=9.0, style="italic", color=SLATE)
     _box(ax, 0.02, 0.46, 0.20, 0.22, "frozen Block 2\nhybrid policy\nsupply-temp $a_t$", NAVY, "#eef5fb")
     _box(ax, 0.27, 0.46, 0.21, 0.22, "adapter $\\mathcal{A}_k$\n$T^{\\mathrm{sup}}_t\\!=\\!18\\!+\\!\\frac{a_t+1}{2}(17)$", PURPLE, "#f4f1fa", fs=7.8)
@@ -232,7 +232,7 @@ def fig_controller_bar(tm: pd.DataFrame) -> None:
     ax.text(x[-1] + 0.5, thr[-1] + 0.02, "$\\tau_k=1.25\\,m_s^{\\mathrm{PI}}$", color=BURGUNDY, fontsize=8, ha="right")
     ax.set_xticks(x); ax.set_xticklabels(labels)
     ax.set_ylabel("$m_s$ (lower better)")
-    ax.set_title("Controller-side transfer vs the pre-registered threshold", loc="left", weight="bold")
+    ax.set_title("Controller-side transfer vs the pre-specified threshold", loc="left", weight="bold")
     ax.grid(True, axis="y", color="#e6e8eb", linewidth=0.7); ax.spines["top"].set_visible(False); ax.spines["right"].set_visible(False)
     ax.legend(frameon=False, fontsize=8.5)
     fig.tight_layout()
@@ -240,16 +240,16 @@ def fig_controller_bar(tm: pd.DataFrame) -> None:
 
 
 def fig_protocol() -> None:
-    """Clean Block 3 pre-registered transferability protocol (replaces the
+    """Clean Block 3 pre-specified transferability protocol (replaces the
     external figure whose stage boxes overlapped)."""
     fig, ax = plt.subplots(figsize=(11.4, 4.2))
     ax.set_axis_off(); ax.set_xlim(0, 1); ax.set_ylim(0, 1)
-    ax.text(0.5, 0.95, "Block 3 pre-registered transferability protocol", ha="center",
+    ax.text(0.5, 0.95, "Block 3 pre-specified transferability protocol", ha="center",
             fontsize=12.5, weight="bold", color="#1f2933")
     ax.text(0.5, 0.875, "the manifest (testcases, regimes, hypotheses, threshold) is committed before any non-bestest_air run",
             ha="center", fontsize=8.8, style="italic", color=SLATE)
     boxes = [
-        (0.015, "Pre-register\nmanifest", "testcases, regimes,\nhypotheses,\n$\\tau_k=1.25\\,m_s^{\\mathrm{PI}}$", NAVY, "#eef5fb"),
+        (0.015, "Pre-specify\nmanifest", "testcases, regimes,\nhypotheses,\n$\\tau_k=1.25\\,m_s^{\\mathrm{PI}}$", NAVY, "#eef5fb"),
         (0.260, "Per-testcase\nsetup", "adapter smoke test\n+ PI baseline", TEAL, "#edf8f7"),
         (0.505, "Transfer + recalibrate", "mode=none transfer;\npartial (Stage C);\nfull (Stage A/B/C)", AMBER, "#fff6ea"),
         (0.750, "Aggregate\n+ close", "transfer matrix;\nhypothesis closure", GREEN, "#eef8ee"),
@@ -261,14 +261,14 @@ def fig_protocol() -> None:
         _arrow(ax, (x, 0.56), (x + 0.02, 0.56), SLATE)
     ax.text(0.5, 0.135, "two component verdicts: controller-side $m_s^{\\mathrm{RL}}\\leq\\tau_k$ (per testcase) and surrogate-side full Stage A/B/C RMSE gain.",
             ha="center", fontsize=8.4, color="#374151")
-    ax.text(0.5, 0.06, "Pre-registration block is bit-identical between the open (1861e48) and close (7ada793) commits; only result appendices are appended.",
+    ax.text(0.5, 0.06, "The analysis-plan manifest is bit-identical between the open (1861e48) and close (7ada793) commits; only result appendices are appended.",
             ha="center", fontsize=8.0, style="italic", color=SLATE)
     _save(fig, "fig_block3_protocol")
 
 
 def table_adapters() -> str:
     """Per-testcase actuator-adapter mapping, verified from
-    configs/block3_actuator_mapping_*.yaml (pre-registered; audit anchors
+    configs/block3_actuator_mapping_*.yaml (pre-specified; audit anchors
     eb7091e / 46fbaa9 / 645626e). Each adapter shares the heat-intensity map
     h = clip((T_sup-18)/17, 0, 1)."""
     rows = [
@@ -304,11 +304,11 @@ def table_nomenclature() -> str:
     rows = [
         (r"$m_{s,\mathrm{RL}}$", "--", "live BOPTEST maintenance score of the frozen RL controller (lower better)"),
         (r"$m_{s,\mathrm{PI}}$", "--", "maintenance score of the testcase built-in PI controller"),
-        (r"$\tau_k$", "--", "pre-registered pass threshold $1.25\\,m_{s,\\mathrm{PI},k}$ for testcase $k$"),
+        (r"$\tau_k$", "--", "pre-specified pass threshold $1.25\\,m_{s,\\mathrm{PI},k}$ for testcase $k$"),
         (r"$\Delta E_k$", r"\si{\percent}", "energy change of the RL controller vs PI on testcase $k$"),
         (r"$G^{\mathrm{RMSE}}_k$", r"\si{\percent}", "rollout-RMSE improvement after full Stage A/B/C recalibration"),
         (r"$\rho_{C,k}$", "--", "re-identified $C_{\\mathrm{zon}}$ ratio vs the \\texttt{bestest\\_air} baseline"),
-        (r"$\mathcal{A}_k$", "--", "pre-registered actuator adapter for testcase $k$"),
+        (r"$\mathcal{A}_k$", "--", "pre-specified actuator adapter for testcase $k$"),
     ]
     return "\n".join(f"{a} & {b} & {c} \\\\" for a, b, c in rows)
 
@@ -380,22 +380,22 @@ def write_tex(ctx: dict) -> None:
 
 Blocks 1 and 2 established the source-case recipe on BOPTEST \texttt{{bestest\_air}}: a v3 rollout surrogate supplies smooth control-oriented dynamics, a calibrated v3.5 RC--NeuralODE supplies a frozen physical disagreement censor, and the thermostatic PPO policy trained on the resulting hybrid backend is the strongest verified controller on the targeted windows. Block 3 asks a narrower, more falsifiable question: does this fixed source-case recipe transfer to related BOPTEST hydronic-family testcases?
 
-The claim boundary is deliberately limited. Block 3 does not claim universal building generalization, cross-climate generalization, or transfer to arbitrary HVAC topologies. It evaluates transfer to three pre-selected single-zone hydronic-family cases under documented actuator adapters and pre-registered recalibration regimes, with controller fine-tuning on the target testcase explicitly excluded. That exclusion is methodologically central: it separates \emph{{controller}} transfer from \emph{{surrogate-recalibration}} transfer, so the evidence is reported component-wise.
+The claim boundary is deliberately limited. Block 3 does not claim universal building generalization, cross-climate generalization, or transfer to arbitrary HVAC topologies. It evaluates transfer to three pre-selected single-zone hydronic-family cases under documented actuator adapters and pre-specified recalibration regimes, with controller fine-tuning on the target testcase explicitly excluded. That exclusion is methodologically central: it separates \emph{{controller}} transfer from \emph{{surrogate-recalibration}} transfer, so the evidence is reported component-wise.
 
 \paragraph{{Roadmap boundary and executed path.}}
 Block 3 (\texttt{{roadmap.md}} Sections 14--15) was opened only after the Block 1/2 article state was committed, and runs strictly as:
 \begin{{enumerate}}
-  \item pre-register the testcase/regime/hypothesis manifest before any non-\texttt{{bestest\_air}} run (\S14);
+  \item pre-specify the testcase/regime/hypothesis manifest before any non-\texttt{{bestest\_air}} run (\S14);
   \item for each testcase, smoke-test the actuator adapter, run the PI baseline, and run mode=none frozen-controller transfer (\S15.1--15.2);
   \item collect target telemetry and run partial (Stage C) and full (Stage A/B/C) surrogate recalibration (\S15.2);
-  \item aggregate the transfer matrix and close the pre-registered hypotheses (\S15.3--15.5).
+  \item aggregate the transfer matrix and close the pre-specified hypotheses (\S15.3--15.5).
 \end{{enumerate}}
 Artifact provenance and rebuild commands for every table and figure are catalogued in roadmap Section 15.
 
 \begin{{figure}}[H]
   \centering
   \includegraphics[width=0.97\linewidth]{{fig_block3_protocol.pdf}}
-  \caption{{Block 3 pre-registered transferability protocol. Controller-side transfer is tested against a testcase-specific PI threshold; surrogate-side transfer is tested by full Stage A/B/C recalibration on target telemetry.}}
+  \caption{{Block 3 pre-specified transferability protocol. Controller-side transfer is tested against a testcase-specific PI threshold; surrogate-side transfer is tested by full Stage A/B/C recalibration on target telemetry.}}
   \label{{fig:protocol}}
 \end{{figure}}
 
@@ -413,9 +413,9 @@ Symbol & Unit & Meaning \\
 \end{{tabularx}}
 \end{{table}}
 
-\subsection{{Pre-registration and audit anchors}}
+\subsection{{Pre-specification and audit anchors}}
 
-Block 3 is pre-registered through \texttt{{configs/block3\_testcase\_manifest.yaml}}. The initial manifest commit (\texttt{{1861e48}}) was made before any non-\texttt{{bestest\_air}} BOPTEST run; the pre-registration block is bit-identical between that commit and the close commit, with only result appendices added. The audit anchors are: \texttt{{1861e48}} (pre-registration manifest), \texttt{{2f9d596}} (record pre-registration SHA), \texttt{{eb7091e}} / \texttt{{46fbaa9}} / \texttt{{645626e}} (the three actuator adapters and the stretch-testcase predictions), \texttt{{7ada793}} (close SHA), and \texttt{{cb7025f}} (component-level interpretation). Because the hypothesis definitions were frozen before the runs, every number below was predictable but not predicted.
+Block 3 is pre-specified through \texttt{{configs/block3\_testcase\_manifest.yaml}}. The initial manifest commit (\texttt{{1861e48}}) was made before any non-\texttt{{bestest\_air}} BOPTEST run; the pre-specification block is bit-identical between that commit and the close commit, with only result appendices added. The audit anchors are: \texttt{{1861e48}} (pre-specification manifest), \texttt{{2f9d596}} (record pre-specification SHA), \texttt{{eb7091e}} / \texttt{{46fbaa9}} / \texttt{{645626e}} (the three actuator adapters and the stretch-testcase predictions), \texttt{{7ada793}} (close SHA), and \texttt{{cb7025f}} (component-level interpretation). Because the hypothesis definitions were frozen before the runs, every number below was predictable but not predicted.
 
 \subsection{{Testcases, actuator adapters, and recalibration regimes}}
 
@@ -424,7 +424,7 @@ The three target testcases span an increasing difficulty ladder relative to \tex
 \begin{{table}}[H]
 \centering
 \small
-\caption{{Pre-registered target testcases and actuator adapters (manifest \texttt{{testcase\_candidates}}).}}
+\caption{{Pre-specified target testcases and actuator adapters (manifest \texttt{{testcase\_candidates}}).}}
 \label{{tab:testcases}}
 \begin{{tabularx}}{{\linewidth}}{{l l >{{\raggedright\arraybackslash}}X l}}
 \toprule
@@ -444,16 +444,16 @@ The adapter maps the frozen source policy output to the target actuator interfac
   T^{{\mathrm{{sup}}}}_t = 18 + \tfrac{{a_t+1}}{{2}}(35-18),
   \label{{eq:adapter}}
 \end{{equation}}
-where $\mathcal{{A}}_{{k}}$ is the pre-registered adapter for testcase $k$, $a_t\in[-1,1]$ is the frozen policy output, and $y_t$ are available BOPTEST measurements used by rule-based adapter logic. Adapter smoke tests verify that low/high overrides produce directionally valid heating before any yearly run. Figure~\ref{{fig:adapter}} shows the adapter-mediated transfer: one frozen controller drives three different actuator interfaces through the per-testcase adapters, with per-testcase controller verdicts. The recalibration regimes (Table~\ref{{tab:regimes}}) keep the controller frozen and vary only how much of the surrogate adapts.
+where $\mathcal{{A}}_{{k}}$ is the pre-specified adapter for testcase $k$, $a_t\in[-1,1]$ is the frozen policy output, and $y_t$ are available BOPTEST measurements used by rule-based adapter logic. Adapter smoke tests verify that low/high overrides produce directionally valid heating before any yearly run. Figure~\ref{{fig:adapter}} shows the adapter-mediated transfer: one frozen controller drives three different actuator interfaces through the per-testcase adapters, with per-testcase controller verdicts. The recalibration regimes (Table~\ref{{tab:regimes}}) keep the controller frozen and vary only how much of the surrogate adapts.
 
 \begin{{figure}}[H]
   \centering
   \includegraphics[width=0.97\linewidth]{{fig_block3_adapter.pdf}}
-  \caption{{Adapter-mediated transfer schematic. The frozen Block 2 hybrid policy is routed through a pre-registered actuator adapter $\mathcal{{A}}_k$ to each testcase's actuator interface; the controller-side verdict (against the $1.25\times$ PI threshold) is per-testcase, while full Stage A/B/C surrogate recalibration passes on all three.}}
+  \caption{{Adapter-mediated transfer schematic. The frozen Block 2 hybrid policy is routed through a pre-specified actuator adapter $\mathcal{{A}}_k$ to each testcase's actuator interface; the controller-side verdict (against the $1.25\times$ PI threshold) is per-testcase, while full Stage A/B/C surrogate recalibration passes on all three.}}
   \label{{fig:adapter}}
 \end{{figure}}
 
-Concretely, each adapter first maps the policy command to a normalized heat-intensity $h=\mathrm{{clip}}\!\big((T^{{\mathrm{{sup}}}}_t-18)/17,\,0,\,1\big)$ and then drives the testcase's pre-registered BOPTEST override inputs (Table~\ref{{tab:adapters}}). The mappings were finalized and committed before any control run (audit anchors \texttt{{eb7091e}} / \texttt{{46fbaa9}} / \texttt{{645626e}}), so the actuator interface cannot be tuned post hoc.
+Concretely, each adapter first maps the policy command to a normalized heat-intensity $h=\mathrm{{clip}}\!\big((T^{{\mathrm{{sup}}}}_t-18)/17,\,0,\,1\big)$ and then drives the testcase's pre-specified BOPTEST override inputs (Table~\ref{{tab:adapters}}). The mappings were finalized and committed before any control run (audit anchors \texttt{{eb7091e}} / \texttt{{46fbaa9}} / \texttt{{645626e}}), so the actuator interface cannot be tuned post hoc.
 
 \begin{{table}}[H]
 \centering
@@ -472,7 +472,7 @@ Testcase & Primary override & Override formula & Auxiliary overrides \\
 \begin{{table}}[H]
 \centering
 \small
-\caption{{Pre-registered recalibration regimes. The controller is frozen in every regime.}}
+\caption{{Pre-specified recalibration regimes. The controller is frozen in every regime.}}
 \label{{tab:regimes}}
 \begin{{tabular}}{{lll}}
 \toprule
@@ -528,7 +528,7 @@ The controller-side pass threshold is normalized by each testcase's built-in PI 
   \Delta E_k = 100\,\frac{{E_{{\mathrm{{RL}},k}}-E_{{\mathrm{{PI}},k}}}}{{E_{{\mathrm{{PI}},k}}}}.
   \label{{eq:threshold}}
 \end{{equation}}
-The threshold value $1.25$ was pre-registered, not chosen post hoc. Surrogate-side transfer is measured by the relative rollout-RMSE improvement after full Stage A/B/C recalibration, and the physical transfer diagnostic is the re-identified capacitance ratio:
+The threshold value $1.25$ was pre-specified, not chosen post hoc. Surrogate-side transfer is measured by the relative rollout-RMSE improvement after full Stage A/B/C recalibration, and the physical transfer diagnostic is the re-identified capacitance ratio:
 \begin{{equation}}
   G^{{\mathrm{{RMSE}}}}_k = 100\,\frac{{\mathrm{{RMSE}}^{{\mathrm{{raw}}}}_{{T,k}}-\mathrm{{RMSE}}^{{\mathrm{{full}}}}_{{T,k}}}}{{\mathrm{{RMSE}}^{{\mathrm{{raw}}}}_{{T,k}}}},
   \qquad
@@ -540,7 +540,7 @@ Two-axis reporting ($m_s$ threshold and $\Delta E$) is necessary because the com
 
 \subsection{{Headline transfer matrix}}
 
-Table~\ref{{tab:transfer_matrix}} is the compact evidence summary and contains two distinct stories. The surrogate component transfers strongly: full Stage A/B/C improves RMSE by $60.2$--$87.8\%$ on all three target testcases. The frozen controller does not transfer uniformly: the two residential hydronic cases fail the pre-registered $1.25\times$ PI threshold, while the commercial stretch case passes the threshold but pays a $+35.3\%$ energy penalty.
+Table~\ref{{tab:transfer_matrix}} is the compact evidence summary and contains two distinct stories. The surrogate component transfers strongly: full Stage A/B/C improves RMSE by $60.2$--$87.8\%$ on all three target testcases. The frozen controller does not transfer uniformly: the two residential hydronic cases fail the pre-specified $1.25\times$ PI threshold, while the commercial stretch case passes the threshold but pays a $+35.3\%$ energy penalty.
 
 \begin{{table}}[H]
 \centering
@@ -573,13 +573,13 @@ Testcase & $m_s^{{\mathrm{{RL}}}}$ & $m_s^{{\mathrm{{PI}}}}$ & $\tau_k$ & Ctrl. 
 \begin{{figure}}[H]
   \centering
   \includegraphics[width=0.80\linewidth]{{fig_block3_controller_bar.pdf}}
-  \caption{{Controller-side transfer: frozen-hybrid $m_s^{{\mathrm{{RL}}}}$ against the PI baseline $m_s^{{\mathrm{{PI}}}}$ and the pre-registered threshold $\tau_k=1.25\,m_s^{{\mathrm{{PI}}}}$ (dashed). The two residential cases exceed the threshold (FAIL); the commercial case is below it (PASS, with the separate energy caveat).}}
+  \caption{{Controller-side transfer: frozen-hybrid $m_s^{{\mathrm{{RL}}}}$ against the PI baseline $m_s^{{\mathrm{{PI}}}}$ and the pre-specified threshold $\tau_k=1.25\,m_s^{{\mathrm{{PI}}}}$ (dashed). The two residential cases exceed the threshold (FAIL); the commercial case is below it (PASS, with the separate energy caveat).}}
   \label{{fig:controller_bar}}
 \end{{figure}}
 
 \subsection{{Primary testcase: \texttt{{bestest\_hydronic\_heat\_pump}}}}
 
-The primary testcase was pre-registered as the easiest target (closest to \texttt{{bestest\_air}} in envelope class, but with a hydronic heat-pump actuator). The yearly PI baseline is $m_s={ctx['hp_pi']}$ with threshold $\tau={ctx['hp_tau']}$. The frozen hybrid controller obtains $m_s={ctx['hp_rl']}$ with energy ${ctx['hp_de']}\%$ relative to PI, so the controller verdict is FAIL: the policy saves energy but violates comfort too often. Full Stage A/B/C recalibration instead succeeds (Table~\ref{{tab:primary}}): RMSE$_T={ctx['hp_full_rmse']}\,^\circ$C and $C_{{\mathrm{{zon}}}}={ctx['hp_czon']}\times10^5$ J/K $={ctx['hp_ratio']}\times$ \texttt{{bestest\_air}}. The component-level split is explicit: surrogate recalibration transfers; the frozen controller does not.
+The primary testcase was pre-specified as the easiest target (closest to \texttt{{bestest\_air}} in envelope class, but with a hydronic heat-pump actuator). The yearly PI baseline is $m_s={ctx['hp_pi']}$ with threshold $\tau={ctx['hp_tau']}$. The frozen hybrid controller obtains $m_s={ctx['hp_rl']}$ with energy ${ctx['hp_de']}\%$ relative to PI, so the controller verdict is FAIL: the policy saves energy but violates comfort too often. Full Stage A/B/C recalibration instead succeeds (Table~\ref{{tab:primary}}): RMSE$_T={ctx['hp_full_rmse']}\,^\circ$C and $C_{{\mathrm{{zon}}}}={ctx['hp_czon']}\times10^5$ J/K $={ctx['hp_ratio']}\times$ \texttt{{bestest\_air}}. The component-level split is explicit: surrogate recalibration transfers; the frozen controller does not.
 
 \begin{{table}}[H]
 \centering
@@ -608,7 +608,7 @@ The secondary testcase tests whether the primary failure was specific to heat-pu
 
 \subsection{{Stretch testcase: \texttt{{singlezone\_commercial\_hydronic}}}}
 
-The stretch testcase was pre-registered as the hardest, most informative falsification probe. The manifest predicted that mode=none controller transfer would FAIL (a-priori probability 0.80) and that the commercial-scale $C_{{\mathrm{{zon}}}}$ would likely be scale-dependent (hypothesis B, $[3,10]\times$, a-priori 0.50). The observed result is mixed and scientifically useful. The frozen controller obtains $m_s={ctx['cm_rl']}$ against PI $m_s={ctx['cm_pi']}$ and threshold ${ctx['cm_tau']}$, so it \emph{{passes}} the $m_s$ criterion --- but it consumes ${ctx['cm_de']}\%$ more energy than PI, so the correct reading is threshold PASS, not deployment-ready PASS. The surrogate side is again strong: full Stage A/B/C reduces RMSE$_T$ from ${ctx['cm_raw_rmse']}$ to ${ctx['cm_full_rmse']}\,^\circ$C (${ctx['cm_gain']}\%$), and the identified $C_{{\mathrm{{zon}}}}$ ratio is ${ctx['cm_ratio']}\times$ --- inside the lower-probability uniform hypothesis A, not the predicted $3$--$10\times$ range.
+The stretch testcase was pre-specified as the hardest, most informative falsification probe. The manifest predicted that mode=none controller transfer would FAIL (a-priori probability 0.80) and that the commercial-scale $C_{{\mathrm{{zon}}}}$ would likely be scale-dependent (hypothesis B, $[3,10]\times$, a-priori 0.50). The observed result is mixed and scientifically useful. The frozen controller obtains $m_s={ctx['cm_rl']}$ against PI $m_s={ctx['cm_pi']}$ and threshold ${ctx['cm_tau']}$, so it \emph{{passes}} the $m_s$ criterion --- but it consumes ${ctx['cm_de']}\%$ more energy than PI, so the correct reading is threshold PASS, not deployment-ready PASS. The surrogate side is again strong: full Stage A/B/C reduces RMSE$_T$ from ${ctx['cm_raw_rmse']}$ to ${ctx['cm_full_rmse']}\,^\circ$C (${ctx['cm_gain']}\%$), and the identified $C_{{\mathrm{{zon}}}}$ ratio is ${ctx['cm_ratio']}\times$ --- inside the lower-probability uniform hypothesis A, not the predicted $3$--$10\times$ range.
 
 \subsection{{Surrogate-side transfer and $C_{{\mathrm{{zon}}}}$ consistency}}
 \label{{ssec:czon}}
@@ -652,12 +652,12 @@ Testcase & $C_{{\mathrm{{zon}}}}$ (J/K) & $\rho_C$ vs \texttt{{bestest\_air}} \\
 
 \subsection{{Hypothesis closure}}
 
-Table~\ref{{tab:hypothesis}} closes the pre-registered hypotheses. The methodological point is that Block 3 does not collapse the evidence into a single label: surrogate transfer and controller transfer diverge.
+Table~\ref{{tab:hypothesis}} closes the pre-specified hypotheses. The methodological point is that Block 3 does not collapse the evidence into a single label: surrogate transfer and controller transfer diverge.
 
 \begin{{table}}[H]
 \centering
 \small
-\caption{{Pre-registered hypothesis closure (manifest \texttt{{hypothesis\_status\_final}}, audit anchor \texttt{{7ada793}}).}}
+\caption{{Pre-specified hypothesis closure (manifest \texttt{{hypothesis\_status\_final}}, audit anchor \texttt{{7ada793}}).}}
 \label{{tab:hypothesis}}
 \begin{{tabularx}}{{\linewidth}}{{l >{{\raggedright\arraybackslash}}p{{42mm}} l >{{\raggedright\arraybackslash}}X}}
 \toprule
@@ -675,14 +675,14 @@ Hypothesis & Claim & Verdict & Evidence \\
   \label{{fig:hypothesis_closure}}
 \end{{figure}}
 
-\subsection{{Pre-registered predictions versus outcomes}}
+\subsection{{Pre-specified predictions versus outcomes}}
 
 The stretch testcase carried numerical a-priori predictions (audit anchor \texttt{{645626e}}, logged before any commercial-hydronic run). Reporting the predicted-vs-observed mapping is the central Popperian discipline of Block 3 (Table~\ref{{tab:predictions}}): the evidence moved the interpretation toward lower-prior hypotheses rather than confirming only what was expected. Two predictions were falsified (the mode=none controller FAIL, and the scale-dependent $C_{{\mathrm{{zon}}}}$ hypothesis) and three were confirmed.
 
 \begin{{table}}[H]
 \centering
 \small
-\caption{{Stretch-testcase pre-registered predictions versus observed outcomes (manifest \texttt{{stretch\_testcase\_predictions}}).}}
+\caption{{Stretch-testcase pre-specified predictions versus observed outcomes (manifest \texttt{{stretch\_testcase\_predictions}}).}}
 \label{{tab:predictions}}
 \begin{{tabularx}}{{\linewidth}}{{>{{\raggedright\arraybackslash}}X l l l l}}
 \toprule
@@ -697,19 +697,19 @@ Prediction & Pre-reg.\ & A-priori & Observed & Verdict \\
 \label{{ssec:b3lim}}
 
 \begin{{itemize}}
-  \item \textbf{{Data provenance.}} The live KPIs ($m_s$, RMSE$_T$, energy, RMSE gains, and the $C_{{\mathrm{{zon}}}}$ ratios) are read directly from the \texttt{{reports/block3\_*}} artifacts; the pre-registered hypotheses, a-priori probabilities, predictions, and actuator-adapter mappings are verified literals from the audit-frozen manifest and adapter configs; and absolute $C_{{\mathrm{{zon}}}}$ values are reconstructed as $\rho_{{C,k}}\times 4.413\times10^5$ J/K from the data-driven ratio.
+  \item \textbf{{Data provenance.}} The live KPIs ($m_s$, RMSE$_T$, energy, RMSE gains, and the $C_{{\mathrm{{zon}}}}$ ratios) are read directly from the \texttt{{reports/block3\_*}} artifacts; the pre-specified hypotheses, a-priori probabilities, predictions, and actuator-adapter mappings are verified literals from the audit-frozen manifest and adapter configs; and absolute $C_{{\mathrm{{zon}}}}$ values are reconstructed as $\rho_{{C,k}}\times 4.413\times10^5$ J/K from the data-driven ratio.
   \item \textbf{{Single run per cell.}} Each testcase$\times$regime cell is a single live BOPTEST run (the manifest caps $N=3$ per cell and excludes a seed cascade), so the transfer KPIs carry no seed-variance interval; the $\bar\rho_C$ spread is across testcases, not seeds.
   \item \textbf{{Frozen-controller scope.}} By manifest design the controller is never fine-tuned on the target testcase; Block 3 therefore measures the transferability of the \emph{{calibration pipeline}}, not of an adapted controller.
   \item \textbf{{N=3 hydronic family.}} The uniform-$C_{{\mathrm{{zon}}}}$ finding ($1.918\pm0.032$) is established on three single-zone hydronic cases; it is not claimed for radiant, VRF, multi-zone, or cross-climate cases.
   \item \textbf{{Single weather source.}} All testcases use one weather-file source, so cross-climate generalization is explicitly out of scope.
-  \item \textbf{{Adapter-mediated transfer.}} Controller transfer is mediated by pre-registered rule-based actuator adapters; a different adapter design could change the controller-side verdict.
+  \item \textbf{{Adapter-mediated transfer.}} Controller transfer is mediated by pre-specified rule-based actuator adapters; a different adapter design could change the controller-side verdict.
 \end{{itemize}}
 
 \subsection{{Results III conclusion}}
 
 Block 3 establishes a precise component-level transferability boundary. The inverse-calibration component of the v3.5 surrogate transfers strongly to the hydronic family: full Stage A/B/C improves RMSE by $60$--$88\%$ and re-identifies $C_{{\mathrm{{zon}}}}$ at a consistent ${ctx['czon_mean']}\pm{ctx['czon_std']}\times$ the \texttt{{bestest\_air}} value, independent of the obvious zone-size proxy. The frozen-controller component does \emph{{not}} transfer as a deployment-ready policy: the two residential hydronic cases save energy but fail the comfort/safety threshold, and the commercial stretch case passes the $m_s$ threshold only at a $+35.3\%$ energy cost. The transferability boundary therefore lies at the controller--adapter interface, not in the surrogate's ability to recalibrate target physics.
 
-The pre-registration discipline is the methodological contribution: hypotheses, predictions, and the $1.25\times$ threshold were frozen before the runs, so the two falsifications (mode=none controller FAIL on the stretch case; scale-dependent $C_{{\mathrm{{zon}}}}$) are genuine Popperian updates rather than post-hoc narrative. The precise next step for Block 4 follows directly: the target surrogate is accurate enough to be a candidate training environment, so target-specific controller fine-tuning on the fully recalibrated surrogate --- not a frozen source controller --- is the falsifiable path to deployment-ready hydronic transfer.
+The pre-specification discipline is the methodological contribution: hypotheses, predictions, and the $1.25\times$ threshold were frozen before the runs, so the two falsifications (mode=none controller FAIL on the stretch case; scale-dependent $C_{{\mathrm{{zon}}}}$) are genuine Popperian updates rather than post-hoc narrative. The precise next step for Block 4 follows directly: the target surrogate is accurate enough to be a candidate training environment, so target-specific controller fine-tuning on the fully recalibrated surrogate --- not a frozen source controller --- is the falsifiable path to deployment-ready hydronic transfer.
 
 \end{{document}}
 """
