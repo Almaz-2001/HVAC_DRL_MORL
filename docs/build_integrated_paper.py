@@ -151,8 +151,8 @@ MASTER = r"""\documentclass[11pt,a4paper]{article}
 % fixed pointer to a table in the separate Supplementary Material PDF
 \newcommand{\suppref}[1]{#1}
 
-\title{Predictive Fidelity is Not Control Utility: A Hybrid Surrogate Recipe for
-Reinforcement-Learning HVAC Control and Its Pre-registered Transferability}
+\title{The Fidelity--Utility Paradox: Hybrid Surrogate Training for
+Reinforcement-Learning HVAC Control on {BOPTEST}}
 \author{TODO authors}
 \date{}
 
@@ -816,8 +816,8 @@ SUPP_DOC = r"""\documentclass[11pt,a4paper]{article}
 \renewcommand{\thetable}{S\arabic{table}}
 \renewcommand{\thefigure}{S\arabic{figure}}
 \title{Supplementary Material for\\[2pt]
-\emph{Predictive Fidelity is Not Control Utility: A Hybrid Surrogate Recipe for
-Reinforcement-Learning HVAC Control and Its Pre-registered Transferability}}
+\emph{The Fidelity--Utility Paradox: Hybrid Surrogate Training for
+Reinforcement-Learning HVAC Control on BOPTEST}}
 \author{}
 \date{}
 
