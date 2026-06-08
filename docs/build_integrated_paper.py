@@ -719,6 +719,15 @@ provenance maps for the three evidence blocks (Supplementary Tables~S1--S3) toge
 with the parameter, configuration, and interface tables referenced from the main
 text (Supplementary Tables~S4--S9).
 
+\section*{Declaration of generative AI and AI-assisted technologies in the manuscript preparation process}
+During the preparation of this work, the author(s) used Claude (Anthropic) to
+assist with language editing, improving the readability and clarity of the text,
+and with \LaTeX{} formatting and reference-list preparation. After using this tool,
+the author(s) reviewed and edited the content as needed and take full responsibility
+for the content of the published article. No generative AI tool was used to generate,
+analyse, or interpret the research data, or to produce the scientific findings and
+conclusions, which are the work of the author(s).
+
 \bibliographystyle{unsrtnat}
 \bibliography{references}
 
