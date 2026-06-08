@@ -702,14 +702,15 @@ of zero-shot reuse; and, ultimately, closing the remaining sim-to-real gap throu
 deployment on a physical building.
 
 \section*{Data availability}
-The building emulators used in this study are openly available as part of the
-BOPTEST project \citep{Blum2021BOPTEST}. The artefacts generated for this work ---
-the training and calibration corpora, the trained surrogate and controller
-checkpoints, the calibration and evaluation outputs, and the scripts that
-regenerate every figure and table --- are organised under the project's
-\texttt{data/}, \texttt{outputs/}, and \texttt{reports/} trees and are mapped to
-each reported quantity by per-section provenance tables (one for each of Results~I,
-II, and III). They are available from the authors on reasonable request.
+The source code, configurations, trained controller checkpoints, calibration and
+training data, result tables, and all artefacts required to regenerate the figures
+and tables of this study are openly available on GitHub
+(\url{https://github.com/Almaz-2001/HVAC_fidelity-utility-paradox}) and permanently
+archived on Zenodo (\url{https://doi.org/10.5281/zenodo.XXXXXXX}). Every reported
+quantity is mapped to its source artefact by the per-section provenance tables
+(Supplementary Tables~S1--S3). The BOPTEST emulator used as the reference
+environment is available separately as part of the BOPTEST project
+\citep{Blum2021BOPTEST} at \url{https://github.com/ibpsa/project1-boptest}.
 
 \section*{Supplementary material}
 Every figure, table, and inline number in Results~I--III is read directly from the
