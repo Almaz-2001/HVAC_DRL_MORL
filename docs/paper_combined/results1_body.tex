@@ -17,12 +17,7 @@ Block~1 asks whether the surrogate family is credible as a fast, physically inte
   \item build the Hou-and-Evins reporting tables and speed benchmark using \texttt{build-reports} and \texttt{speed-benchmark}.
 \end{enumerate}
 
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=\linewidth]{\detokenize{rie_fig01_block1_artifact_chain.pdf}}
-  \caption{Roadmap-derived Block 1 artifact chain. The figure reports the actual row counts, 24 h rollout errors, identified physical parameter, and speed benchmark values used to close Results I.}
-  \label{fig:block1-chain}
-\end{figure}
+
 
 \subsection{Direct Supply-Temperature Control Interface}
 \label{ssec:block1-direct-tsup}
@@ -80,12 +75,7 @@ v3.5 calibration corpus & 10,744 & 900 & hdrl, thermostatic & peak\_heat\_window
 \end{tabularx}
 \end{table}
 
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=\linewidth]{\detokenize{rie_fig02_surrogate_design.pdf}}
-  \caption{Surrogate role separation inside Block 1. v3 is the compact dual-head rollout model; v3.5 adds Stage A/B/C physical identification and residual-head calibration.}
-  \label{fig:surrogate-design}
-\end{figure}
+
 
 \begin{table}[H]
 \centering
@@ -121,12 +111,7 @@ where the multi-step term (horizons of 1, 2, and 4 transitions) enforces short-h
 
 The canonical v3 checkpoint is the early-stopped optimum of a 215-epoch supervised run: the best validation epoch is 185, at which the held-out one-step temperature fit reaches \(R^2=0.991\). This single-step score is deliberately optimistic relative to the multi-step rollout error in Section~\ref{ssec:block1-predictive-diagnostics}, which is the metric that actually governs whether the surrogate can substitute for BOPTEST.
 
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=0.78\linewidth]{\detokenize{rie_fig08_v3_learning_curve.pdf}}
-  \caption{v3 supervised train/validation learning curves. Early stopping at the best validation epoch precedes any validation-loss upturn, indicating no overfitting at the selected checkpoint.}
-  \label{fig:v3-learning-curve}
-\end{figure}
+
 
 The v3 input vector is intentionally low-dimensional. It keeps only the thermal state, outdoor disturbance, cyclic time embedding, and direct-\Tsupply{} action coordinates required by the control problem. The action coordinate \(a_0\in[-1,1]\) is mapped to an 18--35~$^\circ$C supply-temperature command, and the power head is constrained through a non-negative output transform. These choices make v3 a control-oriented surrogate rather than a generic black-box forecaster.
 
@@ -158,42 +143,9 @@ The roadmap builds the canonical v3.5 artifact by two sequential preset runs. St
 
 Stage A estimates a one-step latency compensation, a temperature bias correction of -0.105~$^\circ$C, and a postprocessed temperature RMSE of 0.238~$^\circ$C. Stage B uses the top-excitation subset: 403 of 8058 training rows at excitation quantile 0.95. This filtering is important because \(\Czon\) is identifiable mainly during transients, not quasi-steady operation.
 
-\begin{table}[H]
-\centering
-\small
-\caption{Stage A telemetry-alignment operations from the calibration-summary JSON.}
-\label{tab:stage-a}
-\begin{tabularx}{\linewidth}{llX}
-\toprule
-Operation & Estimated value & Effect \\
-\midrule
-Latency compensation & 1 step (15 min) & latency-search RMSE 0.378 C \\
-Temperature bias removal & -0.1049 C & median residual offset \\
-Power affine normalization & scale -0.702, bias 1148 W & global power-channel rescale \\
-Post-Stage-A temperature RMSE & 0.2383 C & baseline for Stage B \\
-Post-Stage-A power MAE & 514.4 W & baseline for Stage C \\
-\bottomrule
-\end{tabularx}
-\end{table}
 
-\begin{table}[H]
-\centering
-\small
-\caption{Stage B excitation filtering and physical identification of \(\Czon\).}
-\label{tab:stage-b}
-\begin{tabularx}{\linewidth}{llX}
-\toprule
-Parameter & Value & Notes \\
-\midrule
-C\_zon prior & $4.200\times10^5$ J/K & air volume x specific heat \\
-C\_zon after Stage B & $4.413\times10^5$ J/K & +5.1\% vs prior \\
-Stage B epochs & 120 & episode-aware run \\
-C\_zon learning rate & $10^{-3}$ & dedicated scalar LR \\
-Excitation quantile & 0.95 & |dT| threshold 0.1759 \\
-Excitation rows & 403 / 8058 & mean score 0.240 vs 0.069 \\
-\bottomrule
-\end{tabularx}
-\end{table}
+
+
 
 Formally, Stage B is a maximum-a-posteriori estimate of the single physical scalar,
 \begin{equation}
@@ -202,7 +154,7 @@ Formally, Stage B is a maximum-a-posteriori estimate of the single physical scal
   + \frac{1}{2\sigma_p^2}\big(C-C^{\mathrm{prior}}\big)^2,
   \label{eq:stageb-map}
 \end{equation}
-where \(\mathcal{E}\) is the excitation subset and the quadratic term is a weak Gaussian prior centred on \(C^{\mathrm{prior}}\). The excitation filter is justified by identifiability: in quasi-steady operation the sensitivity \(\partial\That/\partial C\to 0\), so steady windows carry almost no information about \(\Czon\) and would merely pull the estimate back to the prior. Restricting \(\mathcal{E}\) to the top-excitation transients (403 of 8058 rows) concentrates the identification where \(\partial\That/\partial C\) is large, which is why the mean excitation score on \(\mathcal{E}\) is several times the corpus mean (Table~\ref{tab:stage-b}).
+where \(\mathcal{E}\) is the excitation subset and the quadratic term is a weak Gaussian prior centred on \(C^{\mathrm{prior}}\). The excitation filter is justified by identifiability: in quasi-steady operation the sensitivity \(\partial\That/\partial C\to 0\), so steady windows carry almost no information about \(\Czon\) and would merely pull the estimate back to the prior. Restricting \(\mathcal{E}\) to the top-excitation transients (403 of 8058 rows) concentrates the identification where \(\partial\That/\partial C\) is large, which is why the mean excitation score on \(\mathcal{E}\) is several times the corpus mean (Table~\suppref{S7}).
 
 The intermediate Stage~B estimate is \(\Czon=4.413\times10^5~\mathrm{J/K}\), and the relative update over the physical prior is
 \begin{equation}
@@ -214,14 +166,9 @@ where \(\Czon^{\mathrm{final}}=4.413 \times 10^5~\mathrm{J/K}\). The update rema
 
 Beyond the point estimate, two complementary uncertainty checks apply. The optimizer is well conditioned (over the final 20 Stage~B epochs the \(\Czon\) trajectory is stable to within \(\pm1,005\)~J/K, 0.23\%). More importantly, a Laplace/Fisher identifiability interval --- obtained from the local curvature of the one-step temperature SSE with respect to \(\Czon\) (residual heads fixed) over the high-excitation transients (\(n=1838\)) --- gives a \(1\sigma\) uncertainty of 6.6\% and a 95\% interval \([3.845,\,4.980]\times10^5\)~J/K. The \(+5.1\%\) data-driven update therefore sits within roughly one standard error of the prior: \(\Czon\) is identifiable with a moderate, honestly bounded signal rather than a tightly pinned value. Physically, the identified capacitance corresponds to an equivalent thermal mass of \(\Czon/c_{p,\mathrm{air}}\approx439\)~kg of air (\(c_{p,\mathrm{air}}=1005~\mathrm{J\,kg^{-1}K^{-1}}\)), or roughly 366~m\(^3\) of equivalent air volume at \(\rho=1.2~\mathrm{kg\,m^{-3}}\). This is the expected order of magnitude for the \texttt{bestest\_air} zone augmented by the effective thermal mass of its internal surfaces, which is exactly why the data-driven update over the air-only prior is small (\(+5\%\)) rather than large.
 
-\medskip\noindent\textbf{Physical-consistency audit.} As a final check we probe the learned dynamics directly: sweeping the supply-temperature command across its range with the state held fixed, the predicted next-step zone temperature increases with \Tsupply{} in 100\% of 400 sampled states (correct sign in every case), with a mean sensitivity of \(+0.061\)~\(^\circ\)C per \(^\circ\)C and a mean Spearman rank correlation of 0.91 (Figure~\ref{fig:physics}). The response is monotone in the physically expected direction; the small departures from strict monotonicity reflect the neural residual head and stay well inside the surrogate temperature tolerance.
+\medskip\noindent\textbf{Physical-consistency audit.} As a final check we probe the learned dynamics directly: sweeping the supply-temperature command across its range with the state held fixed, the predicted next-step zone temperature increases with \Tsupply{} in 100\% of 400 sampled states (correct sign in every case), with a mean sensitivity of \(+0.061\)~\(^\circ\)C per \(^\circ\)C and a mean Spearman rank correlation of 0.91 (Figure~\suppref{S4}). The response is monotone in the physically expected direction; the small departures from strict monotonicity reflect the neural residual head and stay well inside the surrogate temperature tolerance.
 
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=0.74\linewidth]{\detokenize{rie_fig09_physics_consistency.pdf}}
-  \caption{Physical-consistency audit: predicted next-step zone temperature versus the supply-temperature command for representative initial states. The response is monotone increasing, so the learned dynamics respect the correct sign of the control.}
-  \label{fig:physics}
-\end{figure}
+
 
 
 \begin{figure}[H]
@@ -284,12 +231,7 @@ Engineering tolerance is reported as an absolute-error CDF,
 \end{equation}
 The coefficient of determination follows the standard definition \(R^2 = 1 - \mathrm{SS}_{\mathrm{res}}/\mathrm{SS}_{\mathrm{tot}}\) against the held-out mean, so a \emph{negative} 24 h \(R^2\) (as for the hourly v3 in Table~\ref{tab:multi-horizon}) means the long-horizon rollout is worse than predicting that mean. The error tail is summarized by the 95th-percentile absolute error \(\mathrm{P95}=\inf\{\epsilon:F_{|e|}(\epsilon)\ge 0.95\}\).
 
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=\linewidth]{\detokenize{rie_fig04_predictive_validity.pdf}}
-  \caption{Predictive-validity diagnostics from prepared BOPTEST rollouts. Confidence bands are bootstrapped from real window-level errors, and the CDF reports engineering error tolerances at 0.5, 1.0, and 1.5~$^\circ$C.}
-  \label{fig:predictive-validity}
-\end{figure}
+
 
 The calibrated v3.5 surrogate reaches a 24 h rollout \(\RMSE_T=0.644\)~$^\circ$C, compared with raw v3.5 at 1.466~$^\circ$C and the canonical v3 hourly reference at 1.557~$^\circ$C.
 
@@ -312,12 +254,7 @@ calibrated v3.5 & 0.321 & 0.575 & 0.638 & 0.644 & +0.588 \\
 
 Table~\ref{tab:multi-horizon} exposes the qualitative split between the two surrogate families. The hourly v3 model has a \emph{negative} 24 h temperature \(R^2\) -- it is worse than predicting the historical mean over long horizons -- yet it remains a usable control surrogate because PPO needs smooth local gradients, not long-horizon physical realism. The calibrated v3.5 surrogate instead keeps a positive 24 h \(R^2\) and bounds its error tail: its 24 h P95 absolute error is 1.207~$^\circ$C, so even in worst-case windows the calibrated twin stays within that band 95\% of the time. Reporting raw v3.5 and the corpus-matched v3 in the same table lets the matched-corpus attribution in Section~\ref{ssec:block1-corpus-matched} be read directly against the per-horizon numbers. As a model-free reference, a naive persistence forecast (\(\That(t{+}h)=T_t\)) on the same episodes gives 0.397~$^\circ$C at 1 h and 0.969~$^\circ$C at 24 h: calibrated v3.5 beats persistence at every horizon, whereas the hourly v3 is actually \emph{worse} than persistence at 24 h (1.557 vs 0.969~$^\circ$C), which quantitatively confirms that v3 is a control surrogate rather than a forecaster.
 
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=\linewidth]{\detokenize{rie_fig07_episode_replicability.pdf}}
-  \caption{Replicative validity across the eight held-out BOPTEST episodes used by the Block 1 prepared-rollout artifacts. The dashed line marks a 1~$^\circ$C engineering reference.}
-  \label{fig:episode-replicability}
-\end{figure}
+
 
 The episode-level diagnostic is important because a low aggregate RMSE can hide a single unstable rollout. The calibrated v3.5 artifact remains below the 1~$^\circ$C reference in all eight held-out episodes; its best episode is peak heat thermostatic at 0.486~$^\circ$C and its worst episode is typical heat hdrl at 0.964~$^\circ$C. This supports predictive validity as a repeated-episode result rather than a single-window artifact.
 

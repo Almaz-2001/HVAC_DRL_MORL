@@ -34,46 +34,60 @@ SECTIONS = [
     ("results3_transferability_overleaf", "Results III body (Block 3, transferability)"),
 ]
 
-# Auxiliary parameter/configuration tables relocated from the main text to the
-# Supplementary Material (matched by a distinctive caption substring). Their
-# \label travels with them, so in-text \ref calls still resolve (to S-numbers).
-SUPP_TABLE_KEYS = [
-    # NB: only tables that are self-contained (no \ref/\eqref into the main text)
-    # may be relocated. tab:tsup-assumptions is intentionally NOT here because it
-    # \eqref's the supply-temperature signature equation in Results I.
-    "v3 configuration from the active model class", # R1 tab:v3-config
-    "Feature scaling and physical constraints",     # R1 tab:v3-scaling
-    "PPO training configuration",                   # R2 tab:ppo_hparams
-    "Extended 17D observation feature groups",      # R2 tab:obs17
-    "Reward-shaping parameters",                    # R2 tab:reward
-    "Per-testcase actuator-adapter mapping",        # R3 tab:adapters
-]
+# Figures and tables relocated from the main text into the Supplementary Material
+# to keep the article focused (target <= 40 pp). Matched by \label, which travels
+# with the float so in-text \ref calls still resolve (to Figure S / Table S numbers).
+# Only self-contained floats may be moved: anything whose caption \ref/\eqref's a
+# label that STAYS in the main text would break the standalone supplementary build
+# (e.g. tab:tsup-assumptions is deliberately NOT moved).
+SUPP_MOVE_LABELS = {
+    # --- parameter / configuration tables ---
+    "tab:v3-config", "tab:v3-scaling", "tab:ppo_hparams", "tab:obs17",
+    "tab:reward", "tab:adapters",
+    # --- Block 1: schematic + calibration-diagnostic floats ---
+    # (tab:design-rationale stays: it \ref's ssec:block1-limitations in the main text)
+    "fig:block1-chain", "fig:surrogate-design", "fig:v3-learning-curve",
+    "fig:physics", "fig:predictive-validity", "fig:episode-replicability",
+    "tab:stage-a", "tab:stage-b",
+    # --- Block 2: schematic + diagnostic floats ---
+    "fig:block2_pipeline", "fig:morl_pipeline", "fig:action_phase",
+    "fig:morl_heatmap", "fig:seasonal_falsification", "fig:transfer_gap",
+    "tab:hybrid_sweep", "tab:warmstart", "tab:morl_per_seed",
+    # --- Block 3: schematic + per-regime detail floats ---
+    # (fig:topology stays: it \ref's eq:hydronic_balance in the main text)
+    "fig:protocol", "fig:adapter", "fig:regime_progression", "fig:czon_hypothesis",
+    "tab:testcases", "tab:regimes", "tab:primary", "tab:predictions",
+}
 
 
 def extract_supp_tables(body: str):
-    """Pull the SUPP_TABLE_KEYS table environments out of a section body.
-    Returns (reduced_body, [moved_table_blocks])."""
+    """Pull the SUPP_MOVE_LABELS figure/table environments out of a section body.
+    Returns (reduced_body, [moved_float_blocks]) preserving in-body order."""
     moved = []
 
     def repl(m):
         blk = m.group(0)
-        if any(k in blk for k in SUPP_TABLE_KEYS):
+        lab = re.search(r"\\label\{([^}]+)\}", blk)
+        if lab and lab.group(1) in SUPP_MOVE_LABELS:
             moved.append(blk)
             return ""
         return blk
 
-    reduced = re.sub(r"\\begin\{table\}.*?\\end\{table\}", repl, body, flags=re.DOTALL)
-    return reduced, moved
+    for env in ("figure", "table"):
+        body = re.sub(r"\\begin\{" + env + r"\}.*?\\end\{" + env + r"\}",
+                      repl, body, flags=re.DOTALL)
+    return body, moved
 
 
 def build_supplementary_tables(relocated) -> str:
     if not relocated:
         return ""
     parts = [
-        r"\subsection*{Additional parameter and configuration tables}",
-        r"The following parameter, configuration, and interface tables are "
-        r"reported here for completeness. They are cited from Results~I--III but "
-        r"are not required to follow the main argument.",
+        r"\subsection*{Supplementary figures and tables}",
+        r"The following figures and tables provide supporting schematics, "
+        r"calibration and controller diagnostics, and detailed per-regime and "
+        r"per-seed breakdowns. They are cited from Results~I--III (as Figure~S/"
+        r"Table~S references) but are not required to follow the main argument.",
     ]
     parts.extend(relocated)
     return "\n\n".join(parts)
@@ -861,6 +875,7 @@ SUPP_DOC = r"""\documentclass[11pt,a4paper]{article}
 \usepackage[utf8]{inputenc}
 \usepackage{lmodern}
 \usepackage{geometry}
+\usepackage{graphicx}
 \usepackage{booktabs}
 \usepackage{tabularx}
 \usepackage{array}
@@ -869,10 +884,12 @@ SUPP_DOC = r"""\documentclass[11pt,a4paper]{article}
 \usepackage{siunitx}
 \usepackage{longtable}
 \usepackage{float}
+\usepackage{subcaption}
 \usepackage{xcolor}
 \usepackage{caption}
 \usepackage{hyperref}
 \geometry{margin=2.0cm}
+\graphicspath{{figures/}}
 \captionsetup{font=small,labelfont=bf}
 \newcommand{\RMSE}{\ensuremath{\mathrm{RMSE}}}
 \newcommand{\MAE}{\ensuremath{\mathrm{MAE}}}
@@ -935,16 +952,24 @@ def main() -> None:
             for fig in (d / "figures").glob(pattern):
                 shutil.copy2(fig, figdir / fig.name)
                 n_fig += 1
-    # Map each relocated table's \label to its fixed Supplementary number. The
-    # supplement renders 3 provenance tables (S1--S3) first, then the relocated
-    # ones, so they start at S4 in extraction order.
+    # Map each relocated float's \label to its fixed Supplementary number. The
+    # supplement renders 3 provenance tables (Table S1--S3) first, so moved tables
+    # continue at S4; moved figures use an independent figure counter (Figure S1+).
+    # We replay the relocation order to assign numbers per counter.
     label2num = {}
-    for k, blk in enumerate(relocated):
+    fig_n, tab_n = 0, 3
+    for blk in relocated:
         m = re.search(r"\\label\{([^}]+)\}", blk)
-        if m:
-            label2num[m.group(1)] = f"S{4 + k}"
-    # Pass 2: rewrite the now-dangling \ref to relocated tables as fixed \suppref
-    # pointers, then write the combined bodies.
+        if not m:
+            continue
+        if blk.lstrip().startswith(r"\begin{figure}"):
+            fig_n += 1
+            label2num[m.group(1)] = f"S{fig_n}"
+        else:
+            tab_n += 1
+            label2num[m.group(1)] = f"S{tab_n}"
+    # Pass 2: rewrite the now-dangling \ref to relocated floats as fixed \suppref
+    # pointers (Figure~\suppref{Sk} / Table~\suppref{Sk}), then write the bodies.
     for i, body_combined in combined:
         for label, num in label2num.items():
             body_combined = body_combined.replace(r"\ref{" + label + "}", r"\suppref{" + num + "}")
@@ -954,8 +979,7 @@ def main() -> None:
     (paper_dir / "supplementary.tex").write_text(
         build_supplementary_document(relocated), encoding="utf-8")
     print(f"Wrote main_paper.tex + supplementary.tex (self-contained; {n_fig} figure "
-          f"files copied; {len(relocated)} tables -> supplementary as "
-          f"{'/'.join(label2num.values())})")
+          f"files copied; {len(relocated)} floats -> supplementary)")
 
 
 if __name__ == "__main__":
