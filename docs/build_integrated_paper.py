@@ -165,8 +165,8 @@ MASTER = r"""\documentclass[11pt,a4paper]{article}
 % fixed pointer to a table in the separate Supplementary Material PDF
 \newcommand{\suppref}[1]{#1}
 
-\title{The Fidelity--Utility Paradox: Hybrid Surrogate Training for
-Reinforcement-Learning HVAC Control on {BOPTEST}}
+\title{The Fidelity--Utility Paradox in Surrogate-Based
+Reinforcement Learning for HVAC Control}
 \author{TODO authors}
 \date{}
 
@@ -899,8 +899,8 @@ SUPP_DOC = r"""\documentclass[11pt,a4paper]{article}
 \renewcommand{\thetable}{S\arabic{table}}
 \renewcommand{\thefigure}{S\arabic{figure}}
 \title{Supplementary Material for\\[2pt]
-\emph{The Fidelity--Utility Paradox: Hybrid Surrogate Training for
-Reinforcement-Learning HVAC Control on BOPTEST}}
+\emph{The Fidelity--Utility Paradox in Surrogate-Based
+Reinforcement Learning for HVAC Control}}
 \author{}
 \date{}
 
