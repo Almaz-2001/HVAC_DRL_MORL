@@ -63,6 +63,8 @@ where $\dot{Q}_{\mathrm{hyd}}$ is the delivered hydronic heat (whose actuation p
   \includegraphics[width=0.97\linewidth]{fig_block3_topology.pdf}
   \caption{Comparative HVAC topology of the source case and the three hydronic targets (source $\to$ distribution $\to$ zone). Transfer changes the heat source, distribution path, and actuator set, while the zone energy balance \eqref{eq:hydronic_balance} and $C_{\mathrm{zon}}$ are shared.}
   \label{fig:topology}
+
+{\footnotesize\itshape Schematic; not derived from a dataset.}
 \end{figure}
 
 Table~\ref{tab:physics} summarizes the architecture and the identified physics. The equivalent thermal mass $C_{\mathrm{zon}}/c_{p,\mathrm{air}}$ (with $c_{p,\mathrm{air}}=1005$~J\,kg$^{-1}$K$^{-1}$) is roughly $2\times$ the \texttt{bestest\_air} value for every hydronic case, consistent with the added water-loop and surface thermal mass. The mean delivered power exposes the operating regime: it is of order $10^3$~W for the residential cases (envelope-conduction / slow-hydronic dominated) but two orders of magnitude larger for the commercial case (roughly $28\times$), because that zone is ventilation/AHU-dominated. This ventilation dominance is the physical reason the commercial controller passes the comfort threshold yet overshoots energy by $+35.3\%$; it also makes a conduction-only time constant ill-defined from total power for that case.
@@ -131,6 +133,8 @@ commercial hydronic & 0.431 & 0.628 & 0.785 & PASS$^\dagger$ & 35.3 & 1.952 & 0.
   \includegraphics[width=0.84\linewidth]{final17_fig13_block3_controller_transfer_heatmap.pdf}
   \caption{Controller-transfer verdict heatmap. Residential hydronic cases fail the controller threshold; the commercial case passes the threshold but carries a separate energy caveat.}
   \label{fig:heatmap}
+
+{\footnotesize\itshape Data: \texttt{reports/\allowbreak block3\_\allowbreak transfer\_\allowbreak matrix.csv}}
 \end{figure}
 
 \begin{figure}[H]
@@ -138,6 +142,8 @@ commercial hydronic & 0.431 & 0.628 & 0.785 & PASS$^\dagger$ & 35.3 & 1.952 & 0.
   \includegraphics[width=0.84\linewidth]{block3_q1_polish_deployment_quadrants.pdf}
   \caption{Comfort--energy deployment plane. The residential cases save energy but fail the comfort/safety threshold; the commercial case passes the threshold but moves into the energy-penalty quadrant.}
   \label{fig:deployment_plane}
+
+{\footnotesize\itshape Data: \texttt{reports/\allowbreak block3\_\allowbreak transfer\_\allowbreak matrix.csv}}
 \end{figure}
 
 \begin{figure}[H]
@@ -145,6 +151,8 @@ commercial hydronic & 0.431 & 0.628 & 0.785 & PASS$^\dagger$ & 35.3 & 1.952 & 0.
   \includegraphics[width=0.80\linewidth]{fig_block3_controller_bar.pdf}
   \caption{Controller-side transfer: frozen-hybrid $m_s^{\mathrm{RL}}$ against the PI baseline $m_s^{\mathrm{PI}}$ and the pre-specified threshold $\tau_k=1.25\,m_s^{\mathrm{PI}}$ (dashed). The two residential cases exceed the threshold (FAIL); the commercial case is below it (PASS, with the separate energy caveat).}
   \label{fig:controller_bar}
+
+{\footnotesize\itshape Data: \texttt{reports/\allowbreak block3\_\allowbreak transfer\_\allowbreak matrix.csv}}
 \end{figure}
 
 \subsection{Primary testcase: \texttt{bestest\_hydronic\_heat\_pump}}
@@ -199,6 +207,8 @@ hydronic-family mean $\pm$ std & --- & 1.918 $\pm$ 0.032 \\
   \includegraphics[width=0.84\linewidth]{final17_fig15_full_stage_transfer_rmse_improvement.pdf}
   \caption{Full Stage A/B/C transfer RMSE improvement on the three hydronic-family target testcases.}
   \label{fig:stage_abc_gain}
+
+{\footnotesize\itshape Data: \texttt{reports/\allowbreak block3\_\allowbreak transfer\_\allowbreak matrix.csv}}
 \end{figure}
 
 
@@ -230,6 +240,8 @@ hierarchy & Verdict is monotone in recalibration depth. & SUPPORTED & Controller
   \includegraphics[width=0.88\linewidth]{final17_fig17_hypothesis_closure_matrix.pdf}
   \caption{Hypothesis closure matrix: Block 3 supports surrogate-side transferability but falsifies deployment-ready frozen-controller transfer.}
   \label{fig:hypothesis_closure}
+
+{\footnotesize\itshape Data: \texttt{reports/\allowbreak block3\_\allowbreak transfer\_\allowbreak matrix.csv}}
 \end{figure}
 
 \subsection{Pre-specified predictions versus outcomes}

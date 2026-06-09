@@ -79,6 +79,69 @@ def extract_supp_tables(body: str):
     return body, moved
 
 
+# Per-figure raw-data provenance, printed as a small line under each figure
+# caption ("Data: <path>"). Paths point into the released reports//outputs/ trees
+# (file where unambiguous, directory/glob where a figure aggregates several runs).
+# None marks a hand-drawn schematic with no underlying dataset.
+FIG_DATA = {
+    # ---- Block 1 ----
+    "fig:block1-chain": None,
+    "fig:surrogate-design": None,
+    "fig:v3-learning-curve": "outputs/surrogate_v2/train_history_v2.csv",
+    "fig:physics": "outputs/surrogate_v35_rollout_prepared_15min_power_head_only/calibrated_v35/all_full_rollouts.csv",
+    "fig:stage-abc": "outputs/surrogate_v35_inverse_boptest_15min_episodeaware/stage_b_history_v35.csv",
+    "fig:predictive-validity": "outputs/surrogate_v35_rollout_prepared_15min_episodeaware/calibrated_v35/window_errors.csv",
+    "fig:episode-replicability": "outputs/surrogate_v35_rollout_prepared_15min_episodeaware/calibrated_v35/episode_summary.csv",
+    "fig:matched": "reports/block1_corpus_matched_comparison.csv",
+    "fig:speed": "reports/speed_benchmark_table.csv",
+    # ---- Block 2 ----
+    "fig:block2_pipeline": None,
+    "fig:hybrid_reward": None,
+    "fig:hdrl_arch": None,
+    "fig:morl_pipeline": None,
+    "fig:live_kpi": "outputs/block2_*/summary.csv",
+    "fig:ms_decomp": "outputs/block2_*/summary.csv",
+    "fig:closed_loop_traces": "outputs/block2_thermostatic_hybrid_v3_v35_l010/",
+    "fig:action_phase": "outputs/block2_thermostatic_hybrid_v3_v35_l010/",
+    "fig:warmstart": "outputs/block2_thermostatic_warmstart_utility/comparison_summary.csv",
+    "fig:transfer_gap": "reports/hybrid_transfer_comparison.csv",
+    "fig:hdrl_sweep": "reports/block2_hdrl_lambda_sweep_summary.csv",
+    "fig:morl5d17d": "reports/block2_morl_5d_reconstructed_comparison.csv",
+    "fig:morl_pareto": "reports/morl_pareto_front_table.csv",
+    "fig:morl_heatmap": "reports/morl_canonical_seedfix_yearly_summary.csv",
+    "fig:seasonal_falsification": "reports/morl_canonical_seedfix_yearly_per_seed.csv",
+    # ---- Block 3 ----
+    "fig:protocol": None,
+    "fig:adapter": None,
+    "fig:topology": None,
+    "fig:heatmap": "reports/block3_transfer_matrix.csv",
+    "fig:deployment_plane": "reports/block3_transfer_matrix.csv",
+    "fig:controller_bar": "reports/block3_transfer_matrix.csv",
+    "fig:regime_progression": "reports/block3_bestest_hydronic_heat_pump_transfer_summary.csv",
+    "fig:stage_abc_gain": "reports/block3_transfer_matrix.csv",
+    "fig:czon_hypothesis": "reports/block3_transfer_matrix.csv",
+    "fig:hypothesis_closure": "reports/block3_transfer_matrix.csv",
+}
+
+
+def annotate_figures(text: str) -> str:
+    """Insert a small 'Data: <path>' provenance line under each figure caption."""
+
+    def repl(m):
+        blk = m.group(0)
+        lab = re.search(r"\\label\{([^}]+)\}", blk)
+        if not lab or lab.group(1) not in FIG_DATA:
+            return blk
+        src = FIG_DATA[lab.group(1)]
+        if src:
+            note = r"{\footnotesize\itshape Data: " + _artefact_cell(src) + "}"
+        else:
+            note = r"{\footnotesize\itshape Schematic; not derived from a dataset.}"
+        return blk.replace(r"\end{figure}", "\n" + note + "\n\\end{figure}")
+
+    return re.sub(r"\\begin\{figure\}.*?\\end\{figure\}", repl, text, flags=re.DOTALL)
+
+
 def build_supplementary_tables(relocated) -> str:
     if not relocated:
         return ""
@@ -944,6 +1007,7 @@ def main() -> None:
     for i, (section_dir, _) in enumerate(SECTIONS, start=1):
         d = DOCS / section_dir
         body = header + strip_to_body((d / "main.tex").read_text(encoding="utf-8"))
+        body = annotate_figures(body)  # add 'Data: <path>' provenance under figures
         (d / "section_body.tex").write_text(body, encoding="utf-8")  # full copy
         body_combined, moved = extract_supp_tables(body)
         relocated.extend(moved)

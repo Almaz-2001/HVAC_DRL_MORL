@@ -136,6 +136,8 @@ For the canonical thermostatic hybrid, $\lambda_T=0.10$ and $\lambda_P=5.0\times
   \includegraphics[width=0.90\linewidth]{fig_block2_reward_shaping.pdf}
   \caption{Hybrid reward-shaping mechanism. v3 supplies rollout dynamics; frozen v3.5 supplies a disagreement penalty on the same state-action transition.}
   \label{fig:hybrid_reward}
+
+{\footnotesize\itshape Schematic; not derived from a dataset.}
 \end{figure}
 
 \subsection{Thermostatic PPO: direct-v3.5 failure and hybrid success (roadmap \S4--\S5)}
@@ -166,6 +168,8 @@ hybrid $\lambda_T=0.10$ & typical & 0.041 & 2.38 & 0.633 & 352.8 \\
   \includegraphics[width=0.96\linewidth]{final17_fig06_live_boptest_controller_comparison.pdf}
   \caption{Live BOPTEST KPI comparison for pure v3, direct v3.5, and hybrid PPO. Direct v3.5 is a negative control: higher predictive fidelity does not imply a useful RL training environment.}
   \label{fig:live_kpi}
+
+{\footnotesize\itshape Data: \texttt{outputs/\allowbreak block2\_\allowbreak */\allowbreak summary.csv}}
 \end{figure}
 
 \paragraph{Reading $m_s$ step by step.} The decomposition $m_s=r_{\mathrm{time}}+r_{\mathrm{sev}}$ (Eq.~\ref{eq:ms}) exposes the failure structure directly (Figure~\ref{fig:ms_decomp}). Direct v3.5's peak $m_s=1.046$ is dominated by $r_{\mathrm{time}}\approx 0.77$ (out of band 77\% of the time) plus a large worst-case severity $r_{\mathrm{sev}}\approx 0.28$; the hybrid's peak $m_s=0.087$ is almost entirely a small $r_{\mathrm{sev}}$ with $r_{\mathrm{time}}<0.05$. The hybrid therefore does not merely lower the average error --- it removes the sustained band departures that dominate the direct-v3.5 score.
@@ -175,6 +179,8 @@ hybrid $\lambda_T=0.10$ & typical & 0.041 & 2.38 & 0.633 & 352.8 \\
   \includegraphics[width=0.82\linewidth]{fig_block2_ms_decomposition.pdf}
   \caption{Data-driven decomposition $m_s=r_{\mathrm{time}}+r_{\mathrm{sev}}$ on the live BOPTEST windows. Direct v3.5 fails through sustained violation ($r_{\mathrm{time}}$); pure v3 and the hybrid keep both terms small.}
   \label{fig:ms_decomp}
+
+{\footnotesize\itshape Data: \texttt{outputs/\allowbreak block2\_\allowbreak */\allowbreak summary.csv}}
 \end{figure}
 
 The time-series and action diagnostics in Figures~\ref{fig:closed_loop_traces} and~\suppref{S8} explain the mechanism. Direct v3.5 learns a bang-bang-like control law that drives the live simulator outside the comfort band; in phase space it places extreme actions in temperature-error regimes the live building does not support. We note explicitly that this destabilization mechanism is \emph{hypothesized} (higher advantage-estimator variance under sharper surrogate predictions, and/or overfitting to sub-step physical structure unusable at the 15-min cadence) and is not directly measured here; discriminating the two is deferred to future work.
@@ -184,6 +190,8 @@ The time-series and action diagnostics in Figures~\ref{fig:closed_loop_traces} a
   \includegraphics[width=0.96\linewidth]{block2_q1_polish_closed_loop_disturbance.pdf}
   \caption{Closed-loop BOPTEST traces with ambient disturbance, comfort band, and physical actuator limits.}
   \label{fig:closed_loop_traces}
+
+{\footnotesize\itshape Data: \texttt{outputs/\allowbreak block2\_\allowbreak thermostatic\_\allowbreak hybrid\_\allowbreak v3\_\allowbreak v35\_\allowbreak l010/\allowbreak }}
 \end{figure}
 
 
@@ -203,6 +211,8 @@ A second negative control tests whether v3.5 is useful as a policy \emph{initial
   \includegraphics[width=0.82\linewidth]{block2_warmstart_negative_eval_kpis.pdf}
   \caption{Warm-start negative control. Pretraining on direct v3.5 and then fine-tuning on the hybrid backend is inferior to training the hybrid policy from scratch.}
   \label{fig:warmstart}
+
+{\footnotesize\itshape Data: \texttt{outputs/\allowbreak block2\_\allowbreak thermostatic\_\allowbreak warmstart\_\allowbreak utility/\allowbreak comparison\_\allowbreak summary.csv}}
 \end{figure}
 
 \subsection{Transfer-gap diagnostics (roadmap \S5.5)}
@@ -250,6 +260,8 @@ HDRL here is a \emph{seasonal} hierarchy. A high-level seasonal selector routes 
   \includegraphics[width=0.96\linewidth]{fig_block2_hdrl_architecture.pdf}
   \caption{HDRL architecture: a high-level seasonal gate $k(t)$ routes the 17D observation to one of two low-level PPO setpoint specialists (winter / summer). Because the low level is already comfort-aware, the v3.5 temperature censor over-regularizes it.}
   \label{fig:hdrl_arch}
+
+{\footnotesize\itshape Schematic; not derived from a dataset.}
 \end{figure}
 
 The HDRL experiment asks whether the thermostatic hybrid setting $\lambda_T=0.10$ transfers to this hierarchical controller. It does not (Table~\ref{tab:hdrl}). The mechanism is over-regularization: because each seasonal specialist already encodes comfort-aware structure (season-tuned shaping plus the high-level gate), the additional v3.5 temperature-disagreement censor constrains an already comfort-aware low-level loop, biasing it toward conservative under-heating; performance therefore degrades monotonically with $\lambda_T$, and the correct transfer keeps only the power channel ($\lambda_T=0$). HDRL performs best at $\lambda_T=0.00$ on both windows and degrades monotonically as temperature-disagreement regularization is increased. This shows the correct physical-censor strength depends on the controller family and its action decomposition, not on a universal weight.
@@ -282,6 +294,8 @@ $\lambda_T$ & Scenario & $m_s$ & Violation (\%) & RMSE$_T$ ($^\circ$C) & Energy 
   \includegraphics[width=0.88\linewidth]{block2_hdrl_lambda_sweep_sensitivity.pdf}
   \caption{HDRL $\lambda_T$ sensitivity. The thermostatic regularization weight does not transfer; the best HDRL policy uses no temperature-disagreement term.}
   \label{fig:hdrl_sweep}
+
+{\footnotesize\itshape Data: \texttt{reports/\allowbreak block2\_\allowbreak hdrl\_\allowbreak lambda\_\allowbreak sweep\_\allowbreak summary.csv}}
 \end{figure}
 
 \subsection{MORL observation ablation: 5D failure to 17D success (roadmap \S6.5--\S7)}
@@ -312,6 +326,8 @@ MORL 17D power-only (canonical) & 17 & 0.720 & 4.9 & 0.099 \\
   \includegraphics[width=0.84\linewidth]{final17_fig09_morl_5d_failure_17d_success.pdf}
   \caption{MORL 5D failure and 17D recovery. The observation interface, not only the scalarized reward, determines whether MORL is viable.}
   \label{fig:morl5d17d}
+
+{\footnotesize\itshape Data: \texttt{reports/\allowbreak block2\_\allowbreak morl\_\allowbreak 5d\_\allowbreak reconstructed\_\allowbreak comparison.csv}}
 \end{figure}
 
 \paragraph{Power-only backend and claim discipline (roadmap \S7, \S9, \S13).} MORL inherits the controller-family lesson of the HDRL sweep: it runs on the \emph{power-only} hybrid backend ($\lambda_T=0$, $\lambda_P=5\times10^{-5}$), because temperature-disagreement censoring hurts non-thermostatic families. The MORL claim is deliberately narrow and audit-protected. Before the seed expansion, commit \texttt{93df9b3} froze the canonical plan and the seed-45/46 falsification predictions; after $N=5$, commit \texttt{62dc859} appended the observed variance without rewriting the pre-specification, and a replay test confirmed bit-identical BOPTEST trajectories for a fixed checkpoint (so the spread is training stochasticity, not simulator noise). The defensible reading is therefore: under the fixed 17D power-only backend, MORL is substantially stronger than the reconstructed 5D interface and yields a usable comfort--energy Pareto structure, but the $N=5$ canonical variance (CV $0.42$--$0.61$) is too high for a deployment-stability claim --- the single-seed canonical is the best of five, not the median.
@@ -345,6 +361,8 @@ Preference / statistic & RMSE$_T$ ($^\circ$C) & Violation (\%) & $m_s$ & Interpr
   \includegraphics[width=0.86\linewidth]{block2_q1_polish_morl_pareto_ellipses.pdf}
   \caption{MORL comfort--energy Pareto front with N=5 confidence ellipses for the two canonical points. Non-canonical points are seed-42 only.}
   \label{fig:morl_pareto}
+
+{\footnotesize\itshape Data: \texttt{reports/\allowbreak morl\_\allowbreak pareto\_\allowbreak front\_\allowbreak table.csv}}
 \end{figure}
 
 

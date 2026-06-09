@@ -176,6 +176,8 @@ Beyond the point estimate, two complementary uncertainty checks apply. The optim
   \includegraphics[width=\linewidth]{\detokenize{rie_fig03_stage_abc_diagnostics.pdf}}
   \caption{Stage A/B/C calibration diagnostics. Panel (a) shows physical-parameter convergence inside the prior band; panel (b) shows the measured improvement in temperature and power fidelity.}
   \label{fig:stage-abc}
+
+{\footnotesize\itshape Data: \texttt{outputs/\allowbreak surrogate\_\allowbreak v35\_\allowbreak inverse\_\allowbreak boptest\_\allowbreak 15min\_\allowbreak episodeaware/\allowbreak stage\_\allowbreak b\_\allowbreak history\_\allowbreak v35.csv}}
 \end{figure}
 
 \begin{table}[H]
@@ -285,6 +287,8 @@ calibrated v3.5 & 900 & FULL (Stage A + B + C, C\_zon = 4.413e5 J/K) & 0.644 \\
   \includegraphics[width=\linewidth]{\detokenize{rie_fig05_matched_corpus_attribution.pdf}}
   \caption{Matched-corpus attribution. The v3-to-v3.5 gain is split into the 15-minute corpus contribution and the Stage A/B/C calibration contribution.}
   \label{fig:matched}
+
+{\footnotesize\itshape Data: \texttt{reports/\allowbreak block1\_\allowbreak corpus\_\allowbreak matched\_\allowbreak comparison.csv}}
 \end{figure}
 
 The attribution is an additive split of the legacy-v3-to-calibrated-v3.5 gap,
@@ -306,6 +310,8 @@ The final Block 1 roadmap command builds the speed benchmark. The benchmark comp
   \includegraphics[width=0.82\linewidth]{\detokenize{rie_fig06_runtime_feasibility.pdf}}
   \caption{Runtime feasibility benchmark. The hybrid reference is included only to demonstrate downstream feasibility; controller utility is evaluated in Block 2.}
   \label{fig:speed}
+
+{\footnotesize\itshape Data: \texttt{reports/\allowbreak speed\_\allowbreak benchmark\_\allowbreak table.csv}}
 \end{figure}
 
 \begin{table}[H]
