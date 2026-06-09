@@ -692,12 +692,27 @@ channel is reproduced less accurately and we treat it as a known limitation rath
 than a validated output. (iii)~The mechanism of the fidelity--utility paradox is
 established \emph{in direction} --- we observe action saturation and attribute it
 to policy-gradient exploitation of flat-gradient regions --- but a formal
-loss-landscape analysis is left to future work. (iv)~All controller scores are
-means over $N=5$ seeds; the seed-to-seed variance is reported honestly and is
-non-negligible, so the controller rankings should be read together with that
-spread. (v)~Evaluation is entirely in simulation: no live-building deployment is
-claimed, and the sim-to-real gap beyond BOPTEST remains open. These bounds motivate
-the Block~4 directions noted in the conclusion.
+loss-landscape analysis is left to future work. (iv)~Statistical support is uneven
+across controller families: the MORL results are reported over $N=5$ seeds with
+explicit standard deviation and a 95\% confidence interval (for the neutral
+preference, $m_s = 0.187\pm0.078$, CI $[0.090,0.284]$, whose entire interval lies
+far below the PI score of $0.910$, so the improvement over PI holds across all five
+seeds), whereas the thermostatic and hierarchical controllers are single
+deterministic-seed evaluations on fixed 14-day targeted windows, for which
+per-controller confidence intervals are accordingly not reported. (v)~The only
+baseline is BOPTEST's built-in PI controller (its reference controller); this study
+tests \emph{surrogate training utility}, not whether the controllers beat a tuned
+MPC, rule-based controller, or ASHRAE Guideline~36 sequence, and that
+stronger-baseline comparison is out of the present scope. (vi)~The censor weight for
+the MORL controller ($\lambda_{\mathrm{temp}}=0$) is adopted by analogy with the
+hierarchical-controller sweep rather than from an independent MORL sweep, so its
+optimality for MORL is asserted, not demonstrated. (vii)~The observation interface
+and the surrogate backend are not fully crossed: we report the MORL $5$D-versus-$17$D
+ablation, but not every backend$\times$observation combination, so the attribution
+between interface width and backend choice is only partial. (viii)~Evaluation is
+entirely in simulation: no live-building deployment is claimed, and the sim-to-real
+gap beyond BOPTEST remains open. These bounds motivate the Block~4 directions noted
+in the conclusion.
 
 \section{Conclusion}\label{sec:conclusion}
 We asked whether a surrogate with higher predictive fidelity is automatically a
