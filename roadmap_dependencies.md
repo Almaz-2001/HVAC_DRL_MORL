@@ -16,10 +16,11 @@ means the section is independent of compute closure.
 |---------|----------------------------------------------------------|---------------------------------------------|------------------------------|
 | 1       | Block 1: v3 Direct-TSup Surrogate                        | --                                          | 2, 3, 4, 5, 6, 8, 9, 15      |
 | 2       | Block 1: v3.5 Inverse Calibration                        | 1 (semantic; not strictly required)         | 2.5, 3, 4.5, 5, 5.5, 6, 8, 9, 15 |
-| 2.5     | Block 1: Corpus-Matched v3 Retraining (reviewer mitigation) | 1, 2                                     | 3 (reviewer-mitigation row in §5.3) |
+| 2.5     | Block 1: Corpus-Matched v3 Retraining (reviewer mitigation) | 1, 2                                     | 3 (reviewer-mitigation row in §5.3), 4.6 |
 | 3       | Block 1: Article-Facing Fidelity Tables and Figures      | 1, 2, 2.5 (optional reviewer-mitigation row) | 11                           |
 | 4       | Block 2: First Control Baseline -- Pure v3 Thermostatic PPO | 1                                       | 4.5, 5.5, 11                 |
 | 4.5     | Block 2 Negative Control: Direct v3.5 Warm-Start         | 2, 4                                        | 5, 5.5, 11                   |
+| 4.6     | Block 2: Corpus-Matched v3 Closed-Loop Control Utility (reviewer mitigation) | 2.5, 4                  | 11 (reviewer-mitigation row in §8.5) |
 | 5       | Block 2: Thermostatic Hybrid Sweep                       | 1, 2, 4.5                                   | 5.5, 11, 15                  |
 | 5.5     | Block 1.3 / Block 2 Transfer Diagnostics                 | 2, 4, 4.5, 5                                | 11                           |
 | 6       | Block 2: HDRL Sweep                                      | 1, 2                                        | 11                           |
@@ -34,7 +35,7 @@ means the section is independent of compute closure.
 
 | Section | Title                                                    | Reads from                                  | Produces outputs consumed by |
 |---------|----------------------------------------------------------|---------------------------------------------|------------------------------|
-| 11      | Rebuild Block 2 Tables and Figures                       | 3, 4, 4.5, 5, 5.5, 6, 6.5, 8, 9, 10         | 12                           |
+| 11      | Rebuild Block 2 Tables and Figures                       | 3, 4, 4.5, 4.6, 5, 5.5, 6, 6.5, 8, 9, 10    | 12                           |
 | 12      | Rebuild the Word Article Skeleton                        | 11                                          | (final manuscript)           |
 | 17      | Paper Manuscript Build Path + Artifact Consolidation     | 11, 12, 15                                  | `paper_artifacts/` canonical paper package |
 
@@ -112,6 +113,16 @@ LaTeX-facing.
   pre-registration), and the Block 2 frozen models referenced in the
   manifest (Sections 5 and 9). All three must be in place before any
   Section 15 cell runs.
+- **Section 4.6 is a closed-loop reviewer mitigation, distinct from Section 2.5**:
+  Section 2.5 retrains v3 on the matched 15-min corpus and validates it only as a
+  *predictor* (rollout RMSE). Section 4.6 takes that same matched checkpoint and runs
+  it through the full PPO *control* pipeline with the identical recipe as the canonical
+  pure-v3 baseline (Section 4), then benchmarks it live on the two targeted windows.
+  It answers the downstream-utility question that 2.5's predictor metric cannot: it
+  isolates whether v3's training utility is its black-box smoothness or the train/control
+  timestep mismatch. It produces only `reports/block2_v3_15min_closed_loop_comparison.*`
+  and `outputs/bestest_air_pure_v3_15min/`; it does not touch any canonical downstream
+  artifact (the PPO families still use the hourly v3).
 - **Section 17 is the only paper-facing artifact consolidation step**:
   raw model/run artifacts remain in `outputs/` (ignored by Git), compact
   evidence is written to `reports/*.csv`, and the GitHub-facing package is
