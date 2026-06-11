@@ -815,7 +815,7 @@ than a validated output. (iii)~Two caveats bound the core paradox claim. First, 
 policy-gradient exploitation of flat-gradient regions, but a formal loss-landscape
 analysis is future work; correspondingly, the paradox is demonstrated for PPO under
 a matched training configuration --- we did not separately re-tune PPO for the v3.5
-environment or test off-policy algorithms (e.g.\ SAC, TD3), so its generality across
+environment or test off-policy algorithms (e.g.\ SAC~\citep{Haarnoja2018SAC}, TD3), so its generality across
 RL algorithms is open. Second, the black-box v3 is trained at a one-hour step but
 used at the fifteen-minute control step, raising the question of whether v3's
 \emph{training} utility stems from its black-box nature or partly from this timestep
