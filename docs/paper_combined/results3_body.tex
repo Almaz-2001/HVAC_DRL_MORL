@@ -39,11 +39,11 @@ The adapter maps the frozen source policy output to the target actuator interfac
   T^{\mathrm{sup}}_t = 18 + \tfrac{a_t+1}{2}(35-18),
   \label{eq:adapter}
 \end{equation}
-where $\mathcal{A}_{k}$ is the pre-specified adapter for testcase $k$, $a_t\in[-1,1]$ is the frozen policy output, and $y_t$ are available BOPTEST measurements used by rule-based adapter logic. Adapter smoke tests verify that low/high overrides produce directionally valid heating before any yearly run. Figure~\suppref{S14} shows the adapter-mediated transfer: one frozen controller drives three different actuator interfaces through the per-testcase adapters, with per-testcase controller verdicts. The recalibration regimes (Table~\suppref{S16}) keep the controller frozen and vary only how much of the surrogate adapts.
+where $\mathcal{A}_{k}$ is the pre-specified adapter for testcase $k$, $a_t\in[-1,1]$ is the frozen policy output, and $y_t$ are available BOPTEST measurements used by rule-based adapter logic. Adapter smoke tests verify that low/high overrides produce directionally valid heating before any yearly run. Figure~\suppref{S21} shows the adapter-mediated transfer: one frozen controller drives three different actuator interfaces through the per-testcase adapters, with per-testcase controller verdicts. The recalibration regimes (Table~\suppref{S24}) keep the controller frozen and vary only how much of the surrogate adapts.
 
 
 
-Concretely, each adapter first maps the policy command to a normalized heat-intensity $h=\mathrm{clip}\!\big((T^{\mathrm{sup}}_t-18)/17,\,0,\,1\big)$ and then drives the testcase's pre-specified BOPTEST override inputs (Table~\suppref{S15}). The mappings were finalized and committed before any control run (audit anchors \texttt{eb7091e} / \texttt{46fbaa9} / \texttt{645626e}), so the actuator interface cannot be tuned post hoc.
+Concretely, each adapter first maps the policy command to a normalized heat-intensity $h=\mathrm{clip}\!\big((T^{\mathrm{sup}}_t-18)/17,\,0,\,1\big)$ and then drives the testcase's pre-specified BOPTEST override inputs (Table~\suppref{S23}). The mappings were finalized and committed before any control run (audit anchors \texttt{eb7091e} / \texttt{46fbaa9} / \texttt{645626e}), so the actuator interface cannot be tuned post hoc.
 
 
 
@@ -146,18 +146,11 @@ commercial hydronic & 0.431 & 0.628 & 0.785 & PASS$^\dagger$ & 35.3 & 1.952 & 0.
 {\footnotesize\itshape Data: \texttt{reports/\allowbreak block3\_\allowbreak transfer\_\allowbreak matrix.csv}}
 \end{figure}
 
-\begin{figure}[pos={!ht}]
-  \centering
-  \includegraphics[width=0.80\linewidth]{fig_block3_controller_bar.pdf}
-  \caption{Controller-side transfer: frozen-hybrid $m_s^{\mathrm{RL}}$ against the PI baseline $m_s^{\mathrm{PI}}$ and the pre-specified threshold $\tau_k=1.25\,m_s^{\mathrm{PI}}$ (dashed). The two residential cases exceed the threshold (FAIL); the commercial case is below it (PASS, with the separate energy caveat).}
-  \label{fig:controller_bar}
 
-{\footnotesize\itshape Data: \texttt{reports/\allowbreak block3\_\allowbreak transfer\_\allowbreak matrix.csv}}
-\end{figure}
 
 \subsection{Primary testcase: \texttt{bestest\_hydronic\_heat\_pump}}
 
-The primary testcase was pre-specified as the easiest target (closest to \texttt{bestest\_air} in envelope class, but with a hydronic heat-pump actuator). The yearly PI baseline is $m_s=0.464$ with threshold $\tau=0.579$. The frozen hybrid controller obtains $m_s=0.665$ with energy $-7.3\%$ relative to PI, so the controller verdict is FAIL: the policy saves energy but violates comfort too often. Full Stage A/B/C recalibration instead succeeds (Table~\suppref{S17}): RMSE$_T=0.565\,^\circ$C and $C_{\mathrm{zon}}=8.348\times10^5$ J/K $=1.892\times$ \texttt{bestest\_air}. The component-level split is explicit: surrogate recalibration transfers; the frozen controller does not.
+The primary testcase was pre-specified as the easiest target (closest to \texttt{bestest\_air} in envelope class, but with a hydronic heat-pump actuator). The yearly PI baseline is $m_s=0.464$ with threshold $\tau=0.579$. The frozen hybrid controller obtains $m_s=0.665$ with energy $-7.3\%$ relative to PI, so the controller verdict is FAIL: the policy saves energy but violates comfort too often. Full Stage A/B/C recalibration instead succeeds (Table~\suppref{S25}): RMSE$_T=0.565\,^\circ$C and $C_{\mathrm{zon}}=8.348\times10^5$ J/K $=1.892\times$ \texttt{bestest\_air}. The component-level split is explicit: surrogate recalibration transfers; the frozen controller does not.
 
 
 
@@ -174,7 +167,7 @@ The stretch testcase was pre-specified as the hardest, most informative falsific
 \subsection{Surrogate-side transfer and $C_{\mathrm{zon}}$ consistency}
 \label{ssec:czon}
 
-Full Stage A/B/C improves target rollout RMSE on all three testcases (gains $60.2\%$, $87.4\%$, $87.8\%$), supporting the weak surrogate-side transfer hypothesis on $N=3$ (Figure~\ref{fig:stage_abc_gain}). The strongest physical finding is the consistency of the re-identified capacitance: the three hydronic testcases cluster tightly around $1.918\times$ the \texttt{bestest\_air} value (Table~\ref{tab:czon}),
+Full Stage A/B/C improves target rollout RMSE on all three testcases (gains $60.2\%$, $87.4\%$, $87.8\%$), supporting the weak surrogate-side transfer hypothesis on $N=3$ (Figure~\suppref{S24}). The strongest physical finding is the consistency of the re-identified capacitance: the three hydronic testcases cluster tightly around $1.918\times$ the \texttt{bestest\_air} value (Table~\ref{tab:czon}),
 \begin{equation}
   \rho_C = \{1.892,\,1.954,\,1.909\},
   \qquad
@@ -202,14 +195,7 @@ hydronic-family mean $\pm$ std & --- & 1.918 $\pm$ 0.032 \\
 \end{tabular}
 \end{table}
 
-\begin{figure}[pos={!ht}]
-  \centering
-  \includegraphics[width=0.84\linewidth]{final17_fig15_full_stage_transfer_rmse_improvement.pdf}
-  \caption{Full Stage A/B/C transfer RMSE improvement on the three hydronic-family target testcases.}
-  \label{fig:stage_abc_gain}
 
-{\footnotesize\itshape Data: \texttt{reports/\allowbreak block3\_\allowbreak transfer\_\allowbreak matrix.csv}}
-\end{figure}
 
 
 
@@ -246,6 +232,6 @@ hierarchy & Verdict is monotone in recalibration depth. & SUPPORTED & Controller
 
 \subsection{Pre-specified predictions versus outcomes}
 
-The stretch testcase carried numerical a-priori predictions (audit anchor \texttt{645626e}, logged before any commercial-hydronic run). Reporting the predicted-vs-observed mapping is the central Popperian discipline of Block 3 (Table~\suppref{S18}): the evidence moved the interpretation toward lower-prior hypotheses rather than confirming only what was expected. Two predictions were falsified (the mode=none controller FAIL, and the scale-dependent $C_{\mathrm{zon}}$ hypothesis) and three were confirmed.
+The stretch testcase carried numerical a-priori predictions (audit anchor \texttt{645626e}, logged before any commercial-hydronic run). Reporting the predicted-vs-observed mapping is the central Popperian discipline of Block 3 (Table~\suppref{S26}): the evidence moved the interpretation toward lower-prior hypotheses rather than confirming only what was expected. Two predictions were falsified (the mode=none controller FAIL, and the scale-dependent $C_{\mathrm{zon}}$ hypothesis) and three were confirmed.
 
 

@@ -59,38 +59,11 @@ Interface invariance & All four backends obey \eqref{eq:tsup-signature}; only th
 
 The v3 surrogate is a compact control-oriented direct-\Tsupply{} model. Its role is not to be the most accurate long-horizon forecaster; its role is to provide smooth and fast rollout dynamics for downstream PPO experiments. In contrast, v3.5 is a physics-informed extension whose Stage B parameter is interpretable as the zone thermal capacitance \(\Czon\); embedding thermodynamic structure directly into the learned model follows the physics-informed reinforcement-learning paradigm~\citep{Hedayat2025PINN}.
 
-\begin{table}[pos={!ht}]
-\centering
-\small
-\caption{Block 1 data corpora referenced by the roadmap.}
-\label{tab:block1-corpora}
-\begin{tabularx}{\linewidth}{lrrXX}
-\toprule
-Dataset & Rows & Step (s) & Policy mix & Scenario mix \\
-\midrule
-v3 canonical corpus & 51,200 & 3600 & cool, heat, mixed, random & autumn, spring, summer, winter \\
-v3.5 calibration corpus & 10,744 & 900 & hdrl, thermostatic & peak\_heat\_window, typical\_heat\_window \\
-15-min exploration corpus & 48,384 & 900 & cool, heat, mixed, pulse, random, thermostatic\_noise & autumn, spring, summer, winter \\
-\bottomrule
-\end{tabularx}
-\end{table}
 
 
 
-\begin{table}[pos={!ht}]
-\centering
-\scriptsize
-\caption{Architecture and calibration summary for the two Block 1 surrogate roles.}
-\label{tab:architecture-summary}
-\begin{tabularx}{\linewidth}{lXXXX}
-\toprule
-Surrogate & Role & Architecture / physics & Corpus & Training or calibration protocol \\
-\midrule
-v3 direct-TSup & Fast control-oriented rollout dynamics & 8D dual-head MLP: HeatFlowNetV2 (7,105 params, LayerNorm/Tanh/residual), PowerNetV2 (1,377 params, Tanh/Softplus); total 8,482 params & 51,200 hourly transitions & AdamW, lr=1e-3, batch=256, epochs=500 \\
-v3.5 calibrated & Physics-informed predictive twin & RC-NeuralODE backbone with positive C\_zon reparameterization and residual temperature/power heads & 10,744 prepared 15-min transitions & Stage A latency/bias; Stage B 120 epochs; Stage C 60+80 epochs; C\_zon=4.413e5 J/K \\
-\bottomrule
-\end{tabularx}
-\end{table}
+
+
 
 The v3 transition model is
 \begin{align}
@@ -113,7 +86,7 @@ The canonical v3 checkpoint is the early-stopped optimum of a 215-epoch supervis
 
 
 
-The v3 input vector is intentionally low-dimensional. It keeps only the thermal state, outdoor disturbance, cyclic time embedding, and direct-\Tsupply{} action coordinates required by the control problem. The action coordinate \(a_0\in[-1,1]\) is mapped to an 18--35~$^\circ$C supply-temperature command --- a direct supply-temperature setpoint interface of the kind shown effective for DRL-based room HVAC control~\citep{Sun2024DirectTSup} --- and the power head is constrained through a non-negative output transform. These choices make v3 a control-oriented surrogate rather than a generic black-box forecaster. Its full hyperparameters and layer shapes are listed in Supplementary Table~\suppref{S4}.
+The v3 input vector is intentionally low-dimensional. It keeps only the thermal state, outdoor disturbance, cyclic time embedding, and direct-\Tsupply{} action coordinates required by the control problem. The action coordinate \(a_0\in[-1,1]\) is mapped to an 18--35~$^\circ$C supply-temperature command --- a direct supply-temperature setpoint interface of the kind shown effective for DRL-based room HVAC control~\citep{Sun2024DirectTSup} --- and the power head is constrained through a non-negative output transform. These choices make v3 a control-oriented surrogate rather than a generic black-box forecaster. Its full hyperparameters and layer shapes are listed in Supplementary Table~\suppref{S6}.
 
 
 
@@ -154,7 +127,7 @@ Formally, Stage B is a maximum-a-posteriori estimate of the single physical scal
   + \frac{1}{2\sigma_p^2}\big(C-C^{\mathrm{prior}}\big)^2,
   \label{eq:stageb-map}
 \end{equation}
-where \(\mathcal{E}\) is the excitation subset and the quadratic term is a weak Gaussian prior centred on \(C^{\mathrm{prior}}\). The excitation filter is justified by identifiability: in quasi-steady operation the sensitivity \(\partial\That/\partial C\to 0\), so steady windows carry almost no information about \(\Czon\) and would merely pull the estimate back to the prior. Restricting \(\mathcal{E}\) to the top-excitation transients (403 of 8058 rows) concentrates the identification where \(\partial\That/\partial C\) is large, which is why the mean excitation score on \(\mathcal{E}\) is several times the corpus mean (Table~\suppref{S7}).
+where \(\mathcal{E}\) is the excitation subset and the quadratic term is a weak Gaussian prior centred on \(C^{\mathrm{prior}}\). The excitation filter is justified by identifiability: in quasi-steady operation the sensitivity \(\partial\That/\partial C\to 0\), so steady windows carry almost no information about \(\Czon\) and would merely pull the estimate back to the prior. Restricting \(\mathcal{E}\) to the top-excitation transients (403 of 8058 rows) concentrates the identification where \(\partial\That/\partial C\) is large, which is why the mean excitation score on \(\mathcal{E}\) is several times the corpus mean (Table~\suppref{S9}).
 
 The intermediate Stage~B estimate is \(\Czon=4.413\times10^5~\mathrm{J/K}\), and the relative update over the physical prior is
 \begin{equation}
@@ -180,22 +153,7 @@ Beyond the point estimate, two complementary uncertainty checks apply. The optim
 {\footnotesize\itshape Data: \texttt{outputs/\allowbreak surrogate\_\allowbreak v35\_\allowbreak inverse\_\allowbreak boptest\_\allowbreak 15min\_\allowbreak episodeaware/\allowbreak stage\_\allowbreak b\_\allowbreak history\_\allowbreak v35.csv}}
 \end{figure}
 
-\begin{table}[pos={!ht}]
-\centering
-\small
-\caption{Stage A/B/C calibration summary from the canonical JSON and rollout artifacts.}
-\label{tab:stage-abc}
-\begin{tabular}{lrrr}
-\toprule
-Metric & Before & After & Relative change \\
-\midrule
-1-step RMSE$_T$ (\si{\celsius}) & 0.384 & 0.235 & -38.8\% \\
-24 h rollout RMSE$_T$ (\si{\celsius}) & 1.466 & 0.644 & -56.1\% \\
-Power MAE (\si{\watt}) & 808 & 482 & -40.3\% \\
-$\Czon$ ($\times 10^5$ J/K) & 4.200 & 4.413 & +5.1\% \\
-\bottomrule
-\end{tabular}
-\end{table}
+
 
 \begin{table}[pos={!ht}]
 \centering
@@ -305,31 +263,9 @@ which holds exactly because the matched-architecture path is constructed to be a
 
 The final Block 1 roadmap command builds the speed benchmark. The benchmark compares the same BOPTEST RTE HTTP loop used by the paper against local surrogate stepping under a 900 s control step. The result is not a controller claim; it only establishes feasibility for downstream policy optimization.
 
-\begin{figure}[pos={!ht}]
-  \centering
-  \includegraphics[width=0.82\linewidth]{\detokenize{rie_fig06_runtime_feasibility.pdf}}
-  \caption{Runtime feasibility benchmark. The hybrid reference is included only to demonstrate downstream feasibility; controller utility is evaluated in Block 2.}
-  \label{fig:speed}
 
-{\footnotesize\itshape Data: \texttt{reports/\allowbreak speed\_\allowbreak benchmark\_\allowbreak table.csv}}
-\end{figure}
 
-\begin{table}[pos={!ht}]
-\centering
-\small
-\caption{Backend throughput under the 900 s control protocol from the speed-benchmark artifact (single CPU thread, BOPTEST reached through the same HTTP-Docker interface used in training).}
-\label{tab:speed}
-\begin{tabular}{lrrrr}
-\toprule
-Backend & Steps/s & Median (ms) & P95 (ms) & Speed-up \\
-\midrule
-BOPTEST RTE HTTP loop & 21.0 & 14.915 & 19.251 & 1.0$\times$ \\
-v3 surrogate & 4,626.3 & 0.165 & 0.273 & 220.2$\times$ \\
-v3.5 calibrated & 2,399.5 & 0.359 & 0.495 & 114.2$\times$ \\
-hybrid v3+v3.5 & 1,786.8 & 0.507 & 0.648 & 85.0$\times$ \\
-\bottomrule
-\end{tabular}
-\end{table}
+
 
 At the hybrid throughput, a single \(5\times10^6\)-step policy-optimization run costs about 46.6 minutes of pure environment time, versus roughly 66.1 hours on the live BOPTEST RTE HTTP loop. The calibrated v3.5 surrogate is 114.2x faster than the BOPTEST RTE HTTP loop, and the hybrid reference remains 85.0x faster. This closes the runtime part of Block~1: the surrogate family is not only more accurate after calibration, but also fast enough to support repeated policy-training experiments without using the RTE HTTP loop as the inner training environment.
 

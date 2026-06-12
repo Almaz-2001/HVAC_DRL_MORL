@@ -49,14 +49,24 @@ SUPP_MOVE_LABELS = {
     "fig:block1-chain", "fig:surrogate-design", "fig:v3-learning-curve",
     "fig:physics", "fig:predictive-validity", "fig:episode-replicability",
     "tab:stage-a", "tab:stage-b",
+    # --- Block 1: page-trim pass (setup / technical detail) ---
+    # (tab:tsup-assumptions stays: it \eqref's eq:tsup-signature in the main text)
+    "tab:block1-corpora", "tab:architecture-summary",
+    "tab:stage-abc", "fig:speed", "tab:speed",
     # --- Block 2: schematic + diagnostic floats ---
     "fig:block2_pipeline", "fig:morl_pipeline", "fig:action_phase",
     "fig:morl_heatmap", "fig:seasonal_falsification", "fig:transfer_gap",
     "tab:hybrid_sweep", "tab:warmstart", "tab:morl_per_seed",
+    # --- Block 2: page-trim pass (scenario detail / diagnostics / HDRL / MORL detail) ---
+    "tab:scenarios", "fig:closed_loop_traces", "fig:hdrl_arch", "fig:hdrl_sweep",
+    "tab:morl_pareto_seed", "fig:ms_decomp", "tab:hdrl", "fig:morl_pareto",
+    "fig:morl5d17d", "tab:transfer",
     # --- Block 3: schematic + per-regime detail floats ---
     # (fig:topology stays: it \ref's eq:hydronic_balance in the main text)
     "fig:protocol", "fig:adapter", "fig:regime_progression", "fig:czon_hypothesis",
     "tab:testcases", "tab:regimes", "tab:primary", "tab:predictions",
+    # --- Block 3: page-trim pass (secondary diagnostic figures) ---
+    "fig:controller_bar", "fig:stage_abc_gain",
 }
 
 
