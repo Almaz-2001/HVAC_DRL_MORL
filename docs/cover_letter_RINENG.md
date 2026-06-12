@@ -33,7 +33,10 @@ We believe the work fits *Results in Engineering* well: it is a rigorous,
 application-grounded engineering result whose value lies in correcting a working
 assumption that current surrogate-building protocols optimise for, and in
 providing actionable design guidance (evaluate surrogates by downstream control
-utility, not predictive accuracy alone).
+utility, not predictive accuracy alone). The manuscript is organised as a
+self-contained main text carrying the scientific argument and key evidence, with
+the full parameterisation, diagnostics, and per-artifact provenance placed in the
+accompanying supplementary material.
 
 A methodological feature we wish to highlight is the verifiability of the evidence
 chain. All claims are version-locked: hypotheses and pass/fail rules were committed
