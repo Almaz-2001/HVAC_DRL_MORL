@@ -261,7 +261,7 @@ def fig_protocol() -> None:
         _arrow(ax, (x, 0.56), (x + 0.02, 0.56), SLATE)
     ax.text(0.5, 0.135, "two component verdicts: controller-side $m_s^{\\mathrm{RL}}\\leq\\tau_k$ (per testcase) and surrogate-side full Stage A/B/C RMSE gain.",
             ha="center", fontsize=8.4, color="#374151")
-    ax.text(0.5, 0.06, "The analysis-plan manifest is bit-identical between the open (1861e48) and close (7ada793) commits; only result appendices are appended.",
+    ax.text(0.5, 0.06, "The analysis-plan manifest is bit-identical between the open (1861e48) and close (b915bfc) commits; only result appendices are appended.",
             ha="center", fontsize=8.0, style="italic", color=SLATE)
     _save(fig, "fig_block3_protocol")
 
@@ -415,7 +415,7 @@ Symbol & Unit & Meaning \\
 
 \subsection{{Pre-specification and audit anchors}}
 
-Block 3 is pre-specified through \texttt{{configs/block3\_testcase\_manifest.yaml}}. The initial manifest commit (\texttt{{1861e48}}) was made before any non-\texttt{{bestest\_air}} BOPTEST run; the pre-specification block is bit-identical between that commit and the close commit, with only result appendices added. The audit anchors are: \texttt{{1861e48}} (pre-specification manifest), \texttt{{2f9d596}} (record pre-specification SHA), \texttt{{eb7091e}} / \texttt{{46fbaa9}} / \texttt{{645626e}} (the three actuator adapters and the stretch-testcase predictions), \texttt{{7ada793}} (close SHA), and \texttt{{cb7025f}} (component-level interpretation). Because the hypothesis definitions were frozen before the runs, every number below was predictable but not predicted.
+Block 3 is pre-specified through \texttt{{configs/block3\_testcase\_manifest.yaml}}. The initial manifest commit (\texttt{{1861e48}}) was made before any non-\texttt{{bestest\_air}} BOPTEST run; the pre-specification block is bit-identical between that commit and the close commit, with only result appendices added. The audit anchors are: \texttt{{1861e48}} (pre-specification manifest), \texttt{{2f9d596}} (record pre-specification SHA), \texttt{{eb7091e}} / \texttt{{46fbaa9}} / \texttt{{645626e}} (the three actuator adapters and the stretch-testcase predictions), \texttt{{b915bfc}} (Block~3 closure: hydronic transfer matrix and stretch-testcase falsification), \texttt{{7ada793}} (record of the close-commit SHA in the manifest), and \texttt{{cb7025f}} (component-level interpretation). Because the hypothesis definitions were frozen before the runs, every number below was predictable but not predicted.
 
 \subsection{{Testcases, actuator adapters, and recalibration regimes}}
 
@@ -657,7 +657,7 @@ Table~\ref{{tab:hypothesis}} closes the pre-specified hypotheses. The methodolog
 \begin{{table}}[H]
 \centering
 \small
-\caption{{Pre-specified hypothesis closure (manifest \texttt{{hypothesis\_status\_final}}, audit anchor \texttt{{7ada793}}).}}
+\caption{{Pre-specified hypothesis closure (manifest \texttt{{hypothesis\_status\_final}}, written at the Block~3 closure commit \texttt{{b915bfc}}).}}
 \label{{tab:hypothesis}}
 \begin{{tabularx}}{{\linewidth}}{{l >{{\raggedright\arraybackslash}}p{{42mm}} l >{{\raggedright\arraybackslash}}X}}
 \toprule
