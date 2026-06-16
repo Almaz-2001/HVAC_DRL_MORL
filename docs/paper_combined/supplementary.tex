@@ -407,7 +407,7 @@ hybrid v3+v3.5 & 1,786.8 & 0.507 & 0.648 & 85.0$\times$ \\
 \begin{figure}[H]
   \centering
   \includegraphics[width=0.84\linewidth]{final17_fig09_morl_5d_failure_17d_success.pdf}
-  \caption{MORL 5D failure and 17D recovery. The observation interface, not only the scalarized reward, determines whether MORL is viable.}
+  \caption{MORL observation-interface ablation: 5D failure $\rightarrow$ 17D recovery. Two 5D bars are shown to match the main-text MORL 5D/17D comparison table: the \emph{current-code 5D rerun} ($m_s=0.680$, the value reported in that table) and the \emph{originally frozen 5D artifact} ($m_s=1.046$), which is retained only as an audit artifact. Both 5D variants fail; only the 17D power-only observation ($m_s=0.099$) recovers a usable policy. The observation interface, not only the scalarized reward, determines whether MORL is viable.}
   \label{fig:morl5d17d}
 
 {\footnotesize\itshape Data: \texttt{reports/\allowbreak block2\_\allowbreak morl\_\allowbreak 5d\_\allowbreak reconstructed\_\allowbreak comparison.csv}}
