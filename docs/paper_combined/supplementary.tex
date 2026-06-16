@@ -116,7 +116,7 @@ Figures (protocol, heatmap, RMSE gain, C\_zon, closure) & \texttt{docs/\allowbre
 
 The following figures and tables provide supporting schematics, calibration and controller diagnostics, and detailed per-regime and per-seed breakdowns. They are cited from Results~I--III (as Figure~S/Table~S references) but are not required to follow the main argument.
 
-\begin{figure}[pos={!ht}]
+\begin{figure}[H]
   \centering
   \includegraphics[width=\linewidth]{\detokenize{rie_fig01_block1_artifact_chain.pdf}}
   \caption{Roadmap-derived Block 1 artifact chain. The figure reports the actual row counts, 24 h rollout errors, identified physical parameter, and speed benchmark values used to close Results I.}
@@ -125,7 +125,7 @@ The following figures and tables provide supporting schematics, calibration and 
 {\footnotesize\itshape Schematic; not derived from a dataset.}
 \end{figure}
 
-\begin{figure}[pos={!ht}]
+\begin{figure}[H]
   \centering
   \includegraphics[width=\linewidth]{\detokenize{rie_fig02_surrogate_design.pdf}}
   \caption{Surrogate role separation inside Block 1. v3 is the compact dual-head rollout model; v3.5 adds Stage A/B/C physical identification and residual-head calibration.}
@@ -134,7 +134,7 @@ The following figures and tables provide supporting schematics, calibration and 
 {\footnotesize\itshape Schematic; not derived from a dataset.}
 \end{figure}
 
-\begin{figure}[pos={!ht}]
+\begin{figure}[H]
   \centering
   \includegraphics[width=0.78\linewidth]{\detokenize{rie_fig08_v3_learning_curve.pdf}}
   \caption{v3 supervised train/validation learning curves. Early stopping at the best validation epoch precedes any validation-loss upturn, indicating no overfitting at the selected checkpoint.}
@@ -143,7 +143,7 @@ The following figures and tables provide supporting schematics, calibration and 
 {\footnotesize\itshape Data: \texttt{outputs/\allowbreak surrogate\_\allowbreak v2/\allowbreak train\_\allowbreak history\_\allowbreak v2.csv}}
 \end{figure}
 
-\begin{figure}[pos={!ht}]
+\begin{figure}[H]
   \centering
   \includegraphics[width=0.74\linewidth]{\detokenize{rie_fig09_physics_consistency.pdf}}
   \caption{Physical-consistency audit: predicted next-step zone temperature versus the supply-temperature command for representative initial states. The response is monotone increasing, so the learned dynamics respect the correct sign of the control.}
@@ -152,7 +152,7 @@ The following figures and tables provide supporting schematics, calibration and 
 {\footnotesize\itshape Data: \texttt{outputs/\allowbreak surrogate\_\allowbreak v35\_\allowbreak rollout\_\allowbreak prepared\_\allowbreak 15min\_\allowbreak power\_\allowbreak head\_\allowbreak only/\allowbreak calibrated\_\allowbreak v35/\allowbreak all\_\allowbreak full\_\allowbreak rollouts.csv}}
 \end{figure}
 
-\begin{figure}[pos={!ht}]
+\begin{figure}[H]
   \centering
   \includegraphics[width=\linewidth]{\detokenize{rie_fig04_predictive_validity.pdf}}
   \caption{Predictive-validity diagnostics from prepared BOPTEST rollouts. Confidence bands are bootstrapped from real window-level errors, and the CDF reports engineering error tolerances at 0.5, 1.0, and 1.5~$^\circ$C.}
@@ -161,7 +161,7 @@ The following figures and tables provide supporting schematics, calibration and 
 {\footnotesize\itshape Data: \texttt{outputs/\allowbreak surrogate\_\allowbreak v35\_\allowbreak rollout\_\allowbreak prepared\_\allowbreak 15min\_\allowbreak episodeaware/\allowbreak calibrated\_\allowbreak v35/\allowbreak window\_\allowbreak errors.csv}}
 \end{figure}
 
-\begin{figure}[pos={!ht}]
+\begin{figure}[H]
   \centering
   \includegraphics[width=\linewidth]{\detokenize{rie_fig07_episode_replicability.pdf}}
   \caption{Replicative validity across the eight held-out BOPTEST episodes used by the Block 1 prepared-rollout artifacts. The dashed line marks a 1~$^\circ$C engineering reference.}
@@ -170,7 +170,7 @@ The following figures and tables provide supporting schematics, calibration and 
 {\footnotesize\itshape Data: \texttt{outputs/\allowbreak surrogate\_\allowbreak v35\_\allowbreak rollout\_\allowbreak prepared\_\allowbreak 15min\_\allowbreak episodeaware/\allowbreak calibrated\_\allowbreak v35/\allowbreak episode\_\allowbreak summary.csv}}
 \end{figure}
 
-\begin{figure}[pos={!ht}]
+\begin{figure}[H]
   \centering
   \includegraphics[width=0.82\linewidth]{\detokenize{rie_fig06_runtime_feasibility.pdf}}
   \caption{Runtime feasibility benchmark. The hybrid reference is included only to demonstrate downstream feasibility; controller utility is evaluated in Block 2.}
@@ -179,7 +179,7 @@ The following figures and tables provide supporting schematics, calibration and 
 {\footnotesize\itshape Data: \texttt{reports/\allowbreak speed\_\allowbreak benchmark\_\allowbreak table.csv}}
 \end{figure}
 
-\begin{table}[pos={!ht}]
+\begin{table}[H]
 \centering
 \small
 \caption{Block 1 data corpora referenced by the roadmap.}
@@ -195,7 +195,7 @@ v3.5 calibration corpus & 10,744 & 900 & hdrl, thermostatic & peak\_heat\_window
 \end{tabularx}
 \end{table}
 
-\begin{table}[pos={!ht}]
+\begin{table}[H]
 \centering
 \scriptsize
 \caption{Architecture and calibration summary for the two Block 1 surrogate roles.}
@@ -210,7 +210,7 @@ v3.5 calibrated & Physics-informed predictive twin & RC-NeuralODE backbone with 
 \end{tabularx}
 \end{table}
 
-\begin{table}[pos={!ht}]
+\begin{table}[H]
 \centering
 \small
 \caption{v3 configuration from the active model class and Hou-and-Evins reporting artifacts.}
@@ -232,7 +232,7 @@ Early stopping & patience=30; improvement\_threshold=1e-6 \\
 \end{tabularx}
 \end{table}
 
-\begin{table}[pos={!ht}]
+\begin{table}[H]
 \centering
 \scriptsize
 \caption{Feature scaling and physical constraints used by the Block 1 surrogate interface.}
@@ -252,7 +252,7 @@ power\_head\_output & Softplus multiplied by P\_MAX & P\_MAX=5500 W & Guarantees
 \end{tabularx}
 \end{table}
 
-\begin{table}[pos={!ht}]
+\begin{table}[H]
 \centering
 \small
 \caption{Stage A telemetry-alignment operations from the calibration-summary JSON.}
@@ -270,7 +270,7 @@ Post-Stage-A power MAE & 514.4 W & baseline for Stage C \\
 \end{tabularx}
 \end{table}
 
-\begin{table}[pos={!ht}]
+\begin{table}[H]
 \centering
 \small
 \caption{Stage B excitation filtering and physical identification of \(\Czon\).}
@@ -289,7 +289,7 @@ Excitation rows & 403 / 8058 & mean score 0.240 vs 0.069 \\
 \end{tabularx}
 \end{table}
 
-\begin{table}[pos={!ht}]
+\begin{table}[H]
 \centering
 \small
 \caption{Stage A/B/C calibration summary from the canonical JSON and rollout artifacts.}
@@ -306,7 +306,7 @@ $\Czon$ ($\times 10^5$ J/K) & 4.200 & 4.413 & +5.1\% \\
 \end{tabular}
 \end{table}
 
-\begin{table}[pos={!ht}]
+\begin{table}[H]
 \centering
 \small
 \caption{Backend throughput under the 900 s control protocol from the speed-benchmark artifact (single CPU thread, BOPTEST reached through the same HTTP-Docker interface used in training).}
@@ -323,7 +323,7 @@ hybrid v3+v3.5 & 1,786.8 & 0.507 & 0.648 & 85.0$\times$ \\
 \end{tabular}
 \end{table}
 
-\begin{figure}[pos={!ht}]
+\begin{figure}[H]
   \centering
   \includegraphics[width=0.94\linewidth]{fig_block2_pipeline.pdf}
   \caption{Block 2 controller-learning pipeline. The experiments separate the rollout model, the physical regularizer, the controller family, the observation interface, and live BOPTEST validation.}
@@ -332,7 +332,7 @@ hybrid v3+v3.5 & 1,786.8 & 0.507 & 0.648 & 85.0$\times$ \\
 {\footnotesize\itshape Schematic; not derived from a dataset.}
 \end{figure}
 
-\begin{figure}[pos={!ht}]
+\begin{figure}[H]
   \centering
   \includegraphics[width=0.82\linewidth]{fig_block2_ms_decomposition.pdf}
   \caption{Data-driven decomposition $m_s=r_{\mathrm{time}}+r_{\mathrm{sev}}$ on the live BOPTEST windows. Direct v3.5 fails through sustained violation ($r_{\mathrm{time}}$); pure v3 and the hybrid keep both terms small.}
@@ -341,7 +341,7 @@ hybrid v3+v3.5 & 1,786.8 & 0.507 & 0.648 & 85.0$\times$ \\
 {\footnotesize\itshape Data: \texttt{outputs/\allowbreak block2\_\allowbreak */\allowbreak summary.csv}}
 \end{figure}
 
-\begin{figure}[pos={!ht}]
+\begin{figure}[H]
   \centering
   \includegraphics[width=0.96\linewidth]{block2_q1_polish_closed_loop_disturbance.pdf}
   \caption{Closed-loop BOPTEST traces with ambient disturbance, comfort band, and physical actuator limits.}
@@ -350,7 +350,7 @@ hybrid v3+v3.5 & 1,786.8 & 0.507 & 0.648 & 85.0$\times$ \\
 {\footnotesize\itshape Data: \texttt{outputs/\allowbreak block2\_\allowbreak thermostatic\_\allowbreak hybrid\_\allowbreak v3\_\allowbreak v35\_\allowbreak l010/\allowbreak }}
 \end{figure}
 
-\begin{figure}[pos={!ht}]
+\begin{figure}[H]
   \centering
   \includegraphics[width=0.96\linewidth]{block2_q1_polish_phase_density.pdf}
   \caption{Phase portrait as empirical state-action density. The saturation bands near $a_0=\pm1$ expose the bang-bang behavior of direct v3.5 PPO.}
@@ -359,7 +359,7 @@ hybrid v3+v3.5 & 1,786.8 & 0.507 & 0.648 & 85.0$\times$ \\
 {\footnotesize\itshape Data: \texttt{outputs/\allowbreak block2\_\allowbreak thermostatic\_\allowbreak hybrid\_\allowbreak v3\_\allowbreak v35\_\allowbreak l010/\allowbreak }}
 \end{figure}
 
-\begin{figure}[pos={!ht}]
+\begin{figure}[H]
   \centering
   \includegraphics[width=0.86\linewidth]{block1_q1_fig10_transfer_gap_diagnostics.pdf}
   \caption{Transfer-gap diagnostics. Direct v3.5 has high action-gap norm and live-surrogate mismatch; the hybrid backend suppresses both.}
@@ -368,7 +368,7 @@ hybrid v3+v3.5 & 1,786.8 & 0.507 & 0.648 & 85.0$\times$ \\
 {\footnotesize\itshape Data: \texttt{reports/\allowbreak hybrid\_\allowbreak transfer\_\allowbreak comparison.csv}}
 \end{figure}
 
-\begin{figure}[pos={!ht}]
+\begin{figure}[H]
   \centering
   \includegraphics[width=0.96\linewidth]{fig_block2_hdrl_architecture.pdf}
   \caption{HDRL architecture: a high-level seasonal gate $k(t)$ routes the 17D observation to one of two low-level PPO setpoint specialists (winter / summer). Because the low level is already comfort-aware, the v3.5 temperature censor over-regularizes it.}
@@ -377,7 +377,7 @@ hybrid v3+v3.5 & 1,786.8 & 0.507 & 0.648 & 85.0$\times$ \\
 {\footnotesize\itshape Schematic; not derived from a dataset.}
 \end{figure}
 
-\begin{figure}[pos={!ht}]
+\begin{figure}[H]
   \centering
   \includegraphics[width=0.88\linewidth]{block2_hdrl_lambda_sweep_sensitivity.pdf}
   \caption{HDRL $\lambda_T$ sensitivity. The thermostatic regularization weight does not transfer; the best HDRL policy uses no temperature-disagreement term.}
@@ -386,7 +386,7 @@ hybrid v3+v3.5 & 1,786.8 & 0.507 & 0.648 & 85.0$\times$ \\
 {\footnotesize\itshape Data: \texttt{reports/\allowbreak block2\_\allowbreak hdrl\_\allowbreak lambda\_\allowbreak sweep\_\allowbreak summary.csv}}
 \end{figure}
 
-\begin{figure}[pos={!ht}]
+\begin{figure}[H]
   \centering
   \includegraphics[width=0.98\linewidth]{fig_block2_morl_pipeline.pdf}
   \caption{MORL four-stage pipeline: surrogate pretrain $\to$ ERAM preference adaptation $\to$ live-BOPTEST finetune $\to$ yearly evaluation, all on the 17D power-only hybrid backend. The preference vector conditions the scalarized reward.}
@@ -395,7 +395,7 @@ hybrid v3+v3.5 & 1,786.8 & 0.507 & 0.648 & 85.0$\times$ \\
 {\footnotesize\itshape Schematic; not derived from a dataset.}
 \end{figure}
 
-\begin{figure}[pos={!ht}]
+\begin{figure}[H]
   \centering
   \includegraphics[width=0.84\linewidth]{final17_fig09_morl_5d_failure_17d_success.pdf}
   \caption{MORL 5D failure and 17D recovery. The observation interface, not only the scalarized reward, determines whether MORL is viable.}
@@ -404,7 +404,7 @@ hybrid v3+v3.5 & 1,786.8 & 0.507 & 0.648 & 85.0$\times$ \\
 {\footnotesize\itshape Data: \texttt{reports/\allowbreak block2\_\allowbreak morl\_\allowbreak 5d\_\allowbreak reconstructed\_\allowbreak comparison.csv}}
 \end{figure}
 
-\begin{figure}[pos={!ht}]
+\begin{figure}[H]
   \centering
   \includegraphics[width=0.86\linewidth]{block2_q1_polish_morl_pareto_ellipses.pdf}
   \caption{MORL comfort--energy Pareto front with N=5 confidence ellipses for the two canonical points. Non-canonical points are seed-42 only.}
@@ -413,7 +413,7 @@ hybrid v3+v3.5 & 1,786.8 & 0.507 & 0.648 & 85.0$\times$ \\
 {\footnotesize\itshape Data: \texttt{reports/\allowbreak morl\_\allowbreak pareto\_\allowbreak front\_\allowbreak table.csv}}
 \end{figure}
 
-\begin{figure}[pos={!ht}]
+\begin{figure}[H]
   \centering
   \includegraphics[width=0.88\linewidth]{block2_morl_17d_seasonal_heatmap.pdf}
   \caption{MORL seasonal performance heatmap under the 17D interface. The figure shows monthly structure but does not support the N=3 mechanism claim after N=5 extension.}
@@ -422,7 +422,7 @@ hybrid v3+v3.5 & 1,786.8 & 0.507 & 0.648 & 85.0$\times$ \\
 {\footnotesize\itshape Data: \texttt{reports/\allowbreak morl\_\allowbreak canonical\_\allowbreak seedfix\_\allowbreak yearly\_\allowbreak summary.csv}}
 \end{figure}
 
-\begin{figure}[pos={!ht}]
+\begin{figure}[H]
   \centering
   \includegraphics[width=0.88\linewidth]{block2_morl_seasonal_variance_inversion.pdf}
   \caption{Post-N=5 seasonal variance diagnostic. The earlier seasonal-inversion hypothesis is reported as falsified, not retained as a positive mechanism claim.}
@@ -431,7 +431,7 @@ hybrid v3+v3.5 & 1,786.8 & 0.507 & 0.648 & 85.0$\times$ \\
 {\footnotesize\itshape Data: \texttt{reports/\allowbreak morl\_\allowbreak canonical\_\allowbreak seedfix\_\allowbreak yearly\_\allowbreak per\_\allowbreak seed.csv}}
 \end{figure}
 
-\begin{table}[pos={!ht}]
+\begin{table}[H]
 \centering
 \caption{Targeted-window and yearly scenario definitions (data: roadmap Section 11.1).}
 \label{tab:scenarios}
@@ -447,7 +447,7 @@ yearly evaluation & 12 months & --- & 14/mo & varied & MORL + PI yearly summary 
 \end{tabular}
 \end{table}
 
-\begin{table}[pos={!ht}]
+\begin{table}[H]
 \centering
 \caption{PPO training configuration used in Block 2 (verified from the project training scripts and configuration files).}
 \label{tab:ppo_hparams}
@@ -470,7 +470,7 @@ Seed & 42 & 42 & 42 & 42--46 (N=5) \\
 \end{tabular}
 \end{table}
 
-\begin{table}[pos={!ht}]
+\begin{table}[H]
 \centering
 \caption{Extended 17D observation feature groups (verified from \texttt{envs/tsup\_features.py}).}
 \label{tab:obs17}
@@ -489,7 +489,7 @@ Total (extended) & 17 & obs\_mode = extended \\
 \end{tabularx}
 \end{table}
 
-\begin{table}[pos={!ht}]
+\begin{table}[H]
 \centering
 \caption{Reward-shaping parameters (verified from \texttt{configs/env.yaml}).}
 \label{tab:reward}
@@ -512,7 +512,24 @@ Energy scale & $2e-4$ (W$\to$reward) & energy-to-reward conversion \\
 \end{tabularx}
 \end{table}
 
-\begin{table}[pos={!ht}]
+\begin{table}[H]
+\centering
+\caption{Seed robustness ($N=3$ seeds \{42,43,44\}) of the two headline thermostatic controllers on the live BOPTEST targeted windows; mean $\pm$ standard deviation. Every individual seed is below the $5\%$ comfort-violation bar on both windows (data: \texttt{reports/block2\_thermostatic\_seed\_band.csv}).}
+\label{tab:seed_band}
+\small
+\begin{tabular}{llrll}
+\toprule
+Controller & Window & $N$ & $m_s$ (mean $\pm$ std) & Violation \% (mean $\pm$ std) \\
+\midrule
+pure v3 & peak & 3 & 0.072 $\pm$ 0.019 & 2.6 $\pm$ 1.2 \\
+pure v3 & typical & 3 & 0.045 $\pm$ 0.047 & 2.4 $\pm$ 2.2 \\
+hybrid ($\lambda_T{=}0.10$) & peak & 3 & 0.059 $\pm$ 0.026 & 3.0 $\pm$ 1.6 \\
+hybrid ($\lambda_T{=}0.10$) & typical & 3 & 0.014 $\pm$ 0.024 & 0.8 $\pm$ 1.4 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
 \centering
 \caption{Thermostatic hybrid $\lambda_T$ sweep design (roadmap \S5; $\lambda_P=5\times10^{-5}$ throughout). The mid point is the retained canonical.}
 \label{tab:hybrid_sweep}
@@ -528,7 +545,7 @@ $\lambda_T$ & Tag & Role \\
 \end{tabular}
 \end{table}
 
-\begin{table}[pos={!ht}]
+\begin{table}[H]
 \centering
 \caption{Direct-v3.5 warm-start utility (\texttt{outputs/block2\_thermostatic\_warmstart\_utility/comparison\_summary.csv}).}
 \label{tab:warmstart}
@@ -545,7 +562,7 @@ warm-start (from v3.5) & typical & 1.289 & 86.83 \\
 \end{tabular}
 \end{table}
 
-\begin{table}[pos={!ht}]
+\begin{table}[H]
 \centering
 \caption{Transfer diagnostics across three backends. $\Delta m_s=$ surrogate $-$ live (negative $\Rightarrow$ surrogate optimistic); Temp gap is the live closed-loop RMSE$_T$ (data: roadmap Section 11.1).}
 \label{tab:transfer}
@@ -564,7 +581,7 @@ direct v3.5 & typical & 4.401 & -1.014 & 2.014 & 1 & t\_zone\_norm \\
 \end{tabular}
 \end{table}
 
-\begin{table}[pos={!ht}]
+\begin{table}[H]
 \centering
 \caption{HDRL sweep over $\lambda_T$ on the targeted windows; best is $\lambda_T=0$, and performance degrades monotonically as the temperature censor strengthens (data: roadmap Section 11.1).}
 \label{tab:hdrl}
@@ -585,7 +602,7 @@ $\lambda_T$ & Scenario & $m_s$ & Violation (\%) & RMSE$_T$ ($^\circ$C) & Energy 
 \end{tabular}
 \end{table}
 
-\begin{table}[pos={!ht}]
+\begin{table}[H]
 \centering
 \caption{MORL Pareto (seed 42) and N=5 canonical seed analysis (data: roadmap Section 11.1).}
 \label{tab:morl_pareto_seed}
@@ -603,7 +620,7 @@ Preference / statistic & RMSE$_T$ ($^\circ$C) & Violation (\%) & $m_s$ & Interpr
 \end{tabular}
 \end{table}
 
-\begin{table}[pos={!ht}]
+\begin{table}[H]
 \centering
 \caption{Per-seed MORL yearly metrics for the two canonical weight pairs (data: roadmap Section 11.1).}
 \label{tab:morl_per_seed}
@@ -626,7 +643,7 @@ Pair (c/e) & Seed & RMSE$_T$ & Within 1$^\circ$C (\%) & Violation (\%) & Energy 
 \end{tabular}
 \end{table}
 
-\begin{figure}[pos={!ht}]
+\begin{figure}[H]
   \centering
   \includegraphics[width=0.97\linewidth]{fig_block3_protocol.pdf}
   \caption{Block 3 pre-specified transferability protocol. Controller-side transfer is tested against a testcase-specific PI threshold; surrogate-side transfer is tested by full Stage A/B/C recalibration on target telemetry.}
@@ -635,7 +652,7 @@ Pair (c/e) & Seed & RMSE$_T$ & Within 1$^\circ$C (\%) & Violation (\%) & Energy 
 {\footnotesize\itshape Schematic; not derived from a dataset.}
 \end{figure}
 
-\begin{figure}[pos={!ht}]
+\begin{figure}[H]
   \centering
   \includegraphics[width=0.97\linewidth]{fig_block3_adapter.pdf}
   \caption{Adapter-mediated transfer schematic. The frozen Block 2 hybrid policy is routed through a pre-specified actuator adapter $\mathcal{A}_k$ to each testcase's actuator interface; the controller-side verdict (against the $1.25\times$ PI threshold) is per-testcase, while full Stage A/B/C surrogate recalibration passes on all three.}
@@ -644,7 +661,7 @@ Pair (c/e) & Seed & RMSE$_T$ & Within 1$^\circ$C (\%) & Violation (\%) & Energy 
 {\footnotesize\itshape Schematic; not derived from a dataset.}
 \end{figure}
 
-\begin{figure}[pos={!ht}]
+\begin{figure}[H]
   \centering
   \includegraphics[width=0.80\linewidth]{fig_block3_controller_bar.pdf}
   \caption{Controller-side transfer: frozen-hybrid $m_s^{\mathrm{RL}}$ against the PI baseline $m_s^{\mathrm{PI}}$ and the pre-specified threshold $\tau_k=1.25\,m_s^{\mathrm{PI}}$ (dashed). The two residential cases exceed the threshold (FAIL); the commercial case is below it (PASS, with the separate energy caveat).}
@@ -653,7 +670,7 @@ Pair (c/e) & Seed & RMSE$_T$ & Within 1$^\circ$C (\%) & Violation (\%) & Energy 
 {\footnotesize\itshape Data: \texttt{reports/\allowbreak block3\_\allowbreak transfer\_\allowbreak matrix.csv}}
 \end{figure}
 
-\begin{figure}[pos={!ht}]
+\begin{figure}[H]
   \centering
   \includegraphics[width=0.92\linewidth]{fig_block3_regime_progression.pdf}
   \caption{Primary-testcase surrogate-fidelity progression across recalibration regimes. Temperature and power fidelity improve monotonically toward full Stage A/B/C, while the frozen controller's live $m_s$ is invariant by manifest scope.}
@@ -662,7 +679,7 @@ Pair (c/e) & Seed & RMSE$_T$ & Within 1$^\circ$C (\%) & Violation (\%) & Energy 
 {\footnotesize\itshape Data: \texttt{reports/\allowbreak block3\_\allowbreak bestest\_\allowbreak hydronic\_\allowbreak heat\_\allowbreak pump\_\allowbreak transfer\_\allowbreak summary.csv}}
 \end{figure}
 
-\begin{figure}[pos={!ht}]
+\begin{figure}[H]
   \centering
   \includegraphics[width=0.84\linewidth]{final17_fig15_full_stage_transfer_rmse_improvement.pdf}
   \caption{Full Stage A/B/C transfer RMSE improvement on the three hydronic-family target testcases.}
@@ -671,7 +688,7 @@ Pair (c/e) & Seed & RMSE$_T$ & Within 1$^\circ$C (\%) & Violation (\%) & Energy 
 {\footnotesize\itshape Data: \texttt{reports/\allowbreak block3\_\allowbreak transfer\_\allowbreak matrix.csv}}
 \end{figure}
 
-\begin{figure}[pos={!ht}]
+\begin{figure}[H]
   \centering
   \includegraphics[width=0.82\linewidth]{final_eng_fig12_czon_hypothesis_interval.pdf}
   \caption{$C_{\mathrm{zon}}$ hypothesis-interval diagnostic. The observed ratios fall inside the uniform hydronic-family hypothesis A ($1.7$--$2.2\times$) and outside the scale-dependent hypothesis B ($3$--$10\times$).}
@@ -680,7 +697,7 @@ Pair (c/e) & Seed & RMSE$_T$ & Within 1$^\circ$C (\%) & Violation (\%) & Energy 
 {\footnotesize\itshape Data: \texttt{reports/\allowbreak block3\_\allowbreak transfer\_\allowbreak matrix.csv}}
 \end{figure}
 
-\begin{table}[pos={!ht}]
+\begin{table}[H]
 \centering
 \small
 \caption{Pre-specified target testcases and actuator adapters (manifest \texttt{testcase\_candidates}).}
@@ -696,7 +713,7 @@ Stretch & \texttt{singlezone\_commercial\_hydronic} & order-of-magnitude larger 
 \end{tabularx}
 \end{table}
 
-\begin{table}[pos={!ht}]
+\begin{table}[H]
 \centering
 \small
 \caption{Per-testcase actuator-adapter mapping (verified from \texttt{configs/block3\_actuator\_mapping\_*.yaml}). All adapters share $h=\mathrm{clip}((T^{\mathrm{sup}}_t-18)/17,0,1)$; setpoint overrides are in kelvin.}
@@ -712,7 +729,7 @@ Testcase & Primary override & Override formula & Auxiliary overrides \\
 \end{tabularx}
 \end{table}
 
-\begin{table}[pos={!ht}]
+\begin{table}[H]
 \centering
 \small
 \caption{Pre-specified recalibration regimes. The controller is frozen in every regime.}
@@ -728,7 +745,7 @@ full & Stage A + Stage B + Stage C on target telemetry & frozen Block 2 hybrid c
 \end{tabular}
 \end{table}
 
-\begin{table}[pos={!ht}]
+\begin{table}[H]
 \centering
 \small
 \caption{Primary-testcase per-regime detail. $m_s$ is invariant across rows because the controller is frozen by manifest scope; only surrogate fidelity changes (data: roadmap Section 15).}
@@ -747,7 +764,7 @@ full: Stage A/B/C & 0.565 & 1767 & 0.665 & surrogate PASS, ctrl FAIL \\
 \end{tabularx}
 \end{table}
 
-\begin{table}[pos={!ht}]
+\begin{table}[H]
 \centering
 \small
 \caption{Stretch-testcase pre-specified predictions versus observed outcomes (manifest \texttt{stretch\_testcase\_predictions}).}

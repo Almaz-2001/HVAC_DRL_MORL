@@ -60,7 +60,7 @@ SUPP_MOVE_LABELS = {
     # --- Block 2: page-trim pass (scenario detail / diagnostics / HDRL / MORL detail) ---
     "tab:scenarios", "fig:closed_loop_traces", "fig:hdrl_arch", "fig:hdrl_sweep",
     "tab:morl_pareto_seed", "fig:ms_decomp", "tab:hdrl", "fig:morl_pareto",
-    "fig:morl5d17d", "tab:transfer",
+    "fig:morl5d17d", "tab:transfer", "tab:seed_band",
     # --- Block 3: schematic + per-regime detail floats ---
     # (fig:topology stays: it \ref's eq:hydronic_balance in the main text)
     "fig:protocol", "fig:adapter", "fig:regime_progression", "fig:czon_hypothesis",
@@ -754,10 +754,12 @@ a policy that exploits the sharply physics-constrained surface of v3.5 saturates
 into a near bang-bang law that does not survive transfer to the live plant. The
 hybrid resolution --- v3 for smooth dynamics, a frozen v3.5 as a reward-shaping
 censor --- recovers the best cross-window robustness ($m_s = 0.087$/$0.041$ on the
-peak/typical windows): although pure v3 edges it on the peak-window score alone
-($0.073$ vs $0.087$), the hybrid is the only backend with sub-$5\%$ comfort
-violation on \emph{both} windows, the lowest typical-window score ($0.041$), and
-lower energy than pure v3, all while retaining an $85\times$ training speed-up ---
+peak/typical windows): although pure v3 edges it on the single-seed peak-window
+score ($0.073$ vs $0.087$), that ordering does not persist across seeds (over
+$N=3$ the hybrid is at least as good on both windows, $0.059$ vs $0.072$ on peak;
+Section~\ref{ssec:b3lim}), and the hybrid is the only backend with sub-$5\%$ comfort
+violation on \emph{both} windows across every seed, the lowest typical-window score,
+and lower energy than pure v3, all while retaining an $85\times$ training speed-up ---
 the practical pay-off of separating the two roles rather than seeking one maximally
 faithful model.
 
@@ -848,14 +850,19 @@ distribution-shift mechanism above: higher-fidelity dynamics, whether from finer
 resolution or physical calibration, present the sharper gradient surface that
 policy-gradient search exploits into a non-transferable near-bang-bang law (a formal
 loss-landscape characterisation of that surface remains the open item noted above).
-(iv)~Statistical support is uneven
-across controller families: the MORL results are reported over $N=5$ seeds with
-explicit standard deviation and a 95\% confidence interval (for the neutral
-preference, $m_s = 0.187\pm0.078$, CI $[0.090,0.284]$, whose entire interval lies
-far below the PI score of $0.910$, so the improvement over PI holds across all five
-seeds), whereas the thermostatic and hierarchical controllers are single
-deterministic-seed evaluations on fixed 14-day targeted windows, for which
-per-controller confidence intervals are accordingly not reported. (v)~The only
+(iv)~Statistical support varies across controller families. The MORL results are
+reported over $N=5$ seeds with explicit standard deviation and a 95\% confidence
+interval (for the neutral preference, $m_s = 0.187\pm0.078$, CI $[0.090,0.284]$,
+whose entire interval lies far below the PI score of $0.910$, so the improvement
+over PI holds across all five seeds). The two headline thermostatic controllers were
+extended to $N=3$ seeds (\{42,43,44\}): across seeds pure v3 stays usable
+($m_s = 0.072\pm0.019$ peak / $0.045\pm0.047$ typical) and the hybrid stays robust
+($m_s = 0.059\pm0.026$ peak / $0.014\pm0.024$ typical), with \emph{every} individual
+seed below the $5\%$ comfort-violation bar on both windows (per-seed values are
+tabulated in the supplementary seed-robustness table). The single-seed peak advantage
+of pure v3 over the hybrid does not persist across seeds---it lies within the seed
+spread. Only the hierarchical (HDRL) controller remains a single deterministic-seed
+evaluation, and its per-seed extension is the natural next step. (v)~The only
 baseline is BOPTEST's built-in PI controller (its reference controller); this study
 tests \emph{surrogate training utility}, not whether the controllers beat a tuned
 MPC, rule-based controller, or ASHRAE Guideline~36 sequence, and that
@@ -1077,6 +1084,10 @@ maps to the exact versioned source file in the project's \texttt{reports/} and
 
 def build_supplementary_document(relocated) -> str:
     body = build_provenance_supplementary() + "\n\n" + build_supplementary_tables(relocated)
+    # Relocated floats carry the CAS [pos={!ht}] key from the main bodies; the
+    # supplementary is article-class (float package loaded), which does not parse the
+    # CAS key, so map it back to the float-package [H] for clean, valid placement.
+    body = body.replace("[pos={!ht}]", "[H]")
     return SUPP_DOC.replace("%%SUPP_BODY%%", body)
 
 

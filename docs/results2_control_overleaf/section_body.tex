@@ -293,6 +293,25 @@ hybrid & v3 + v3.5 censor & 900 & --- & 0.087 / 0.041 & 4.7 / 2.4 & robust \\
 
 This ablation resolves the timestep confound directly: improving v3's temporal resolution and predictive RMSE does not improve downstream control utility---it destroys it. The useful property of the canonical v3 is therefore not its black-box architecture alone, but the optimization-friendly smoothing induced by temporal coarse-graining. Read across the three single-model backends the pattern is near-monotonic in fidelity: the least accurate surrogate (hourly v3) is the only usable training environment, while the more accurate matched v3 and the most accurate calibrated v3.5 both fail. This reframes the hybrid as an explicit \emph{architectural separation of smoothing and fidelity}: v3 supplies the coarse, optimization-friendly rollout dynamics while the frozen v3.5 supplies a physical-plausibility signal as a censor, so policy-gradient training keeps the smoothing it needs while regaining physical grounding. The broader principle is that PPO needs not only accurate predictions but an optimization-friendly training landscape.
 
+\paragraph{Seed robustness of the two headline controllers.} To check that the single-seed scores are not seed-luck, pure v3 and the canonical hybrid were retrained and re-evaluated on three fixed seeds (\{42, 43, 44\}). Both stay in their qualitative regime on every seed --- each individual seed is below the $5\%$ comfort-violation bar on both windows --- so the usable-vs-robust verdicts are seed-stable (Supplementary Table~\ref{tab:seed_band}). The single-seed peak advantage of pure v3 over the hybrid (Table~\ref{tab:main_kpi}) does not persist across seeds: over $N{=}3$ the hybrid is at least as good on both windows. The hierarchical and MORL families are treated separately (HDRL single-seed; MORL over $N{=}5$).
+
+\begin{table}[pos={!ht}]
+\centering
+\caption{Seed robustness ($N=3$ seeds \{42,43,44\}) of the two headline thermostatic controllers on the live BOPTEST targeted windows; mean $\pm$ standard deviation. Every individual seed is below the $5\%$ comfort-violation bar on both windows (data: \texttt{reports/block2\_thermostatic\_seed\_band.csv}).}
+\label{tab:seed_band}
+\small
+\begin{tabular}{llrll}
+\toprule
+Controller & Window & $N$ & $m_s$ (mean $\pm$ std) & Violation \% (mean $\pm$ std) \\
+\midrule
+pure v3 & peak & 3 & 0.072 $\pm$ 0.019 & 2.6 $\pm$ 1.2 \\
+pure v3 & typical & 3 & 0.045 $\pm$ 0.047 & 2.4 $\pm$ 2.2 \\
+hybrid ($\lambda_T{=}0.10$) & peak & 3 & 0.059 $\pm$ 0.026 & 3.0 $\pm$ 1.6 \\
+hybrid ($\lambda_T{=}0.10$) & typical & 3 & 0.014 $\pm$ 0.024 & 0.8 $\pm$ 1.4 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
 \paragraph{Hybrid $\lambda_T$ sweep and canonical selection (roadmap \S5).} The canonical hybrid operating point was selected by a thermostatic sweep over the temperature-disagreement weight $\lambda_T\in\{0.05,0.10,0.15\}$ at fixed $\lambda_P=5\times10^{-5}$ (Table~\ref{tab:hybrid_sweep}). The mid setting $\lambda_T=0.10$ (\texttt{hybrid\_l010}) is canonical: per the roadmap selection rule it retains the energy advantage over pure v3 while avoiding the stronger comfort degradation seen at the weaker ($0.05$) and stronger ($0.15$) censor settings. Only the canonical point's live-BOPTEST KPIs are retained as a frozen artifact; the bracketing points served selection only.
 
 \begin{table}[pos={!ht}]

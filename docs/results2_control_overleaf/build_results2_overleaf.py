@@ -218,6 +218,23 @@ def table_coarse_graining_ablation(d: dict) -> str:
     return "\n".join(rows)
 
 
+def table_seed_band(d: dict) -> str:
+    # N=3 seed robustness for the two headline thermostatic controllers, read from the
+    # multi-seed aggregator (reports/block2_thermostatic_seed_band.csv). Mean +/- std.
+    sb = read_csv("reports/block2_thermostatic_seed_band.csv")
+    rows = []
+    label = {"pure v3": "pure v3", "hybrid (lambda_T=0.10)": "hybrid ($\\lambda_T{=}0.10$)"}
+    for ctrl in ["pure v3", "hybrid (lambda_T=0.10)"]:
+        for win in ["peak", "typical"]:
+            r = sb[(sb.controller == ctrl) & (sb.window == win)].iloc[0]
+            rows.append(
+                f"{label[ctrl]} & {win} & {int(r.n_seeds)} & "
+                f"{f(r.m_s_mean)} $\\pm$ {f(r.m_s_std)} & "
+                f"{f(r.violation_pct_mean,1)} $\\pm$ {f(r.violation_pct_std,1)} \\\\"
+            )
+    return "\n".join(rows)
+
+
 def table_warmstart(d: dict) -> str:
     w = d["warm"]
     rows = []
@@ -770,6 +787,22 @@ Training backend & Architecture & Step (s) & 24\,h RMSE & $m_s$ (pk/typ) & Viol.
 
 This ablation resolves the timestep confound directly: improving v3's temporal resolution and predictive RMSE does not improve downstream control utility---it destroys it. The useful property of the canonical v3 is therefore not its black-box architecture alone, but the optimization-friendly smoothing induced by temporal coarse-graining. Read across the three single-model backends the pattern is near-monotonic in fidelity: the least accurate surrogate (hourly v3) is the only usable training environment, while the more accurate matched v3 and the most accurate calibrated v3.5 both fail. This reframes the hybrid as an explicit \emph{{architectural separation of smoothing and fidelity}}: v3 supplies the coarse, optimization-friendly rollout dynamics while the frozen v3.5 supplies a physical-plausibility signal as a censor, so policy-gradient training keeps the smoothing it needs while regaining physical grounding. The broader principle is that PPO needs not only accurate predictions but an optimization-friendly training landscape.
 
+\paragraph{{Seed robustness of the two headline controllers.}} To check that the single-seed scores are not seed-luck, pure v3 and the canonical hybrid were retrained and re-evaluated on three fixed seeds (\{{42, 43, 44\}}). Both stay in their qualitative regime on every seed --- each individual seed is below the $5\%$ comfort-violation bar on both windows --- so the usable-vs-robust verdicts are seed-stable (Supplementary Table~\ref{{tab:seed_band}}). The single-seed peak advantage of pure v3 over the hybrid (Table~\ref{{tab:main_kpi}}) does not persist across seeds: over $N{{=}}3$ the hybrid is at least as good on both windows. The hierarchical and MORL families are treated separately (HDRL single-seed; MORL over $N{{=}}5$).
+
+\begin{{table}}[H]
+\centering
+\caption{{Seed robustness ($N=3$ seeds \{{42,43,44\}}) of the two headline thermostatic controllers on the live BOPTEST targeted windows; mean $\pm$ standard deviation. Every individual seed is below the $5\%$ comfort-violation bar on both windows (data: \texttt{{reports/block2\_thermostatic\_seed\_band.csv}}).}}
+\label{{tab:seed_band}}
+\small
+\begin{{tabular}}{{llrll}}
+\toprule
+Controller & Window & $N$ & $m_s$ (mean $\pm$ std) & Violation \% (mean $\pm$ std) \\
+\midrule
+{ctx['table_seed_band']}
+\bottomrule
+\end{{tabular}}
+\end{{table}}
+
 \paragraph{{Hybrid $\lambda_T$ sweep and canonical selection (roadmap \S5).}} The canonical hybrid operating point was selected by a thermostatic sweep over the temperature-disagreement weight $\lambda_T\in\{{0.05,0.10,0.15\}}$ at fixed $\lambda_P=5\times10^{{-5}}$ (Table~\ref{{tab:hybrid_sweep}}). The mid setting $\lambda_T=0.10$ (\texttt{{hybrid\_l010}}) is canonical: per the roadmap selection rule it retains the energy advantage over pure v3 while avoiding the stronger comfort degradation seen at the weaker ($0.05$) and stronger ($0.15$) censor settings. Only the canonical point's live-BOPTEST KPIs are retained as a frozen artifact; the bracketing points served selection only.
 
 \begin{{table}}[H]
@@ -1085,6 +1118,7 @@ def main() -> None:
         "n75_ci_lo": f(float(n75.ms_mean) - ci75, 3), "n75_ci_hi": f(float(n75.ms_mean) + ci75, 3),
         "table_main_kpi": kpi,
         "table_coarse_graining": table_coarse_graining_ablation(d),
+        "table_seed_band": table_seed_band(d),
         "table_warmstart": table_warmstart(d),
         "table_transfer": table_transfer(d),
         "table_hdrl": table_hdrl(d),
