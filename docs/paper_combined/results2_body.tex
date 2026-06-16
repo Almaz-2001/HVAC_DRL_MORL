@@ -128,7 +128,7 @@ For the canonical thermostatic hybrid, $\lambda_T=0.10$ and $\lambda_P=5.0\times
 
 \subsection{Thermostatic PPO: direct-v3.5 failure and hybrid success (roadmap \S4--\S5)}
 
-Table~\ref{tab:main_kpi} and Figure~\ref{fig:live_kpi} summarize the main Block 2 controller result. Pure v3 PPO is already usable ($m_s=0.073$ peak, $0.095$ typical). Direct v3.5 PPO fails catastrophically despite v3.5's superior Block 1 predictive fidelity: live violation reaches 77.1\% on peak and 82.4\% on typical, with RMSE above $4.3\,^\circ$C. The hybrid backend resolves the conflict: $m_s=0.087$ on peak and $0.041$ on typical, with violation below $5\%$ on both windows and lower energy than pure v3 on the peak window.
+Table~\ref{tab:main_kpi} and Figure~\suppref{S9} summarize the main Block 2 controller result. Pure v3 PPO is already usable ($m_s=0.073$ peak, $0.095$ typical). Direct v3.5 PPO fails catastrophically despite v3.5's superior Block 1 predictive fidelity: live violation reaches 77.1\% on peak and 82.4\% on typical, with RMSE above $4.3\,^\circ$C. The hybrid backend resolves the conflict: $m_s=0.087$ on peak and $0.041$ on typical, with violation below $5\%$ on both windows and lower energy than pure v3 on the peak window.
 
 \begin{table}[pos={!ht}]
 \centering
@@ -151,18 +151,18 @@ hybrid $\lambda_T=0.10$ & typical & 0.041 & 2.38 & 0.633 & 352.8 \\
 
 \begin{figure}[pos={!ht}]
   \centering
-  \includegraphics[width=0.96\linewidth]{final17_fig06_live_boptest_controller_comparison.pdf}
-  \caption{Live BOPTEST KPI comparison for pure v3, direct v3.5, and hybrid PPO. Direct v3.5 is a negative control: higher predictive fidelity does not imply a useful RL training environment.}
-  \label{fig:live_kpi}
-
-{\footnotesize\itshape Data: \texttt{outputs/\allowbreak block2\_\allowbreak */\allowbreak summary.csv}}
+  \includegraphics[width=0.78\linewidth]{block2_fidelity_utility_scatter.pdf}
+  \caption{The fidelity--utility paradox in one view: surrogate predictive fidelity (24\,h rollout RMSE, $x$) versus downstream control utility (live maintenance score $m_s$, $y$; marker = peak/typical mean, whisker = the two windows). Across the three single-model surrogates the relationship is \emph{inverted}---the \emph{more} accurate the twin, the \emph{worse} the controller: the least accurate hourly v3 (RMSE $1.557\,^\circ$C) is the only usable training environment ($m_s\approx0.08$), while the more accurate matched-resolution v3 ($0.876\,^\circ$C) and the most accurate calibrated v3.5 ($0.644\,^\circ$C) both collapse ($m_s>1$). The role-separating hybrid breaks the trade-off: it rolls out on v3 (so its environment fidelity equals v3's, hence plotted at $1.557\,^\circ$C) but the frozen v3.5 censor drives $m_s$ to the usable regime. Lower predictive RMSE does not imply lower $m_s$.}
+  \label{fig:paradox_scatter}
 \end{figure}
 
-\paragraph{Reading $m_s$ step by step.} The decomposition $m_s=r_{\mathrm{time}}+r_{\mathrm{sev}}$ (Eq.~\ref{eq:ms}) exposes the failure structure directly (Figure~\suppref{S9}). Direct v3.5's peak $m_s=1.046$ is dominated by $r_{\mathrm{time}}\approx 0.77$ (out of band 77\% of the time) plus a large worst-case severity $r_{\mathrm{sev}}\approx 0.28$; the hybrid's peak $m_s=0.087$ is almost entirely a small $r_{\mathrm{sev}}$ with $r_{\mathrm{time}}<0.05$. The hybrid therefore does not merely lower the average error --- it removes the sustained band departures that dominate the direct-v3.5 score.
+
+
+\paragraph{Reading $m_s$ step by step.} The decomposition $m_s=r_{\mathrm{time}}+r_{\mathrm{sev}}$ (Eq.~\ref{eq:ms}) exposes the failure structure directly (Figure~\suppref{S10}). Direct v3.5's peak $m_s=1.046$ is dominated by $r_{\mathrm{time}}\approx 0.77$ (out of band 77\% of the time) plus a large worst-case severity $r_{\mathrm{sev}}\approx 0.28$; the hybrid's peak $m_s=0.087$ is almost entirely a small $r_{\mathrm{sev}}$ with $r_{\mathrm{time}}<0.05$. The hybrid therefore does not merely lower the average error --- it removes the sustained band departures that dominate the direct-v3.5 score.
 
 
 
-The time-series and action diagnostics in Figures~\suppref{S10} and~\suppref{S11} explain the mechanism. Direct v3.5 learns a bang-bang-like control law that drives the live simulator outside the comfort band; in phase space it places extreme actions in temperature-error regimes the live building does not support. We note explicitly that this destabilization mechanism is \emph{hypothesized} (higher advantage-estimator variance under sharper surrogate predictions, and/or overfitting to sub-step physical structure unusable at the 15-min cadence) and is not directly measured here; discriminating the two is deferred to future work.
+The time-series and action diagnostics in Figures~\suppref{S11} and~\suppref{S12} explain the mechanism. Direct v3.5 learns a bang-bang-like control law that drives the live simulator outside the comfort band; in phase space it places extreme actions in temperature-error regimes the live building does not support. We note explicitly that this destabilization mechanism is \emph{hypothesized} (higher advantage-estimator variance under sharper surrogate predictions, and/or overfitting to sub-step physical structure unusable at the 15-min cadence) and is not directly measured here; discriminating the two is deferred to future work.
 
 
 
@@ -196,7 +196,7 @@ This ablation resolves the timestep confound directly: improving v3's temporal r
 
 
 
-\paragraph{Measured mechanism: response-surface smoothness.} The ``optimization-friendly smoothing'' invoked above is not a post-hoc narrative: it is directly measurable on the surrogates themselves, independently of any controller. For each single-model backend we hold a representative state fixed, sweep the supply-temperature action $a_0$ over $[-1,1]$, and read the surrogate's own one-step map $\hat T(a_0)$; from that curve we compute the slope magnitude $\overline{|\partial\hat T/\partial a_0|}$ and, as a step-length-independent measure of non-smoothness, the \emph{relative roughness} (mean curvature normalised by mean slope, both in $^\circ$C per unit action), averaged over a grid of zone temperatures and the two windows' ambients. The scale-free relative roughness orders cleanly with downstream usability (Table~\ref{tab:surface_sharpness}): the only usable training environment, the canonical hourly v3, exposes the \emph{smoothest}, near-monotone action$\to$next-temperature landscape (relative roughness $0.17$), whereas both backends that collapse in closed loop expose markedly rougher landscapes---$9.4\times$ for the matched-resolution v3 and $7.9\times$ for the calibrated v3.5. (The raw per-step slope and range are intentionally \emph{not} used as the mechanism metric: they are confounded by the step length, which is the coarse-graining variable; the normalised roughness is not.) This is the surrogate-side cause whose policy-side symptom is the near-bang-bang action gap of the collapsed controllers (Fig.~\suppref{S11}): a rougher, more sharply peaked optimisation landscape is precisely what a policy-gradient learner saturates into a non-transferable extremal law. The contrast is visual as well as numerical---the usable hourly v3 has a smooth, monotone action map, while both collapsing surrogates are visibly non-monotone (Supplementary Fig.~\suppref{S12}), so this figure (cause) pairs directly with the bang-bang phase portrait of Fig.~\suppref{S11} (effect).
+\paragraph{Measured mechanism: response-surface smoothness.} The ``optimization-friendly smoothing'' invoked above is not a post-hoc narrative: it is directly measurable on the surrogates themselves, independently of any controller. For each single-model backend we hold a representative state fixed, sweep the supply-temperature action $a_0$ over $[-1,1]$, and read the surrogate's own one-step map $\hat T(a_0)$; from that curve we compute the slope magnitude $\overline{|\partial\hat T/\partial a_0|}$ and, as a step-length-independent measure of non-smoothness, the \emph{relative roughness} (mean curvature normalised by mean slope, both in $^\circ$C per unit action), averaged over a grid of zone temperatures and the two windows' ambients. The scale-free relative roughness orders cleanly with downstream usability (Table~\ref{tab:surface_sharpness}): the only usable training environment, the canonical hourly v3, exposes the \emph{smoothest}, near-monotone action$\to$next-temperature landscape (relative roughness $0.17$), whereas both backends that collapse in closed loop expose markedly rougher landscapes---$9.4\times$ for the matched-resolution v3 and $7.9\times$ for the calibrated v3.5. (The raw per-step slope and range are intentionally \emph{not} used as the mechanism metric: they are confounded by the step length, which is the coarse-graining variable; the normalised roughness is not.) This is the surrogate-side cause whose policy-side symptom is the near-bang-bang action gap of the collapsed controllers (Fig.~\suppref{S12}): a rougher, more sharply peaked optimisation landscape is precisely what a policy-gradient learner saturates into a non-transferable extremal law. The contrast is visual as well as numerical---the usable hourly v3 has a smooth, monotone action map, while both collapsing surrogates are visibly non-monotone (Fig.~\ref{fig:surface_curves}), so this figure (cause) pairs directly with the bang-bang phase portrait of Fig.~\suppref{S12} (effect).
 
 \begin{table}[pos={!ht}]
 \centering
@@ -214,7 +214,12 @@ calibrated v3.5 & 0.467 & 1.338 & 7.9$\times$ & collapse \\
 \end{tabular}
 \end{table}
 
-
+\begin{figure}[pos={!ht}]
+  \centering
+  \includegraphics[width=0.96\linewidth]{block2_surface_response_curves.pdf}
+  \caption{Measured response-surface smoothness of the three single-model surrogate backends, probed directly on each surrogate's one-step action map (no controller, no BOPTEST). \textbf{(A)} Shape of the action$\to$next-temperature map $\hat T(a_0)$ at a representative state, each curve centred and scaled by its own peak-to-peak range so the comparison is of \emph{smoothness}, not amplitude (the per-step magnitudes differ by ${\sim}7\times$): the usable hourly v3 is smooth and monotone, whereas both collapsing surrogates (matched-resolution v3, calibrated v3.5) are visibly non-monotone. \textbf{(B)} Scale-free relative roughness (mean curvature $\div$ mean slope), averaged over a grid of zone temperatures and the two windows' ambients: the collapsing backends are $7.9$--$9.4\times$ rougher than the usable v3. This is the surrogate-side \emph{cause} whose policy-side \emph{effect} is the near-bang-bang action gap of Fig.~\suppref{S12}. Data: \texttt{reports/block2\_mechanism\_surface\_sharpness.csv}.}
+  \label{fig:surface_curves}
+\end{figure}
 
 \paragraph{Hybrid $\lambda_T$ sweep and canonical selection (roadmap \S5).} The canonical hybrid operating point was selected by a thermostatic sweep over the temperature-disagreement weight $\lambda_T\in\{0.05,0.10,0.15\}$ at fixed $\lambda_P=5\times10^{-5}$ (Table~\suppref{S17}). The mid setting $\lambda_T=0.10$ (\texttt{hybrid\_l010}) is canonical: per the roadmap selection rule it retains the energy advantage over pure v3 while avoiding the stronger comfort degradation seen at the weaker ($0.05$) and stronger ($0.15$) censor settings. Only the canonical point's live-BOPTEST KPIs are retained as a frozen artifact; the bracketing points served selection only.
 

@@ -60,7 +60,11 @@ SUPP_MOVE_LABELS = {
     # --- Block 2: page-trim pass (scenario detail / diagnostics / HDRL / MORL detail) ---
     "tab:scenarios", "fig:closed_loop_traces", "fig:hdrl_arch", "fig:hdrl_sweep",
     "tab:morl_pareto_seed", "fig:ms_decomp", "tab:hdrl", "fig:morl_pareto",
-    "fig:morl5d17d", "tab:transfer", "tab:seed_band", "fig:surface_curves",
+    "fig:morl5d17d", "tab:transfer", "tab:seed_band",
+    # fig:surface_curves promoted to MAIN (the measured mechanism is a headline result);
+    # fig:live_kpi (per-metric KPI bars) demoted to supplementary -- the paradox is now
+    # carried in main by the fidelity-utility scatter (fig:paradox_scatter).
+    "fig:live_kpi",
     # --- Block 3: schematic + per-regime detail floats ---
     # (fig:topology stays: it \ref's eq:hydronic_balance in the main text)
     "fig:protocol", "fig:adapter", "fig:regime_progression", "fig:czon_hypothesis",
