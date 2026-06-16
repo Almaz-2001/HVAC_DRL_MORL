@@ -621,10 +621,14 @@ not exercised, and the transferability evidence covers a hydronic family rather
 than an arbitrary building stock. (ii)~The surrogate models are validated on the
 temperature channel, where the calibration metrics are strong; the heating-power
 channel is reproduced less accurately and we treat it as a known limitation rather
-than a validated output. (iii)~Two caveats bound the core paradox claim. First, its mechanism is established
-\emph{in direction} only --- we observe action saturation and attribute it to
-policy-gradient exploitation of flat-gradient regions, but a formal loss-landscape
-analysis is future work; correspondingly, the paradox is demonstrated for PPO under
+than a validated output. (iii)~Two caveats bound the core paradox claim. First, the mechanism is now
+\emph{measured} on the surrogate side: probing each surrogate's own one-step action map
+shows that both backends that collapse as training environments expose a response
+surface that is several times rougher (in scale-free, step-length-independent terms)
+than the usable hourly v3 ($7.9$--$9.4\times$; Table~\ref{tab:surface_sharpness}),
+the direct counterpart of the policy-side action-gap symptom we observe in closed loop.
+What remains open is a formal loss-landscape analysis along the full PPO training
+trajectory (as opposed to this static action-map probe); correspondingly, the paradox is demonstrated for PPO under
 a matched training configuration --- we did not separately re-tune PPO for the v3.5
 environment or test off-policy algorithms (e.g.\ SAC~\citep{Haarnoja2018SAC}, TD3), so its generality across
 RL algorithms is open. Second, the black-box v3 is trained at a one-hour step but
@@ -646,9 +650,11 @@ near-monotonic statement along the fidelity axis---the least accurate surrogate
 (hourly v3) trains a usable controller, while the more accurate matched-resolution
 v3 and the most accurate calibrated v3.5 both fail---and is consistent with the
 distribution-shift mechanism above: higher-fidelity dynamics, whether from finer
-resolution or physical calibration, present the sharper gradient surface that
-policy-gradient search exploits into a non-transferable near-bang-bang law (a formal
-loss-landscape characterisation of that surface remains the open item noted above).
+resolution or physical calibration, present the sharper response surface that
+policy-gradient search exploits into a non-transferable near-bang-bang law---measured
+directly as a $7.9$--$9.4\times$ rougher action map on the two collapsing surrogates
+relative to the usable hourly v3 (Table~\ref{tab:surface_sharpness}), with a formal
+loss-landscape characterisation along the training trajectory the open item noted above).
 (iv)~Statistical support varies across controller families. The MORL results are
 reported over $N=5$ seeds with explicit standard deviation and a 95\% confidence
 interval (for the neutral preference, $m_s = 0.187\pm0.078$, CI $[0.090,0.284]$,
@@ -706,8 +712,9 @@ or fail, together with a reusable role-separating recipe.
 
 Several directions (the project's Block~4) follow directly from the limitations of
 Section~\ref{ssec:b3lim}: extending the study from a single zone to multi-zone and
-mixed-topology buildings; a formal loss-landscape analysis to turn the
-hypothesised flat-gradient mechanism of the paradox into an established one;
+mixed-topology buildings; extending the now-measured static response-surface
+roughness (Table~\ref{tab:surface_sharpness}) to a formal loss-landscape analysis
+along the full PPO training trajectory;
 improving the heating-power channel of the surrogate so it is a validated rather
 than an auxiliary output; broadening transfer beyond the hydronic family and
 pairing the transferable calibration pipeline with light policy adaptation instead

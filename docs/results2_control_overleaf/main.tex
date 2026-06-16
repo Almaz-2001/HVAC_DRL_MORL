@@ -350,6 +350,24 @@ hybrid ($\lambda_T{=}0.10$) & typical & 3 & 0.014 $\pm$ 0.024 & 0.8 $\pm$ 1.4 \\
 \end{tabular}
 \end{table}
 
+\paragraph{Measured mechanism: response-surface smoothness.} The ``optimization-friendly smoothing'' invoked above is not a post-hoc narrative: it is directly measurable on the surrogates themselves, independently of any controller. For each single-model backend we hold a representative state fixed, sweep the supply-temperature action $a_0$ over $[-1,1]$, and read the surrogate's own one-step map $\hat T(a_0)$; from that curve we compute the slope magnitude $\overline{|\partial\hat T/\partial a_0|}$ and, as a step-length-independent measure of non-smoothness, the \emph{relative roughness} (mean curvature normalised by mean slope, both in $^\circ$C per unit action), averaged over a grid of zone temperatures and the two windows' ambients. The scale-free relative roughness orders cleanly with downstream usability (Table~\ref{tab:surface_sharpness}): the only usable training environment, the canonical hourly v3, exposes the \emph{smoothest}, near-monotone action$\to$next-temperature landscape (relative roughness $0.17$), whereas both backends that collapse in closed loop expose markedly rougher landscapes---$9.4\times$ for the matched-resolution v3 and $7.9\times$ for the calibrated v3.5. (The raw per-step slope and range are intentionally \emph{not} used as the mechanism metric: they are confounded by the step length, which is the coarse-graining variable; the normalised roughness is not.) This is the surrogate-side cause whose policy-side symptom is the near-bang-bang action gap of the collapsed controllers (Fig.~\ref{fig:action_phase}): a rougher, more sharply peaked optimisation landscape is precisely what a policy-gradient learner saturates into a non-transferable extremal law.
+
+\begin{table}[H]
+\centering
+\caption{Measured response-surface smoothness of the three single-model backends, probed directly on each surrogate's one-step action map (no controller, no BOPTEST; data: \texttt{reports/block2\_mechanism\_surface\_sharpness.csv}). The scale-free relative roughness (curvature normalised by slope) is independent of the step length and tracks closed-loop usability: the usable hourly v3 is the smoothest; both collapsed backends are several times rougher.}
+\label{tab:surface_sharpness}
+\small
+\begin{tabular}{lrrll}
+\toprule
+Surrogate backend & Slope $\overline{|\partial\hat T/\partial a_0|}$ & Rel.\ roughness & vs.\ v3 & Closed-loop role \\
+\midrule
+canonical v3 (hourly) & 3.368 & 0.169 & 1.0 (ref) & usable \\
+matched v3 (15-min) & 0.272 & 1.578 & 9.4$\times$ & collapse \\
+calibrated v3.5 & 0.467 & 1.338 & 7.9$\times$ & collapse \\
+\bottomrule
+\end{tabular}
+\end{table}
+
 \paragraph{Hybrid $\lambda_T$ sweep and canonical selection (roadmap \S5).} The canonical hybrid operating point was selected by a thermostatic sweep over the temperature-disagreement weight $\lambda_T\in\{0.05,0.10,0.15\}$ at fixed $\lambda_P=5\times10^{-5}$ (Table~\ref{tab:hybrid_sweep}). The mid setting $\lambda_T=0.10$ (\texttt{hybrid\_l010}) is canonical: per the roadmap selection rule it retains the energy advantage over pure v3 while avoiding the stronger comfort degradation seen at the weaker ($0.05$) and stronger ($0.15$) censor settings. Only the canonical point's live-BOPTEST KPIs are retained as a frozen artifact; the bracketing points served selection only.
 
 \begin{table}[H]
