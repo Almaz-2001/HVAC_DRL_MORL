@@ -363,6 +363,13 @@ hybrid v3+v3.5 & 1,786.8 & 0.507 & 0.648 & 85.0$\times$ \\
 
 \begin{figure}[H]
   \centering
+  \includegraphics[width=0.96\linewidth]{block2_surface_response_curves.pdf}
+  \caption{Measured response-surface smoothness of the three single-model surrogate backends, probed directly on each surrogate's one-step action map (no controller, no BOPTEST). \textbf{(A)} Shape of the action$\to$next-temperature map $\hat T(a_0)$ at a representative state, each curve centred and scaled by its own peak-to-peak range so the comparison is of \emph{smoothness}, not amplitude (the per-step magnitudes differ by ${\sim}7\times$): the usable hourly v3 is smooth and monotone, whereas both collapsing surrogates (matched-resolution v3, calibrated v3.5) are visibly non-monotone. \textbf{(B)} Scale-free relative roughness (mean curvature $\div$ mean slope), averaged over a grid of zone temperatures and the two windows' ambients: the collapsing backends are $7.9$--$9.4\times$ rougher than the usable v3. This is the surrogate-side \emph{cause} whose policy-side \emph{effect} is the near-bang-bang action gap of Fig.~\ref{fig:action_phase}. Data: \texttt{reports/block2\_mechanism\_surface\_sharpness.csv}.}
+  \label{fig:surface_curves}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
   \includegraphics[width=0.86\linewidth]{block1_q1_fig10_transfer_gap_diagnostics.pdf}
   \caption{Transfer-gap diagnostics. Direct v3.5 has high action-gap norm and live-surrogate mismatch; the hybrid backend suppresses both.}
   \label{fig:transfer_gap}
