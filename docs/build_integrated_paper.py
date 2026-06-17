@@ -235,21 +235,28 @@ MASTER = r"""\documentclass[a4paper,fleqn]{cas-sc}
 \let\WriteBookmarks\relax
 
 \shorttitle{The Fidelity--Utility Paradox in Surrogate-Based RL for HVAC Control}
-\shortauthors{Author One et~al.}
+\shortauthors{Sapargali et~al.}   % TODO: adjust if author order/corresponding author differs
 
 \title[mode=title]{The Fidelity--Utility Paradox in Surrogate-Based Reinforcement Learning for HVAC Control}
 
-% ==== TODO authors: replace placeholders with real author data ====
-\author[1]{Author One}[orcid=0000-0000-0000-0000]
+% ============================ AUTHORS — FILL IN ============================
+% Replace <...> with real data. Add one \author{} block per co-author (and a
+% matching \affiliation[n]{} if their institution differs). The \cormark/\cortext
+% mark the corresponding author. Keep this consistent with CITATION.cff and the
+% CRediT statement near the end of the file.
+\author[1]{Almaz Sapargali}[orcid=<XXXX-XXXX-XXXX-XXXX>]
 \cormark[1]
-\ead{corresponding.author@example.edu}
-\credit{Conceptualization, Methodology, Software, Validation, Formal analysis, Investigation, Writing -- original draft, Writing -- review and editing}
-\affiliation[1]{organization={Department, University/Institution},
-                city={City},
-                postcode={00000},
-                country={Country}}
+\ead{<corresponding.email@institution>}
+\credit{Conceptualization, Methodology, Software, Validation, Formal analysis, Investigation, Data curation, Writing -- original draft, Writing -- review and editing, Visualization}
+% --- co-author template (uncomment and duplicate as needed) ---
+% \author[1]{<Co-author Name>}[orcid=<XXXX-XXXX-XXXX-XXXX>]
+% \credit{Supervision, Conceptualization, Writing -- review and editing}
+\affiliation[1]{organization={<Department, University/Institution>},
+                city={<City>},
+                postcode={<00000>},
+                country={<Country>}}
 \cortext[cor1]{Corresponding author}
-% ==================================================================
+% ===========================================================================
 
 \begin{abstract}
 Deep reinforcement-learning (RL) controllers for HVAC systems are usually trained against fast neural-network surrogates, on the assumption that a more accurate surrogate is a better training environment. Testing this on the BOPTEST \texttt{bestest\_air} testcase, we report a negative result --- the \emph{fidelity--utility paradox}: the surrogate with the lower predictive error can be the worse environment for policy-gradient search. A grey-box resistance--capacitance surrogate with a neural residual heat-flow head (v3.5) attains a 24-hour rollout RMSE of $0.644\,^{\circ}$C versus $1.557\,^{\circ}$C for a black-box surrogate (v3); yet used directly for training it collapses on the live runtime (maintenance score $m_s = 1.046$, comfort violation $>77\%$), whereas the weaker v3 trains a usable controller ($m_s = 0.073$/$0.095$ on peak/typical windows). Retraining the black-box surrogate at finer resolution makes it \emph{more} accurate yet unusable for training ($m_s > 1.1$), so the paradox tracks a fidelity/smoothing trade-off, not model class alone. We resolve the paradox with a role-separating hybrid: v3 supplies smooth rollout dynamics while a frozen v3.5 acts as a per-step reward-shaping censor. The hybrid provides the best cross-window robustness --- sub-$5\%$ comfort violation on both windows and the lowest typical-window score ($m_s = 0.041$), at ${\sim}85\times$ live-simulator throughput --- and the optimal censor weight is controller-family specific. A transferability study on three hydronic testcases shows the inverse-calibration pipeline generalizes ($60.2$--$87.8\%$ rollout-RMSE reduction; effective zone capacitance re-identified at $1.918\pm0.032\times$ the baseline), whereas frozen-policy transfer is regime-dependent. The contribution is a precise, component-level transferability boundary, not a universal generalization claim.
@@ -936,8 +943,9 @@ of zero-shot reuse; and, ultimately, closing the remaining sim-to-real gap throu
 deployment on a physical building.
 
 \section*{CRediT authorship contribution statement}
-% TODO: list every author with their CRediT roles; placeholder for the corresponding author below.
-\textbf{Author One:} Conceptualization, Methodology, Software, Validation, Formal analysis, Investigation, Data curation, Writing -- original draft, Writing -- review and editing, Visualization.
+% TODO: list every author with their CRediT roles; add one \textbf{Name:} line per co-author.
+\textbf{Almaz Sapargali:} Conceptualization, Methodology, Software, Validation, Formal analysis, Investigation, Data curation, Writing -- original draft, Writing -- review and editing, Visualization.
+% \textbf{<Co-author Name>:} Supervision, Conceptualization, Writing -- review and editing.
 
 \section*{Declaration of competing interest}
 The authors declare that they have no known competing financial interests or
