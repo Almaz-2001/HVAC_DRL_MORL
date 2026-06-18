@@ -162,7 +162,7 @@ hybrid $\lambda_T=0.10$ & typical & 0.041 & 2.38 & 0.633 & 352.8 \\
 
 
 
-The time-series and action diagnostics in Figures~\suppref{S11} and~\ref{fig:action_phase} explain the mechanism. Direct v3.5 learns a bang-bang-like control law that drives the live simulator outside the comfort band; in phase space it places extreme actions in temperature-error regimes the live building does not support. We note explicitly that this destabilization mechanism is \emph{hypothesized} (higher advantage-estimator variance under sharper surrogate predictions, and/or overfitting to sub-step physical structure unusable at the 15-min cadence) and is not directly measured here; discriminating the two is deferred to future work.
+The time-series and action diagnostics in Figures~\suppref{S11} and~\ref{fig:action_phase} explain the mechanism. Direct v3.5 learns a bang-bang-like control law that drives the live simulator outside the comfort band; in phase space it places extreme actions in temperature-error regimes the live building does not support. The \emph{full training-trajectory loss-landscape} mechanism is not directly measured here; however, the surrogate-side response-surface roughness and the policy-side action saturation that drive this behaviour \emph{are} measured directly in Section~\ref{ssec:coarse-graining} (Table~\ref{tab:surface_sharpness}, Figure~\ref{fig:surface_curves}). What remains hypothesized is which micro-cause dominates (higher advantage-estimator variance under sharper surrogate predictions vs.\ overfitting to sub-step physical structure unusable at the 15-min cadence); discriminating the two is deferred to future work.
 
 
 
