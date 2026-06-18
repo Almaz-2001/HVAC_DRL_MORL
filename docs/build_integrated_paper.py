@@ -375,7 +375,7 @@ We organize the investigation around four pre-specified, falsifiable hypotheses:
 \begin{enumerate}[label=\textbf{H\arabic*.},leftmargin=2.6em]
   \item \emph{Fidelity--utility:} a surrogate with higher predictive fidelity is a better RL training environment.
   \item \emph{Role separation:} using the physical twin as a frozen reward-shaping censor over a smooth black-box rollout recovers the control utility that direct use of the twin destroys.
-  \item \emph{Family specificity:} a single physical-censor weight is optimal across controller families.
+  \item \emph{Censor-weight universality:} a single physical-censor weight is sufficient (transfers) across controller families. (Falsification of this hypothesis is what establishes controller-family specificity.)
   \item \emph{Transferability:} the inverse-calibration pipeline and the frozen controller transfer to related hydronic testcases under documented recalibration.
 \end{enumerate}
 As reported below, H1 and H3 are \emph{falsified}, H2 is supported, and H4 resolves into a component-level boundary --- the calibration pipeline transfers while frozen-controller transfer does not. Each hypothesis and its verdict are bound to a versioned audit anchor, so that every outcome was predictable but not predicted before the corresponding runs.
@@ -970,8 +970,12 @@ and tables of this study are openly available on GitHub
 (\url{https://github.com/Almaz-2001/HVAC_fidelity-utility-paradox}); the repository
 will be archived with a citable DOI upon acceptance. Every reported quantity is
 mapped to its source artefact by the per-section provenance tables (Supplementary
-Tables~S1--S3). The BOPTEST emulator used as the reference environment is available
-separately as part of the BOPTEST project \citep{Blum2021BOPTEST} at
+Tables~S1--S3). All figures and tables were generated programmatically from these
+versioned project artefacts under \texttt{reports/}, \texttt{outputs/}, and
+\texttt{configs/}; no numerical values were entered manually into the plotting scripts
+except display labels, axis limits, and pre-specified threshold constants. The BOPTEST
+emulator used as the reference environment is available separately as part of the
+BOPTEST project \citep{Blum2021BOPTEST} at
 \url{https://github.com/ibpsa/project1-boptest}.
 
 \section*{Supplementary material}
