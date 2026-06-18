@@ -363,6 +363,15 @@ hybrid v3+v3.5 & 1,786.8 & 0.507 & 0.648 & 85.0$\times$ \\
 
 \begin{figure}[H]
   \centering
+  \includegraphics[width=0.92\linewidth]{block2_seed_band.pdf}
+  \caption{Across $N=3$ seeds the fidelity--utility paradox is not a seed artefact: the usable hourly-v3 and hybrid controllers stay below both the $m_s=1$ closed-loop-collapse line and the $5\%$ comfort-violation reference on every seed, while the matched-resolution v3 collapses on every seed ($m_s>1$, $>85\%$ violation) with negligible seed variance. Markers are the mean over seeds \{42,43,44\} (filled = peak-heat window, open = typical-heat window); whiskers are $\pm$ one standard deviation; colour encodes the controller (green = coarse v3, red = matched-resolution v3, blue = hybrid). \textbf{(left)} live maintenance score $m_s$ (lower is better, with the usable $m_s<0.1$ band shaded); \textbf{(right)} comfort-violation fraction. Same data as Table~\ref{tab:seed_band}.}
+  \label{fig:seed_band}
+
+{\footnotesize\itshape Data: \texttt{reports/\allowbreak block2\_\allowbreak thermostatic\_\allowbreak seed\_\allowbreak band.csv}}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
   \includegraphics[width=0.82\linewidth]{block2_warmstart_negative_eval_kpis.pdf}
   \caption{Warm-start negative control. Pretraining on direct v3.5 and then fine-tuning on the hybrid backend is inferior to training the hybrid policy from scratch.}
   \label{fig:warmstart}

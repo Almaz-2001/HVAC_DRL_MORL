@@ -231,8 +231,15 @@ hybrid $\lambda_T=0.10$ & typical & 0.041 & 2.38 & 0.633 & 352.8 \\
 
 \begin{figure}[pos={!ht}]
   \centering
+  \includegraphics[width=0.78\linewidth]{block2_fidelity_utility_scatter.pdf}
+  \caption{The fidelity--utility paradox in one view: surrogate predictive fidelity (24\,h rollout RMSE, $x$) versus downstream control utility (live maintenance score $m_s$, $y$; marker = peak/typical mean, vertical segment = the peak/typical window \emph{range}, not a statistical confidence interval). The dashed red line is the $m_s=1$ collapse threshold and the shaded band is the usable region ($m_s<0.1$). Across the three single-model surrogates the relationship is \emph{inverted}---the \emph{more} accurate the twin, the \emph{worse} the controller: the least accurate hourly v3 (RMSE $1.557\,^\circ$C) is the only usable training environment ($m_s\approx0.08$), while the more accurate matched-resolution v3 ($0.876\,^\circ$C) and the most accurate calibrated v3.5 ($0.644\,^\circ$C) both collapse ($m_s>1$). The role-separating hybrid breaks the trade-off: it rolls out on v3 (so its environment fidelity equals v3's, hence plotted at $1.557\,^\circ$C) but the frozen v3.5 censor drives $m_s$ to the usable regime. Lower predictive RMSE does not imply lower $m_s$.}
+  \label{fig:paradox_scatter}
+\end{figure}
+
+\begin{figure}[pos={!ht}]
+  \centering
   \includegraphics[width=0.96\linewidth]{final17_fig06_live_boptest_controller_comparison.pdf}
-  \caption{Live BOPTEST KPI comparison for pure v3, direct v3.5, and hybrid PPO. Direct v3.5 is a negative control: higher predictive fidelity does not imply a useful RL training environment.}
+  \caption{Detailed live BOPTEST KPI breakdown (per-metric bars) for pure v3, direct v3.5, and hybrid PPO. Direct v3.5 is a negative control: higher predictive fidelity does not imply a useful RL training environment. These per-metric bars give the underlying $m_s$, violation, RMSE, and energy behind the compact fidelity--utility scatter in the main text.}
   \label{fig:live_kpi}
 
 {\footnotesize\itshape Data: \texttt{outputs/\allowbreak block2\_\allowbreak */\allowbreak summary.csv}}
@@ -249,7 +256,7 @@ hybrid $\lambda_T=0.10$ & typical & 0.041 & 2.38 & 0.633 & 352.8 \\
 {\footnotesize\itshape Data: \texttt{outputs/\allowbreak block2\_\allowbreak */\allowbreak summary.csv}}
 \end{figure}
 
-The time-series and action diagnostics in Figures~\ref{fig:closed_loop_traces} and~\ref{fig:action_phase} explain the mechanism. Direct v3.5 learns a bang-bang-like control law that drives the live simulator outside the comfort band; in phase space it places extreme actions in temperature-error regimes the live building does not support. We note explicitly that this destabilization mechanism is \emph{hypothesized} (higher advantage-estimator variance under sharper surrogate predictions, and/or overfitting to sub-step physical structure unusable at the 15-min cadence) and is not directly measured here; discriminating the two is deferred to future work.
+The time-series and action diagnostics in Figures~\ref{fig:closed_loop_traces} and~\ref{fig:action_phase} explain the mechanism. Direct v3.5 learns a bang-bang-like control law that drives the live simulator outside the comfort band; in phase space it places extreme actions in temperature-error regimes the live building does not support. The \emph{full training-trajectory loss-landscape} mechanism is not directly measured here; however, the surrogate-side response-surface roughness and the policy-side action saturation that drive this behaviour \emph{are} measured directly in Section~\ref{ssec:coarse-graining} (Table~\ref{tab:surface_sharpness}, Figure~\ref{fig:surface_curves}). What remains hypothesized is which micro-cause dominates (higher advantage-estimator variance under sharper surrogate predictions vs.\ overfitting to sub-step physical structure unusable at the 15-min cadence); discriminating the two is deferred to future work.
 
 \begin{figure}[pos={!ht}]
   \centering
@@ -293,7 +300,7 @@ hybrid & v3 + v3.5 censor & 900 & --- & 0.087 / 0.041 & 4.7 / 2.4 & robust \\
 
 This ablation resolves the timestep confound directly: improving v3's temporal resolution and predictive RMSE does not improve downstream control utility---it destroys it. The useful property of the canonical v3 is therefore not its black-box architecture alone, but the optimization-friendly smoothing induced by temporal coarse-graining. Read across the three single-model backends the pattern is near-monotonic in fidelity: the least accurate surrogate (hourly v3) is the only usable training environment, while the more accurate matched v3 and the most accurate calibrated v3.5 both fail. This reframes the hybrid as an explicit \emph{architectural separation of smoothing and fidelity}: v3 supplies the coarse, optimization-friendly rollout dynamics while the frozen v3.5 supplies a physical-plausibility signal as a censor, so policy-gradient training keeps the smoothing it needs while regaining physical grounding. The broader principle is that PPO needs not only accurate predictions but an optimization-friendly training landscape.
 
-\paragraph{Seed robustness.} To check that the single-seed scores are not seed-luck, the three thermostatic backends (pure v3, the matched-resolution v3, and the canonical hybrid) were retrained and re-evaluated on three fixed seeds (\{42, 43, 44\}). Each stays in its qualitative regime on every seed: the usable controllers (pure v3 and hybrid) keep every individual seed below the $5\%$ comfort-violation bar on both windows, while the matched-resolution v3 \emph{collapses on every seed} ($m_s = 1.14$/$1.21$, std $<0.001$ --- the unlearnable environment drives all seeds to the same degenerate policy). The usable-versus-collapse verdicts, including the temporal-coarse-graining failure, are therefore seed-stable (Supplementary Table~\ref{tab:seed_band}). The single-seed peak advantage of pure v3 over the hybrid (Table~\ref{tab:main_kpi}) does not persist across seeds: over $N{=}3$ the hybrid is at least as good on both windows. The hierarchical and MORL families are treated separately (HDRL single-seed; MORL over $N{=}5$).
+\paragraph{Seed robustness.} To check that the single-seed scores are not seed-luck, the three thermostatic backends (pure v3, the matched-resolution v3, and the canonical hybrid) were retrained and re-evaluated on three fixed seeds (\{42, 43, 44\}). Each stays in its qualitative regime on every seed: the usable controllers (pure v3 and hybrid) keep every individual seed below the $5\%$ comfort-violation bar on both windows, while the matched-resolution v3 \emph{collapses on every seed} ($m_s = 1.14$/$1.21$, std $<0.001$ --- the unlearnable environment drives all seeds to the same degenerate policy). The usable-versus-collapse verdicts, including the temporal-coarse-graining failure, are therefore seed-stable (Supplementary Table~\ref{tab:seed_band} and Fig.~\ref{fig:seed_band}). The single-seed peak advantage of pure v3 over the hybrid (Table~\ref{tab:main_kpi}) does not persist across seeds: over $N{=}3$ the hybrid is at least as good on both windows. The hierarchical and MORL families are treated separately (HDRL single-seed; MORL over $N{=}5$).
 
 \begin{table}[pos={!ht}]
 \centering
@@ -313,6 +320,40 @@ hybrid ($\lambda_T{=}0.10$) & typical & 3 & 0.014 $\pm$ 0.024 & 0.8 $\pm$ 1.4 \\
 \bottomrule
 \end{tabular}
 \end{table}
+
+\begin{figure}[pos={!ht}]
+  \centering
+  \includegraphics[width=0.92\linewidth]{block2_seed_band.pdf}
+  \caption{Across $N=3$ seeds the fidelity--utility paradox is not a seed artefact: the usable hourly-v3 and hybrid controllers stay below both the $m_s=1$ closed-loop-collapse line and the $5\%$ comfort-violation reference on every seed, while the matched-resolution v3 collapses on every seed ($m_s>1$, $>85\%$ violation) with negligible seed variance. Markers are the mean over seeds \{42,43,44\} (filled = peak-heat window, open = typical-heat window); whiskers are $\pm$ one standard deviation; colour encodes the controller (green = coarse v3, red = matched-resolution v3, blue = hybrid). \textbf{(left)} live maintenance score $m_s$ (lower is better, with the usable $m_s<0.1$ band shaded); \textbf{(right)} comfort-violation fraction. Same data as Table~\ref{tab:seed_band}.}
+  \label{fig:seed_band}
+
+{\footnotesize\itshape Data: \texttt{reports/\allowbreak block2\_\allowbreak thermostatic\_\allowbreak seed\_\allowbreak band.csv}}
+\end{figure}
+
+\paragraph{Measured mechanism: response-surface smoothness.} The ``optimization-friendly smoothing'' invoked above is not a post-hoc narrative: it is directly measurable on the surrogates themselves, independently of any controller. For each single-model backend we hold a representative state fixed, sweep the supply-temperature action $a_0$ over $[-1,1]$, and read the surrogate's own one-step map $\hat T(a_0)$; from that curve we compute the slope magnitude $\overline{|\partial\hat T/\partial a_0|}$ and, as a step-length-independent measure of non-smoothness, the \emph{relative roughness} (mean curvature normalised by mean slope, both in $^\circ$C per unit action), averaged over a grid of zone temperatures and the two windows' ambients. The scale-free relative roughness orders cleanly with downstream usability (Table~\ref{tab:surface_sharpness}): the only usable training environment, the canonical hourly v3, exposes the \emph{smoothest}, near-monotone action$\to$next-temperature landscape (relative roughness $0.17$), whereas both backends that collapse in closed loop expose markedly rougher landscapes---$9.4\times$ for the matched-resolution v3 and $7.9\times$ for the calibrated v3.5. (The raw per-step slope and range are intentionally \emph{not} used as the mechanism metric: they are confounded by the step length, which is the coarse-graining variable; the normalised roughness is not.) This is the surrogate-side cause whose policy-side symptom is the near-bang-bang action gap of the collapsed controllers (Fig.~\ref{fig:action_phase}): a rougher, more sharply peaked optimisation landscape is precisely what a policy-gradient learner saturates into a non-transferable extremal law. The contrast is visual as well as numerical---the usable hourly v3 has a smooth, monotone action map, while both collapsing surrogates are visibly non-monotone (Fig.~\ref{fig:surface_curves}), so this figure (cause) pairs directly with the bang-bang phase portrait of Fig.~\ref{fig:action_phase} (effect).
+
+\begin{table}[pos={!ht}]
+\centering
+\caption{Measured response-surface smoothness of the three single-model backends, probed directly on each surrogate's one-step action map (no controller, no BOPTEST; data: \texttt{reports/block2\_mechanism\_surface\_sharpness.csv}). The scale-free relative roughness (curvature normalised by slope) is independent of the step length and tracks closed-loop usability: the usable hourly v3 is the smoothest; both collapsed backends are several times rougher.}
+\label{tab:surface_sharpness}
+\small
+\begin{tabular}{lrrll}
+\toprule
+Surrogate backend & Slope $\overline{|\partial\hat T/\partial a_0|}$ & Rel.\ roughness & vs.\ v3 & Closed-loop role \\
+\midrule
+canonical v3 (hourly) & 3.368 & 0.169 & 1.0 (ref) & usable \\
+matched v3 (15-min) & 0.272 & 1.578 & 9.4$\times$ & collapse \\
+calibrated v3.5 & 0.467 & 1.338 & 7.9$\times$ & collapse \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[pos={!ht}]
+  \centering
+  \includegraphics[width=0.96\linewidth]{block2_surface_response_curves.pdf}
+  \caption{The surrogates that fail downstream expose a rougher action-response surface, and that roughness drives the policy to a bang-bang law on the live emulator. Probed directly on each surrogate's one-step action map (no controller, no BOPTEST). \textbf{(A)} Normalised action$\to$next-temperature response $\hat T(a_0)$ (each backend's grid-mean curve, centred and scaled to a common range so the comparison is of \emph{shape}, not amplitude; line styles aid colour-blind reading): the usable hourly v3 is smooth and monotone, both collapsing backends are visibly non-monotone. \textbf{(B)} Scale-free relative roughness (mean curvature $\div$ mean slope; bars = canonical aggregate matching Table~\ref{tab:surface_sharpness}, whiskers = standard deviation of the per-state ratio over the grid): the collapsing backends are $7.9$--$9.4\times$ rougher than the usable v3. \textbf{(C)} The measured policy-side consequence---the fraction of closed-loop BOPTEST steps with a saturated action ($|a_0|>0.9$): the usable hourly v3 modulates ($24\%$) whereas both collapsing backends are driven to a near bang-bang law ($100\%$). This is the surrogate-side \emph{cause} whose policy-side \emph{effect} is the action gap of Fig.~\ref{fig:action_phase}. Data: \texttt{reports/block2\_mechanism\_surface\_sharpness.csv}.}
+  \label{fig:surface_curves}
+\end{figure}
 
 \paragraph{Hybrid $\lambda_T$ sweep and canonical selection (roadmap \S5).} The canonical hybrid operating point was selected by a thermostatic sweep over the temperature-disagreement weight $\lambda_T\in\{0.05,0.10,0.15\}$ at fixed $\lambda_P=5\times10^{-5}$ (Table~\ref{tab:hybrid_sweep}). The mid setting $\lambda_T=0.10$ (\texttt{hybrid\_l010}) is canonical: per the roadmap selection rule it retains the energy advantage over pure v3 while avoiding the stronger comfort degradation seen at the weaker ($0.05$) and stronger ($0.15$) censor settings. Only the canonical point's live-BOPTEST KPIs are retained as a frozen artifact; the bracketing points served selection only.
 
@@ -465,7 +506,7 @@ MORL uses a four-stage pipeline that differs from the single-stage PPO families 
 {\footnotesize\itshape Schematic; not derived from a dataset.}
 \end{figure}
 
-MORL initially failed with a 5D observation (zone temperature, ambient, hour, day, occupancy). Under the current code path, a reconstructed 5D rerun obtains RMSE$_T=2.721\,^\circ$C, violation $37.8\%$, and $m_s=0.680$; the originally frozen 5D artifact was even worse (RMSE$_T=4.96\,^\circ$C, $m_s=1.046$) and is retained only as an audit artifact. Replacing the observation with the 17D TSup-style vector recovers a usable policy: RMSE$_T=0.720\,^\circ$C, violation $4.9\%$, $m_s=0.099$ (Table~\ref{tab:morl5d17d}). The dominant MORL bottleneck was the observation geometry, not the reward scalarization alone. Widening the observation to include action history and short-horizon forecasts is the standard remedy for the partial observability (POMDP structure) of the underlying control task --- the richer interface restores an approximately Markov state, consistent with forecast-augmented RL-HVAC control~\citep{Gao2024Predictive}.
+MORL initially failed with a 5D observation (zone temperature, ambient, hour, day, occupancy). Under the current code path, a reconstructed 5D rerun obtains RMSE$_T=2.721\,^\circ$C, violation $37.8\%$, and $m_s=0.680$ (an earlier historical 5D artifact, retained only for audit, is reported in the supplementary). Replacing the observation with the 17D TSup-style vector recovers a usable policy: RMSE$_T=0.720\,^\circ$C, violation $4.9\%$, $m_s=0.099$ (Table~\ref{tab:morl5d17d}). The dominant MORL bottleneck was the observation geometry, not the reward scalarization alone. Widening the observation to include action history and short-horizon forecasts is the standard remedy for the partial observability (POMDP structure) of the underlying control task --- the richer interface restores an approximately Markov state, consistent with forecast-augmented RL-HVAC control~\citep{Gao2024Predictive}.
 
 \begin{table}[pos={!ht}]
 \centering
@@ -485,7 +526,7 @@ MORL 17D power-only (canonical) & 17 & 0.720 & 4.9 & 0.099 \\
 \begin{figure}[pos={!ht}]
   \centering
   \includegraphics[width=0.84\linewidth]{final17_fig09_morl_5d_failure_17d_success.pdf}
-  \caption{MORL 5D failure and 17D recovery. The observation interface, not only the scalarized reward, determines whether MORL is viable.}
+  \caption{MORL observation-interface ablation: 5D failure $\rightarrow$ 17D recovery. Two 5D bars are shown to match the main-text MORL 5D/17D comparison table: the \emph{current-code 5D rerun} ($m_s=0.680$, the value reported in that table) and the \emph{originally frozen 5D artifact} ($m_s=1.046$), which is retained only as an audit artifact. Both 5D variants fail; only the 17D power-only observation ($m_s=0.099$) recovers a usable policy. The observation interface, not only the scalarized reward, determines whether MORL is viable.}
   \label{fig:morl5d17d}
 
 {\footnotesize\itshape Data: \texttt{reports/\allowbreak block2\_\allowbreak morl\_\allowbreak 5d\_\allowbreak reconstructed\_\allowbreak comparison.csv}}
@@ -520,7 +561,7 @@ Preference / statistic & RMSE$_T$ ($^\circ$C) & Violation (\%) & $m_s$ & Interpr
 \begin{figure}[pos={!ht}]
   \centering
   \includegraphics[width=0.86\linewidth]{block2_q1_polish_morl_pareto_ellipses.pdf}
-  \caption{MORL comfort--energy Pareto front with N=5 confidence ellipses for the two canonical points. Non-canonical points are seed-42 only.}
+  \caption{MORL comfort--energy Pareto front. \textbf{Non-canonical points are seed-42 only}; the $N=5$ confidence ellipses are drawn \emph{only} for the two canonical operating points (neutral 50/50 and practical 75/25), which are the audited multi-seed results. The front should therefore be read as a best-seed envelope, not a deployment guarantee.}
   \label{fig:morl_pareto}
 
 {\footnotesize\itshape Data: \texttt{reports/\allowbreak morl\_\allowbreak pareto\_\allowbreak front\_\allowbreak table.csv}}

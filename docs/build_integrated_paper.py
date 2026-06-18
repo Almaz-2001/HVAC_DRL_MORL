@@ -62,7 +62,7 @@ SUPP_MOVE_LABELS = {
     # --- Block 2: page-trim pass (scenario detail / diagnostics / HDRL / MORL detail) ---
     "tab:scenarios", "fig:closed_loop_traces", "fig:hdrl_arch", "fig:hdrl_sweep",
     "tab:morl_pareto_seed", "fig:ms_decomp", "tab:hdrl", "fig:morl_pareto",
-    "fig:morl5d17d", "tab:transfer", "tab:seed_band",
+    "fig:morl5d17d", "tab:transfer", "tab:seed_band", "fig:seed_band",
     # fig:surface_curves promoted to MAIN (the measured mechanism is a headline result);
     # fig:live_kpi (per-metric KPI bars) demoted to supplementary -- the paradox is now
     # carried in main by the fidelity-utility scatter (fig:paradox_scatter).
@@ -123,6 +123,7 @@ FIG_DATA = {
     "fig:hdrl_arch": None,
     "fig:morl_pipeline": None,
     "fig:live_kpi": "outputs/block2_*/summary.csv",
+    "fig:seed_band": "reports/block2_thermostatic_seed_band.csv",
     "fig:ms_decomp": "outputs/block2_*/summary.csv",
     "fig:closed_loop_traces": "outputs/block2_thermostatic_hybrid_v3_v35_l010/",
     "fig:action_phase": "outputs/block2_thermostatic_hybrid_v3_v35_l010/",
