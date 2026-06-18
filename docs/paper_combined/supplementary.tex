@@ -363,6 +363,15 @@ hybrid v3+v3.5 & 1,786.8 & 0.507 & 0.648 & 85.0$\times$ \\
 
 \begin{figure}[H]
   \centering
+  \includegraphics[width=0.82\linewidth]{block2_warmstart_negative_eval_kpis.pdf}
+  \caption{Warm-start negative control. Pretraining on direct v3.5 and then fine-tuning on the hybrid backend is inferior to training the hybrid policy from scratch.}
+  \label{fig:warmstart}
+
+{\footnotesize\itshape Data: \texttt{outputs/\allowbreak block2\_\allowbreak thermostatic\_\allowbreak warmstart\_\allowbreak utility/\allowbreak comparison\_\allowbreak summary.csv}}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
   \includegraphics[width=0.86\linewidth]{block1_q1_fig10_transfer_gap_diagnostics.pdf}
   \caption{Transfer-gap diagnostics. Direct v3.5 has high action-gap norm and live-surrogate mismatch; the hybrid backend suppresses both.}
   \label{fig:transfer_gap}
@@ -667,6 +676,15 @@ Pair (c/e) & Seed & RMSE$_T$ & Within 1$^\circ$C (\%) & Violation (\%) & Energy 
 
 \begin{figure}[H]
   \centering
+  \includegraphics[width=0.84\linewidth]{final17_fig13_block3_controller_transfer_heatmap.pdf}
+  \caption{Controller-transfer verdict heatmap. Residential hydronic cases fail the controller threshold; the commercial case passes the threshold but carries a separate energy caveat.}
+  \label{fig:heatmap}
+
+{\footnotesize\itshape Data: \texttt{reports/\allowbreak block3\_\allowbreak transfer\_\allowbreak matrix.csv}}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
   \includegraphics[width=0.80\linewidth]{fig_block3_controller_bar.pdf}
   \caption{Controller-side transfer: frozen-hybrid $m_s^{\mathrm{RL}}$ against the PI baseline $m_s^{\mathrm{PI}}$ and the pre-specified threshold $\tau_k=1.25\,m_s^{\mathrm{PI}}$ (dashed). The two residential cases exceed the threshold (FAIL); the commercial case is below it (PASS, with the separate energy caveat).}
   \label{fig:controller_bar}
@@ -697,6 +715,15 @@ Pair (c/e) & Seed & RMSE$_T$ & Within 1$^\circ$C (\%) & Violation (\%) & Energy 
   \includegraphics[width=0.82\linewidth]{final_eng_fig12_czon_hypothesis_interval.pdf}
   \caption{$C_{\mathrm{zon}}$ hypothesis-interval diagnostic. The observed ratios fall inside the uniform hydronic-family hypothesis A ($1.7$--$2.2\times$) and outside the scale-dependent hypothesis B ($3$--$10\times$).}
   \label{fig:czon_hypothesis}
+
+{\footnotesize\itshape Data: \texttt{reports/\allowbreak block3\_\allowbreak transfer\_\allowbreak matrix.csv}}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.88\linewidth]{final17_fig17_hypothesis_closure_matrix.pdf}
+  \caption{Hypothesis closure matrix: Block 3 supports surrogate-side transferability but falsifies deployment-ready frozen-controller transfer.}
+  \label{fig:hypothesis_closure}
 
 {\footnotesize\itshape Data: \texttt{reports/\allowbreak block3\_\allowbreak transfer\_\allowbreak matrix.csv}}
 \end{figure}

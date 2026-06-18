@@ -238,14 +238,7 @@ A second negative control tests whether v3.5 is useful as a policy \emph{initial
 
 
 
-\begin{figure}[pos={!ht}]
-  \centering
-  \includegraphics[width=0.82\linewidth]{block2_warmstart_negative_eval_kpis.pdf}
-  \caption{Warm-start negative control. Pretraining on direct v3.5 and then fine-tuning on the hybrid backend is inferior to training the hybrid policy from scratch.}
-  \label{fig:warmstart}
 
-{\footnotesize\itshape Data: \texttt{outputs/\allowbreak block2\_\allowbreak thermostatic\_\allowbreak warmstart\_\allowbreak utility/\allowbreak comparison\_\allowbreak summary.csv}}
-\end{figure}
 
 \subsection{Transfer-gap diagnostics (roadmap \S5.5)}
 
@@ -268,7 +261,7 @@ Direct v3.5 has the largest transfer mismatch ($|\Delta m_s|\approx 0.9$--$1.0$,
 
 \subsection{HDRL sensitivity: the hybrid weight is controller-family specific (roadmap \S6)}
 
-HDRL here is a \emph{seasonal} hierarchy. A high-level seasonal selector routes control to one of two low-level PPO setpoint specialists --- a winter agent (trained 5M steps on cold-season day ranges with cold-biased comfort shaping) and a summer agent (7M steps on warm-season ranges) --- each acting on the same 17D observation and supply-temperature action. Formally the controller is $\pi(a_t\mid s_t)=\pi_{k(t)}(a_t\mid s_t)$ with the high-level gate $k(t)\in\{\text{winter},\text{summer}\}$ chosen by season; the hierarchy supplies regime-aware temporal abstraction, so each low-level specialist solves a narrower, better-conditioned control problem than a single global policy (Figure~\suppref{S13}).
+HDRL here is a \emph{seasonal} hierarchy. A high-level seasonal selector routes control to one of two low-level PPO setpoint specialists --- a winter agent (trained 5M steps on cold-season day ranges with cold-biased comfort shaping) and a summer agent (7M steps on warm-season ranges) --- each acting on the same 17D observation and supply-temperature action. Formally the controller is $\pi(a_t\mid s_t)=\pi_{k(t)}(a_t\mid s_t)$ with the high-level gate $k(t)\in\{\text{winter},\text{summer}\}$ chosen by season; the hierarchy supplies regime-aware temporal abstraction, so each low-level specialist solves a narrower, better-conditioned control problem than a single global policy (Figure~\suppref{S14}).
 
 
 
@@ -282,7 +275,7 @@ The HDRL experiment asks whether the thermostatic hybrid setting $\lambda_T=0.10
 
 \subsection{MORL observation ablation: 5D failure to 17D success (roadmap \S6.5--\S7)}
 
-MORL uses a four-stage pipeline that differs from the single-stage PPO families (roadmap Section 7): (1) a 2M-step surrogate \emph{pretrain} on the 17D hybrid backend with canonical $(w_c,w_e,w_s)=(0.80,0.20,0.00)$; (2) an \emph{ERAM} weight-adaptation stage (20 iterations of 100k steps from initial weights $0.34/0.33/0.33$, weight-update temperature $\tau_w=0.35$); (3) a 100k-step \emph{finetune} on the live BOPTEST RTE at learning rate $10^{-4}$ with $\pm3$-day episode-start jitter; and (4) a 12-month \emph{yearly evaluation}. MORL is the only family with a live-BOPTEST finetune; the thermostatic/HDRL families are evaluated zero-shot after surrogate-only training, which is a strictly harder transfer (Figure~\suppref{S15}).
+MORL uses a four-stage pipeline that differs from the single-stage PPO families (roadmap Section 7): (1) a 2M-step surrogate \emph{pretrain} on the 17D hybrid backend with canonical $(w_c,w_e,w_s)=(0.80,0.20,0.00)$; (2) an \emph{ERAM} weight-adaptation stage (20 iterations of 100k steps from initial weights $0.34/0.33/0.33$, weight-update temperature $\tau_w=0.35$); (3) a 100k-step \emph{finetune} on the live BOPTEST RTE at learning rate $10^{-4}$ with $\pm3$-day episode-start jitter; and (4) a 12-month \emph{yearly evaluation}. MORL is the only family with a live-BOPTEST finetune; the thermostatic/HDRL families are evaluated zero-shot after surrogate-only training, which is a strictly harder transfer (Figure~\suppref{S16}).
 
 
 

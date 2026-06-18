@@ -39,7 +39,7 @@ The adapter maps the frozen source policy output to the target actuator interfac
   T^{\mathrm{sup}}_t = 18 + \tfrac{a_t+1}{2}(35-18),
   \label{eq:adapter}
 \end{equation}
-where $\mathcal{A}_{k}$ is the pre-specified adapter for testcase $k$, $a_t\in[-1,1]$ is the frozen policy output, and $y_t$ are available BOPTEST measurements used by rule-based adapter logic. Adapter smoke tests verify that low/high overrides produce directionally valid heating before any yearly run. Figure~\suppref{S21} shows the adapter-mediated transfer: one frozen controller drives three different actuator interfaces through the per-testcase adapters, with per-testcase controller verdicts. The recalibration regimes (Table~\suppref{S25}) keep the controller frozen and vary only how much of the surrogate adapts.
+where $\mathcal{A}_{k}$ is the pre-specified adapter for testcase $k$, $a_t\in[-1,1]$ is the frozen policy output, and $y_t$ are available BOPTEST measurements used by rule-based adapter logic. Adapter smoke tests verify that low/high overrides produce directionally valid heating before any yearly run. Figure~\suppref{S22} shows the adapter-mediated transfer: one frozen controller drives three different actuator interfaces through the per-testcase adapters, with per-testcase controller verdicts. The recalibration regimes (Table~\suppref{S25}) keep the controller frozen and vary only how much of the surrogate adapts.
 
 
 
@@ -128,14 +128,7 @@ commercial hydronic & 0.431 & 0.628 & 0.785 & PASS$^\dagger$ & 35.3 & 1.952 & 0.
 \end{tabular}
 \end{table}
 
-\begin{figure}[pos={!ht}]
-  \centering
-  \includegraphics[width=0.84\linewidth]{final17_fig13_block3_controller_transfer_heatmap.pdf}
-  \caption{Controller-transfer verdict heatmap. Residential hydronic cases fail the controller threshold; the commercial case passes the threshold but carries a separate energy caveat.}
-  \label{fig:heatmap}
 
-{\footnotesize\itshape Data: \texttt{reports/\allowbreak block3\_\allowbreak transfer\_\allowbreak matrix.csv}}
-\end{figure}
 
 \begin{figure}[pos={!ht}]
   \centering
@@ -167,7 +160,7 @@ The stretch testcase was pre-specified as the hardest, most informative falsific
 \subsection{Surrogate-side transfer and $C_{\mathrm{zon}}$ consistency}
 \label{ssec:czon}
 
-Full Stage A/B/C improves target rollout RMSE on all three testcases (gains $60.2\%$, $87.4\%$, $87.8\%$), supporting the weak surrogate-side transfer hypothesis on $N=3$ (Figure~\suppref{S24}). The strongest physical finding is the consistency of the re-identified capacitance: the three hydronic testcases cluster tightly around $1.918\times$ the \texttt{bestest\_air} value (Table~\ref{tab:czon}),
+Full Stage A/B/C improves target rollout RMSE on all three testcases (gains $60.2\%$, $87.4\%$, $87.8\%$), supporting the weak surrogate-side transfer hypothesis on $N=3$ (Figure~\suppref{S26}). The strongest physical finding is the consistency of the re-identified capacitance: the three hydronic testcases cluster tightly around $1.918\times$ the \texttt{bestest\_air} value (Table~\ref{tab:czon}),
 \begin{equation}
   \rho_C = \{1.892,\,1.954,\,1.909\},
   \qquad
@@ -221,14 +214,7 @@ hierarchy & Verdict is monotone in recalibration depth. & SUPPORTED & Controller
 \end{tabularx}
 \end{table}
 
-\begin{figure}[pos={!ht}]
-  \centering
-  \includegraphics[width=0.88\linewidth]{final17_fig17_hypothesis_closure_matrix.pdf}
-  \caption{Hypothesis closure matrix: Block 3 supports surrogate-side transferability but falsifies deployment-ready frozen-controller transfer.}
-  \label{fig:hypothesis_closure}
 
-{\footnotesize\itshape Data: \texttt{reports/\allowbreak block3\_\allowbreak transfer\_\allowbreak matrix.csv}}
-\end{figure}
 
 \subsection{Pre-specified predictions versus outcomes}
 

@@ -67,12 +67,19 @@ SUPP_MOVE_LABELS = {
     # fig:live_kpi (per-metric KPI bars) demoted to supplementary -- the paradox is now
     # carried in main by the fidelity-utility scatter (fig:paradox_scatter).
     "fig:live_kpi",
+    # fig:warmstart demoted: warm-start is an auxiliary negative control, not a headline
+    # result (the thesis is carried by fig:paradox_scatter + fig:surface_curves + Tables 8/9).
+    "fig:warmstart",
     # --- Block 3: schematic + per-regime detail floats ---
     # (fig:topology stays: it \ref's eq:hydronic_balance in the main text)
     "fig:protocol", "fig:adapter", "fig:regime_progression", "fig:czon_hypothesis",
     "tab:testcases", "tab:regimes", "tab:primary", "tab:predictions",
     # --- Block 3: page-trim pass (secondary diagnostic figures) ---
     "fig:controller_bar", "fig:stage_abc_gain",
+    # fig:heatmap (PASS/FAIL verdict grid) and fig:hypothesis_closure (text-as-image
+    # matrix) demoted: the engineering comfort-energy deployment plane (fig:deployment_plane)
+    # and the closure table carry these in the main text more rigorously.
+    "fig:heatmap", "fig:hypothesis_closure",
 }
 
 
