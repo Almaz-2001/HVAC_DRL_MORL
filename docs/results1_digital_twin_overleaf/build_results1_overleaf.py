@@ -237,17 +237,20 @@ def fig03_stage_abc(ep: dict, power: dict, corpus: pd.DataFrame) -> None:
     style(axes[0], "(a) Stage B physical-parameter identification", "epoch", "$C_{zon}$ ($10^5$ J/K)")
     axes[0].legend(frameon=False, fontsize=8)
 
+    # normalised improvement (% reduction) so different units (deg C, kW) are not mixed
+    # on one axis; the raw before->after values are kept as sub-labels for context
     x = np.arange(len(labels))
-    axes[1].bar(x - 0.17, before, width=0.34, color=AMBER, label="before", edgecolor="#111827", linewidth=0.4)
-    axes[1].bar(x + 0.17, after, width=0.34, color=GREEN, label="after", edgecolor="#111827", linewidth=0.4)
-    y_top = float(before.max()) * 1.35
-    axes[1].set_ylim(0, y_top)
-    for i, (b, a) in enumerate(zip(before, after)):
-        axes[1].text(i, max(b, a) + y_top * 0.035, f"{(a-b)/b*100:+.1f}%", ha="center", fontsize=8.5, weight="bold")
+    red = (before - after) / before * 100.0
+    units = ["°C", "°C", "kW"]
+    names = ["1-step RMSE$_T$", "24 h RMSE$_T$", "Power MAE"]
+    sub = [f"{names[i]}\n{before[i]:.2f}$\\to${after[i]:.2f} {units[i]}" for i in range(len(labels))]
+    axes[1].bar(x, red, width=0.55, color=GREEN, edgecolor="#111827", linewidth=0.4)
+    for i, r in enumerate(red):
+        axes[1].text(i, r + 1.6, f"−{r:.1f}%", ha="center", fontsize=9.5, weight="bold")
     axes[1].set_xticks(x)
-    axes[1].set_xticklabels(labels)
-    style(axes[1], "(b) Calibration effect on fidelity metrics", ylabel="metric value")
-    axes[1].legend(frameon=False, fontsize=8)
+    axes[1].set_xticklabels(sub, fontsize=8.5)
+    axes[1].set_ylim(0, float(red.max()) * 1.2)
+    style(axes[1], "(b) Calibration reduces every fidelity error", ylabel="reduction after calibration (%)")
     fig.suptitle("Stage A/B/C calibration improves prediction while keeping the physical parameter bounded", fontsize=13, weight="bold")
     fig.tight_layout(rect=[0, 0, 1, 0.92])
     save(fig, "rie_fig03_stage_abc_diagnostics")
