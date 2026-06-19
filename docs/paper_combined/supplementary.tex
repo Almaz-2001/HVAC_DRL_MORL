@@ -336,6 +336,15 @@ hybrid v3+v3.5 & 1,786.8 & 0.507 & 0.648 & 85.0$\times$ \\
 
 \begin{figure}[H]
   \centering
+  \includegraphics[width=0.90\linewidth]{fig_block2_reward_shaping.pdf}
+  \caption{Hybrid reward-shaping mechanism. v3 supplies rollout dynamics; frozen v3.5 supplies a disagreement penalty on the same state-action transition.}
+  \label{fig:hybrid_reward}
+
+{\footnotesize\itshape Schematic; not derived from a dataset.}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
   \includegraphics[width=0.96\linewidth]{final17_fig06_live_boptest_controller_comparison.pdf}
   \caption{Detailed live BOPTEST KPI breakdown (per-metric bars) for pure v3, direct v3.5, and hybrid PPO. Direct v3.5 is a negative control: higher predictive fidelity does not imply a useful RL training environment. These per-metric bars give the underlying $m_s$, violation, RMSE, and energy behind the compact fidelity--utility scatter in the main text.}
   \label{fig:live_kpi}
@@ -679,6 +688,15 @@ Pair (c/e) & Seed & RMSE$_T$ & Within 1$^\circ$C (\%) & Violation (\%) & Energy 
   \includegraphics[width=0.97\linewidth]{fig_block3_adapter.pdf}
   \caption{Adapter-mediated transfer schematic. The frozen Block 2 hybrid policy is routed through a pre-specified actuator adapter $\mathcal{A}_k$ to each testcase's actuator interface; the controller-side verdict (against the $1.25\times$ PI threshold) is per-testcase, while full Stage A/B/C surrogate recalibration passes on all three.}
   \label{fig:adapter}
+
+{\footnotesize\itshape Schematic; not derived from a dataset.}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.97\linewidth]{fig_block3_topology.pdf}
+  \caption{Schematic (no data). Comparative HVAC topology of the source case and the three hydronic targets (source $\to$ distribution $\to$ zone). Transfer changes the heat source, distribution path, and actuator set, while the single-zone energy balance and the zone thermal capacitance $C_{\mathrm{zon}}$ are shared across the family.}
+  \label{fig:topology}
 
 {\footnotesize\itshape Schematic; not derived from a dataset.}
 \end{figure}

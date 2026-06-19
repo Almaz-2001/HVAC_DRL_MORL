@@ -54,7 +54,9 @@ SUPP_MOVE_LABELS = {
     "tab:block1-corpora", "tab:architecture-summary",
     "tab:stage-abc", "fig:speed", "tab:speed",
     # --- Block 2: schematic + diagnostic floats ---
-    "fig:block2_pipeline", "fig:morl_pipeline",
+    # fig:hybrid_reward (reward-shaping schematic) demoted to supplementary: the main text
+    # now carries the runtime-fidelity feasibility figure (fig:runtime_feasibility) instead.
+    "fig:block2_pipeline", "fig:morl_pipeline", "fig:hybrid_reward",
     # fig:action_phase promoted to MAIN: it is the policy-side "effect" that completes
     # the cause->effect pairing with the surrogate-side mechanism (fig:surface_curves).
     "fig:morl_heatmap", "fig:seasonal_falsification", "fig:transfer_gap",
@@ -71,7 +73,9 @@ SUPP_MOVE_LABELS = {
     # result (the thesis is carried by fig:paradox_scatter + fig:surface_curves + Tables 8/9).
     "fig:warmstart",
     # --- Block 3: schematic + per-regime detail floats ---
-    # (fig:topology stays: it \ref's eq:hydronic_balance in the main text)
+    # fig:topology demoted to supplementary (its caption no longer \eqref's the main-text
+    # balance, so the standalone supplementary build stays self-contained).
+    "fig:topology",
     "fig:protocol", "fig:adapter", "fig:regime_progression", "fig:czon_hypothesis",
     "tab:testcases", "tab:regimes", "tab:primary", "tab:predictions",
     # --- Block 3: page-trim pass (secondary diagnostic figures) ---
@@ -123,6 +127,8 @@ FIG_DATA = {
     "fig:hdrl_arch": None,
     "fig:morl_pipeline": None,
     "fig:live_kpi": "outputs/block2_*/summary.csv",
+    "fig:runtime_feasibility": "reports/speed_benchmark_table.csv",
+    "fig:lambda_specificity": "reports/block2_hdrl_lambda_sweep_summary.csv",
     "fig:seed_band": "reports/block2_thermostatic_seed_band.csv",
     "fig:ms_decomp": "outputs/block2_*/summary.csv",
     "fig:closed_loop_traces": "outputs/block2_thermostatic_hybrid_v3_v35_l010/",
@@ -358,12 +364,12 @@ People spend up to 90\% of their time indoors, and buildings account for roughly
 Deep reinforcement learning (DRL) is an attractive alternative because it learns a control policy directly from interaction, without an explicit model, and standardized runtime environments such as BOPTEST now make such controllers reproducibly comparable~\citep{Blum2021BOPTEST,AlSayed2024Review}. The obstacle is the sim-to-real deployment gap: policy-gradient algorithms consume millions of environment steps, so training on a live building --- or on a high-fidelity physics simulator stepped through an HTTP interface --- is prohibitively slow and risks sustained comfort violations during exploration~\citep{Wang2025SafeDRL,Hou2024MultiSource}. The community's response is to train the policy against a fast neural-network surrogate of the building, increasingly a physics-informed digital twin (e.g.\ resistance--capacitance or Neural Ordinary Differential Equation models) that generates state transitions orders of magnitude faster than real time~\citep{HouEvins2024,Mshragi2026FastML}. This paradigm rests on an unstated assumption, which we make explicit and test in this work: that a surrogate with higher predictive fidelity is automatically a better environment in which to train a controller.
 
 \subsection{Research gap}
-We find that this assumption can fail, and we name the phenomenon the \emph{fidelity--utility paradox} (the causal chain and its resolution are summarised in Fig.~\ref{fig:concept}): the surrogate with the lowest multi-step rollout error can be the worst environment for policy-gradient search. When a controller is trained directly on the high-fidelity physical twin, the policy converges to a near bang-bang law (a surrogate-to-live action-gap norm of $2.0$) and fails on the live BOPTEST runtime environment ($m_s>1$, comfort violation above $77\%$), even though that twin is the more accurate offline predictor. We \emph{observe} this action saturation directly, and we \emph{measure} its surrogate-side cause: the higher-fidelity surrogates expose an action$\to$next-temperature response surface that is $7.9$--$9.4\times$ rougher (in a scale-free, step-length-independent sense) than the usable one, so policy-gradient optimizers such as PPO saturate into a near bang-bang law that does not survive the distribution shift to the live simulator~\citep{RiahiSamani2026OOD}. A full loss-landscape analysis along the training trajectory remains future work, but the mechanism is no longer established only in direction. Establishing the paradox cleanly is itself non-trivial: two surrogates of different fidelity also differ in their training corpus and time resolution, so any naive fidelity-versus-utility comparison is confounded and must be separated by a controlled decomposition.
+We find that this assumption can fail, and we name the phenomenon the \emph{fidelity--utility paradox} (quantified as a measured contradiction across the evidence chain in Fig.~\ref{fig:concept}): the surrogate with the lowest multi-step rollout error can be the worst environment for policy-gradient search. When a controller is trained directly on the high-fidelity physical twin, the policy converges to a near bang-bang law (a surrogate-to-live action-gap norm of $2.0$) and fails on the live BOPTEST runtime environment ($m_s>1$, comfort violation above $77\%$), even though that twin is the more accurate offline predictor. We \emph{observe} this action saturation directly, and we \emph{measure} its surrogate-side cause: the higher-fidelity surrogates expose an action$\to$next-temperature response surface that is $7.9$--$9.4\times$ rougher (in a scale-free, step-length-independent sense) than the usable one, so policy-gradient optimizers such as PPO saturate into a near bang-bang law that does not survive the distribution shift to the live simulator~\citep{RiahiSamani2026OOD}. A full loss-landscape analysis along the training trajectory remains future work, but the mechanism is no longer established only in direction. Establishing the paradox cleanly is itself non-trivial: two surrogates of different fidelity also differ in their training corpus and time resolution, so any naive fidelity-versus-utility comparison is confounded and must be separated by a controlled decomposition.
 
 \begin{figure}[pos={!ht}]
   \centering
   \includegraphics[width=0.98\linewidth]{block2_conceptual_overview.pdf}
-  \caption{The fidelity--utility paradox and its resolution. Reading each lane left to right: a surrogate training environment induces an action-response surface, which shapes the PPO policy, which determines the live BOPTEST outcome. The coarse black-box v3 (top) gives a smooth surface and a usable controller; the more accurate calibrated v3.5 and the \emph{matched-resolution} v3 --- the same black-box v3 retrained at the finer fifteen-minute control resolution, so it is matched to v3.5's resolution and is strictly more accurate --- (middle) give a sharper, non-monotone surface that PPO exploits into a near bang-bang law that collapses on the live runtime; the role-separating hybrid (bottom) keeps v3's smooth rollout dynamics while adding a frozen v3.5 plausibility censor, recovering a robust controller. Quantities shown are established in Sections~\ref{sec:results1-digital-twin}--\ref{sec:results2-control}.}
+  \caption{Quantified evidence chain for the fidelity--utility paradox. Each row is a training backend (v3 hourly, matched-resolution v3, direct v3.5, hybrid) and each column reports one \emph{measured} link of the chain from predictive fidelity to live utility: \textbf{(A)} 24\,h rollout RMSE$_T$ ($^\circ$C), \textbf{(B)} the scale-free relative action-surface roughness ($\times$ the usable v3), \textbf{(C)} the closed-loop policy saturation ($|a_0|\geq0.9$, \% of steps), and \textbf{(D)} the live BOPTEST maintenance score $m_s$ with the $m_s=1$ collapse line and the usable band ($m_s<0.1$). The paradox is the \emph{measured contradiction} between columns A and D: the RMSE$_T$ order (v3.5 $<$ matched-v3 $<$ v3) reverses in live $m_s$ --- the least accurate hourly v3 is the only usable single-model environment, while the two more accurate backends collapse. The hybrid inherits v3's rollout fidelity and surface (hatched, marked $\ast$) because it rolls out on v3, with the frozen v3.5 acting only as a reward censor, and lands in the usable band. Every value is loaded from the committed artefacts established in Sections~\ref{sec:results1-digital-twin}--\ref{sec:results2-control} (the per-figure source CSVs are listed in the supplementary provenance map).}
   \label{fig:concept}
 \end{figure}
 

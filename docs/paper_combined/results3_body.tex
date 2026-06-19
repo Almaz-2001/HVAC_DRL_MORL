@@ -39,7 +39,7 @@ The adapter maps the frozen source policy output to the target actuator interfac
   T^{\mathrm{sup}}_t = 18 + \tfrac{a_t+1}{2}(35-18),
   \label{eq:adapter}
 \end{equation}
-where $\mathcal{A}_{k}$ is the pre-specified adapter for testcase $k$, $a_t\in[-1,1]$ is the frozen policy output, and $y_t$ are available BOPTEST measurements used by rule-based adapter logic. Adapter smoke tests verify that low/high overrides produce directionally valid heating before any yearly run. Figure~\suppref{S22} shows the adapter-mediated transfer: one frozen controller drives three different actuator interfaces through the per-testcase adapters, with per-testcase controller verdicts. The recalibration regimes (Table~\suppref{S25}) keep the controller frozen and vary only how much of the surrogate adapts.
+where $\mathcal{A}_{k}$ is the pre-specified adapter for testcase $k$, $a_t\in[-1,1]$ is the frozen policy output, and $y_t$ are available BOPTEST measurements used by rule-based adapter logic. Adapter smoke tests verify that low/high overrides produce directionally valid heating before any yearly run. Figure~\suppref{S24} shows the adapter-mediated transfer: one frozen controller drives three different actuator interfaces through the per-testcase adapters, with per-testcase controller verdicts. The recalibration regimes (Table~\suppref{S25}) keep the controller frozen and vary only how much of the surrogate adapts.
 
 
 
@@ -51,21 +51,14 @@ Concretely, each adapter first maps the policy command to a normalized heat-inte
 
 \subsection{Testcase architecture and physical processes}
 
-The three targets differ in heat source, distribution path, and actuator set, but share the same single-zone energy balance (Figure~\ref{fig:topology}). For a hydronic zone the governing first-order balance is
+The three targets differ in heat source, distribution path, and actuator set, but share the same single-zone energy balance (Figure~\suppref{S25}). For a hydronic zone the governing first-order balance is
 \begin{equation}
   C_{\mathrm{zon}}\frac{dT_{\mathrm{zon}}}{dt} = \dot{Q}_{\mathrm{hyd}}(u_t) + \frac{T_{\mathrm{amb}}-T_{\mathrm{zon}}}{R_{\mathrm{env}}} + \dot{Q}_{\mathrm{gain}},
   \label{eq:hydronic_balance}
 \end{equation}
 where $\dot{Q}_{\mathrm{hyd}}$ is the delivered hydronic heat (whose actuation path --- heat pump, boiler/radiator, or district valve --- changes per testcase), $R_{\mathrm{env}}$ the envelope resistance, and $\dot{Q}_{\mathrm{gain}}$ the internal/solar gains. Transfer changes the \emph{delivery path} $\dot{Q}_{\mathrm{hyd}}$ and the actuator interface, but $C_{\mathrm{zon}}$ is the shared physical invariant that Stage~B re-identifies --- which is why its re-identified value transfers (Section~\ref{ssec:czon}).
 
-\begin{figure}[pos={!ht}]
-  \centering
-  \includegraphics[width=0.97\linewidth]{fig_block3_topology.pdf}
-  \caption{Comparative HVAC topology of the source case and the three hydronic targets (source $\to$ distribution $\to$ zone). Transfer changes the heat source, distribution path, and actuator set, while the zone energy balance \eqref{eq:hydronic_balance} and $C_{\mathrm{zon}}$ are shared.}
-  \label{fig:topology}
 
-{\footnotesize\itshape Schematic; not derived from a dataset.}
-\end{figure}
 
 Table~\ref{tab:physics} summarizes the architecture and the identified physics. The equivalent thermal mass $C_{\mathrm{zon}}/c_{p,\mathrm{air}}$ (with $c_{p,\mathrm{air}}=1005$~J\,kg$^{-1}$K$^{-1}$) is roughly $2\times$ the \texttt{bestest\_air} value for every hydronic case, consistent with the added water-loop and surface thermal mass. The mean delivered power exposes the operating regime: it is of order $10^3$~W for the residential cases (envelope-conduction / slow-hydronic dominated) but two orders of magnitude larger for the commercial case (roughly $28\times$), because that zone is ventilation/AHU-dominated. This ventilation dominance is the physical reason the commercial controller passes the comfort threshold yet overshoots energy by $+35.3\%$; it also makes a conduction-only time constant ill-defined from total power for that case.
 
@@ -133,7 +126,7 @@ commercial hydronic & 0.431 & 0.628 & 0.785 & PASS$^\dagger$ & 35.3 & 1.952 & 0.
 \begin{figure}[pos={!ht}]
   \centering
   \includegraphics[width=0.84\linewidth]{block3_q1_polish_deployment_quadrants.pdf}
-  \caption{Comfort--energy deployment plane. The residential cases save energy but fail the comfort/safety threshold; the commercial case passes the threshold but moves into the energy-penalty quadrant.}
+  \caption{Comfort--energy deployment plane for the frozen RL policy transferred zero-shot to the hydronic family. The $x$-axis is the comfort/safety margin $M_k=\tau_k-m_s^{RL}$ relative to the pre-specified pass threshold $\tau_k=1.25\,m_s^{PI}$ (pass $\Leftrightarrow M_k>0$); the $y$-axis is the energy change versus the PI baseline. The four quadrants read directly: \emph{deployable} (pass + energy saving), \emph{safe but inefficient} (pass + energy penalty), \emph{unsafe energy saving} (fail + saving), \emph{reject} (fail + penalty). The residential hydronic cases (heat pump, hydronic) save energy but fall just left of the pass line, while the commercial case passes the comfort threshold at an energy penalty---none of the frozen-policy transfers land in the deployable quadrant, which is the regime-boundedness the recalibration step addresses. Data: \texttt{reports/block3\_transfer\_matrix.csv}.}
   \label{fig:deployment_plane}
 
 {\footnotesize\itshape Data: \texttt{reports/\allowbreak block3\_\allowbreak transfer\_\allowbreak matrix.csv}}
@@ -160,7 +153,7 @@ The stretch testcase was pre-specified as the hardest, most informative falsific
 \subsection{Surrogate-side transfer and $C_{\mathrm{zon}}$ consistency}
 \label{ssec:czon}
 
-Full Stage A/B/C improves target rollout RMSE on all three testcases (gains $60.2\%$, $87.4\%$, $87.8\%$), supporting the weak surrogate-side transfer hypothesis on $N=3$ (Figure~\suppref{S26}). The strongest physical finding is the consistency of the re-identified capacitance: the three hydronic testcases cluster tightly around $1.918\times$ the \texttt{bestest\_air} value (Table~\ref{tab:czon}),
+Full Stage A/B/C improves target rollout RMSE on all three testcases (gains $60.2\%$, $87.4\%$, $87.8\%$), supporting the weak surrogate-side transfer hypothesis on $N=3$ (Figure~\suppref{S29}). The strongest physical finding is the consistency of the re-identified capacitance: the three hydronic testcases cluster tightly around $1.918\times$ the \texttt{bestest\_air} value (Table~\ref{tab:czon}),
 \begin{equation}
   \rho_C = \{1.892,\,1.954,\,1.909\},
   \qquad

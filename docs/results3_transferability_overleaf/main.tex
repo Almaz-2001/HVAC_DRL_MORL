@@ -160,7 +160,7 @@ where $\dot{Q}_{\mathrm{hyd}}$ is the delivered hydronic heat (whose actuation p
 \begin{figure}[H]
   \centering
   \includegraphics[width=0.97\linewidth]{fig_block3_topology.pdf}
-  \caption{Comparative HVAC topology of the source case and the three hydronic targets (source $\to$ distribution $\to$ zone). Transfer changes the heat source, distribution path, and actuator set, while the zone energy balance \eqref{eq:hydronic_balance} and $C_{\mathrm{zon}}$ are shared.}
+  \caption{Schematic (no data). Comparative HVAC topology of the source case and the three hydronic targets (source $\to$ distribution $\to$ zone). Transfer changes the heat source, distribution path, and actuator set, while the single-zone energy balance and the zone thermal capacitance $C_{\mathrm{zon}}$ are shared across the family.}
   \label{fig:topology}
 \end{figure}
 
@@ -235,7 +235,7 @@ commercial hydronic & 0.431 & 0.628 & 0.785 & PASS$^\dagger$ & 35.3 & 1.952 & 0.
 \begin{figure}[H]
   \centering
   \includegraphics[width=0.84\linewidth]{block3_q1_polish_deployment_quadrants.pdf}
-  \caption{Comfort--energy deployment plane. The residential cases save energy but fail the comfort/safety threshold; the commercial case passes the threshold but moves into the energy-penalty quadrant.}
+  \caption{Comfort--energy deployment plane for the frozen RL policy transferred zero-shot to the hydronic family. The $x$-axis is the comfort/safety margin $M_k=\tau_k-m_s^{RL}$ relative to the pre-specified pass threshold $\tau_k=1.25\,m_s^{PI}$ (pass $\Leftrightarrow M_k>0$); the $y$-axis is the energy change versus the PI baseline. The four quadrants read directly: \emph{deployable} (pass + energy saving), \emph{safe but inefficient} (pass + energy penalty), \emph{unsafe energy saving} (fail + saving), \emph{reject} (fail + penalty). The residential hydronic cases (heat pump, hydronic) save energy but fall just left of the pass line, while the commercial case passes the comfort threshold at an energy penalty---none of the frozen-policy transfers land in the deployable quadrant, which is the regime-boundedness the recalibration step addresses. Data: \texttt{reports/block3\_transfer\_matrix.csv}.}
   \label{fig:deployment_plane}
 \end{figure}
 
