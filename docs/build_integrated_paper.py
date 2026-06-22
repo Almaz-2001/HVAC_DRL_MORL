@@ -52,6 +52,7 @@ SUPP_MOVE_LABELS = {
     # --- Block 1: page-trim pass (setup / technical detail) ---
     # (tab:tsup-assumptions stays: it \eqref's eq:tsup-signature in the main text)
     "tab:block1-corpora", "tab:architecture-summary",
+    "tab:czon", "tab:multi-horizon", "tab:physics",   # secondary Block-1 detail -> supplementary
     "tab:stage-abc", "fig:speed", "tab:speed",
     # --- Block 2: schematic + diagnostic floats ---
     # fig:hybrid_reward (reward-shaping schematic) demoted to supplementary: the main text
@@ -358,12 +359,10 @@ PI / RBC / MPC & -- & proportional--integral / rule-based / model predictive con
 % via natbib (\citep) against references.bib; all placeholders resolved.
 \section{Introduction}
 
-\subsection{Motivation}
 People spend up to 90\% of their time indoors, and buildings account for roughly one third of global final energy use; within them, heating, ventilation, and air-conditioning (HVAC) systems are the single largest consumer~\citep{AlSayed2024Review,Nguyen2024Modelling}. Improving HVAC control is therefore one of the highest-leverage interventions available for building decarbonization, yet it is intrinsically difficult: zone thermodynamics are nonlinear and coupled, and they are driven by time-varying occupancy, weather, and equipment constraints. The controllers used in practice --- proportional--integral (PID) loops and rule-based control (RBC) --- are robust and interpretable but cannot exploit this structure, leaving substantial comfort and energy gains unrealized~\citep{Savino2025ASHRAE,Gao2024Predictive}. Model predictive control (MPC) can exploit it in principle, but it requires an accurate, continuously maintained physical model of each building, which is expensive to identify and brittle under model mismatch~\citep{Hou2024MultiSource}.
 
 Deep reinforcement learning (DRL) is an attractive alternative because it learns a control policy directly from interaction, without an explicit model, and standardized runtime environments such as BOPTEST now make such controllers reproducibly comparable~\citep{Blum2021BOPTEST,AlSayed2024Review}. The obstacle is the sim-to-real deployment gap: policy-gradient algorithms consume millions of environment steps, so training on a live building --- or on a high-fidelity physics simulator stepped through an HTTP interface --- is prohibitively slow and risks sustained comfort violations during exploration~\citep{Wang2025SafeDRL,Hou2024MultiSource}. The community's response is to train the policy against a fast neural-network surrogate of the building, increasingly a physics-informed digital twin (e.g.\ resistance--capacitance or Neural Ordinary Differential Equation models) that generates state transitions orders of magnitude faster than real time~\citep{HouEvins2024,Mshragi2026FastML}. This paradigm rests on an unstated assumption, which we make explicit and test in this work: that a surrogate with higher predictive fidelity is automatically a better environment in which to train a controller.
 
-\subsection{Research gap}
 We find that this assumption can fail, and we name the phenomenon the \emph{fidelity--utility paradox} (quantified as a measured contradiction across the evidence chain in Fig.~\ref{fig:concept}): the surrogate with the lowest multi-step rollout error can be the worst environment for policy-gradient search. When a controller is trained directly on the high-fidelity physical twin, the policy converges to a near bang-bang law (a surrogate-to-live action-gap norm of $2.0$) and fails on the live BOPTEST runtime environment ($m_s>1$, comfort violation above $77\%$), even though that twin is the more accurate offline predictor. We \emph{observe} this action saturation directly, and we \emph{measure} its surrogate-side cause: the higher-fidelity surrogates expose an action$\to$next-temperature response surface that is $7.9$--$9.4\times$ rougher (in a scale-free, step-length-independent sense) than the usable one, so policy-gradient optimizers such as PPO saturate into a near bang-bang law that does not survive the distribution shift to the live simulator~\citep{RiahiSamani2026OOD}. A full loss-landscape analysis along the training trajectory remains future work, but the mechanism is no longer established only in direction. Establishing the paradox cleanly is itself non-trivial: two surrogates of different fidelity also differ in their training corpus and time resolution, so any naive fidelity-versus-utility comparison is confounded and must be separated by a controlled decomposition.
 
 \begin{figure}[pos={!ht}]
@@ -375,7 +374,6 @@ We find that this assumption can fail, and we name the phenomenon the \emph{fide
 
 A second, orthogonal gap concerns the observation interface and the controller family. HVAC control is a partially observable Markov decision process (POMDP): a small ($5$-dimensional) observation of the instantaneous state is insufficient for preference-conditioned multi-objective control (MORL)~\citep{Byeon2025MaxMinMORL}, which needs forecast and actuation context to disambiguate heating demand~\citep{Gao2024Predictive}. It is also unclear whether a single physics-regularization recipe is universal across controller families, since thermostatic, hierarchical, and multi-objective agents have different loss-surface geometries, so a censor that helps one may over-constrain another. Existing studies seldom separate surrogate predictive fidelity from downstream controller utility, rarely audit the observation interface, and almost never pre-specify cross-testcase transfer hypotheses --- which is precisely the methodological gap this paper addresses.
 
-\subsection{Hypothesis and study design}
 We propose a hybrid, role-separating architecture that decouples prediction from training. A compact control-oriented black-box surrogate (v3) supplies smooth, control-friendly Markov rollout dynamics, while an inverse-calibrated physics-informed twin (v3.5), whose zone thermal capacitance $\Czon$ is identified from telemetry, acts as a \emph{frozen per-step reward-shaping censor}: it adds a disagreement penalty to the reward, not a term to the policy loss, so the smooth v3 gradient field is preserved while physically implausible state--action regions are discouraged. To address the POMDP we widen the interface to a $17$-dimensional, forecast-augmented direct-supply-temperature observation, and we evaluate the recipe across three controller families --- thermostatic proximal policy optimization (PPO), hierarchical DRL (HDRL)~\citep{Liao2025HDRL}, and preference-conditioned MORL~\citep{Byeon2025MaxMinMORL}. Finally, the resulting frozen policies are subjected to a pre-specified transferability study on a hydronic family of BOPTEST testcases.
 
 We organize the investigation around four pre-specified, falsifiable hypotheses:
@@ -387,108 +385,19 @@ We organize the investigation around four pre-specified, falsifiable hypotheses:
 \end{enumerate}
 As reported below, H1 and H3 are \emph{falsified}, H2 is supported, and H4 resolves into a component-level boundary --- the calibration pipeline transfers while frozen-controller transfer does not. Each hypothesis and its verdict are bound to a versioned audit anchor, so that every outcome was predictable but not predicted before the corresponding runs.
 
-\subsection{Results summary}
-The evidence answers these questions concretely. Calibrated v3.5 reduces the 24-hour rollout RMSE to $0.644\,^{\circ}$C (versus $1.557\,^{\circ}$C for v3), yet used directly it yields $m_s=1.046$ live; the predictively weaker v3 yields a usable controller ($m_s=0.073$/$0.095$). The hybrid backend recovers the best cross-window robustness profile ($m_s=0.087$/$0.041$, violation below $5\%$ on both windows) while sustaining $85.0\times$ the BOPTEST throughput. The optimal disagreement weight is controller-family specific ($\lambda_{\mathrm{temp}}=0.10$ for thermostatic PPO, $\lambda_{\mathrm{temp}}=0$ for HDRL and the $17$D MORL). On the hydronic family, the inverse calibration transfers ($60.2$--$87.8\%$ rollout-RMSE reduction; $\Czon$ re-identified at $1.918\pm0.032$ times the source value), whereas frozen-policy transfer is regime-dependent.
-
-\subsection{Contributions}
 This paper makes three commit-anchored, version-locked contributions, organized as the project's three evidence blocks:
 \begin{enumerate}
   \item \textbf{Inverse-calibration pipeline and a matched-corpus decomposition (Block 1).} A Stage~A/B/C inverse-calibration protocol for the physical twin, with a controlled experiment attributing the predictive-fidelity gain to a $74.6\%$ data-resolution component and a $25.4\%$ physical-calibration component, so the calibration claim is real but bounded.
   \item \textbf{The fidelity--utility paradox and its hybrid resolution (Block 2).} Empirical evidence that a higher-fidelity physical surrogate is the worse direct RL training environment, resolved by a hybrid role assignment (v3 dynamics + frozen-v3.5 reward-shaping censor); the censor strength is shown to be controller-family specific, and the MORL controller beats the built-in PI baseline in mean (with the $N=5$ seed variance reported honestly).
   \item \textbf{A commit-anchored, version-locked transferability study (Block 3).} Across a hydronic family of testcases, the identified zone capacitance $\Czon$ transfers as a near-uniform structural invariant (rollout-RMSE improvement up to $88\%$), while zero-shot transfer of the frozen controller fails or passes only with an energy penalty --- establishing a precise component-level transferability boundary rather than a universal generalization claim.
 \end{enumerate}
-The remainder of this paper is organized as follows. Section~\ref{sec:related} reviews related work; Section~\ref{sec:methodology} details the methodology; Section~\ref{sec:setup} describes the experimental setup; Sections~\ref{sec:results1-digital-twin}, \ref{sec:results2-control}, and~\ref{sec:results3-transfer} present Results~I, II, and III; Section~\ref{sec:discussion} discusses the findings; and Section~\ref{sec:conclusion} concludes.
 
 \section{Related Work}\label{sec:related}
-\subsection{Deep and multi-objective reinforcement learning for HVAC control}
-Deep reinforcement learning (DRL) has become the dominant learning-based approach
-to supervisory HVAC control, yet the review of \citet{AlSayed2024Review} finds
-that only a minority of studies reach real-building deployment and that agents are
-typically trained on a single testbed with limited exposure to exogenous
-variation. Concrete controllers illustrate both the promise and this narrowness:
-phasic policy-gradient control improves adaptivity and convergence on a
-building-energy task \citep{Nguyen2024Modelling}; low-level multi-zone DRL has been
-benchmarked directly against ASHRAE Guideline~36 sequences \citep{Savino2025ASHRAE};
-and multi-agent formulations address energy management under chance constraints
-\citep{Deng2025MultiAgent} or couple DRL to IoT telemetry for context-aware
-operation \citep{Alotaibi2025ContextAware}. Because comfort and energy are
-competing objectives, HVAC control is naturally multi-objective: hierarchical DRL
-decomposes the problem across timescales to trade indoor-air-quality against
-consumption \citep{Liao2025HDRL}, while the broader multi-objective RL (MORL)
-literature studies preference-conditioned policies and their convergence
-guarantees \citep{Byeon2025MaxMinMORL}. What this body of work does not isolate is
-whether a single training recipe holds \emph{across} these controller families, or
-how the choice of training environment --- rather than the algorithm --- shapes the
-resulting policy; both are central questions in this paper.
-\subsection{Surrogate and physics-informed models for building control}
-Because high-fidelity building simulators are too slow to supply the millions of
-interactions that data-driven controllers require, a now-standard response is to
-replace --- or accelerate --- the physical model with a learned surrogate.
-\citet{HouEvins2024} formalize this practice into a reproducible protocol for
-developing and evaluating neural-network surrogate models of building energy
-behaviour, establishing reporting and justification levels that we adopt as an
-audit standard in this work. At the extreme of the throughput axis,
-\citet{Mshragi2026FastML} implement a random-forest surrogate as an FPGA hardware
-accelerator, reaching over $1.67$ million predictions per second so that an
-evolutionary optimizer can re-tune airflow and supply-temperature set-points in
-real time. Such fast surrogates are what make learning-based supervisory control
-tractable at building scale: multi-agent deep reinforcement learning has been
-applied to smart-building energy management under chance constraints
-\citep{Deng2025MultiAgent}, and context-aware reinforcement-learning controllers
-coupled to IoT telemetry have been reported to jointly improve energy efficiency
-and thermal comfort \citep{Alotaibi2025ContextAware}. In every case the surrogate
-or fast model is the substrate on which the controller is trained and tuned.
-These surrogates span a fidelity spectrum, from purely data-driven black-box
-networks to physics-informed digital twins --- resistance--capacitance or Neural
-ODE structures whose parameters carry physical meaning --- and the protocol of
-\citet{HouEvins2024} is, to date, oriented toward the predictive accuracy of such
-models rather than their suitability as a training environment.
+\textbf{DRL and multi-objective control for HVAC.} Deep RL is an increasingly studied alternative to PID/MPC for building HVAC, benchmarked against ASHRAE Guideline~36 sequences \citep{Savino2025ASHRAE} and extended to multi-agent and chance-constrained settings \citep{Deng2025MultiAgent,Alotaibi2025ContextAware}. Because comfort and energy compete, the problem is naturally multi-objective: hierarchical DRL decomposes it across timescales \citep{Liao2025HDRL} and preference-conditioned MORL studies trade-off policies \citep{Byeon2025MaxMinMORL,Nguyen2024Modelling}. What this work does not isolate is whether one training recipe holds \emph{across} controller families, or how the training \emph{environment} --- not the algorithm --- shapes the policy.
 
-This body of work, however, optimizes the surrogate almost exclusively along two
-axes --- predictive accuracy and inference throughput --- and treats the
-\emph{use} of that surrogate as a downstream concern. In parallel, the
-reinforcement-learning literature studies how training data should be
-\emph{collected} from a simulator: \citet{Mayor2025Parallelized} analyze how
-on-policy parallelized data collection shapes the optimization stability and final
-performance of PPO agents, while \citet{Radac2025OnlineRL} examine the software
-mechanics of interleaving environment stepping with learning updates for
-near-real-time online RL. What neither strand asks is whether a surrogate that is
-\emph{more accurate} as a predictor is thereby a \emph{better environment} in
-which to train a controller. We make exactly this question explicit and answer it
-in the negative (Section~\ref{sec:results2-control}): the surrogate's predictive
-fidelity and its downstream control utility are distinct, and can even be
-opposed --- a gap the accuracy-and-throughput framing of the surrogate literature
-leaves unexamined.
-\subsection{Distribution shift and transfer in learning-based control}
-A policy is only as good as the states it was trained to see, and two failure
-modes follow. The first is informational: a controller acting on an instantaneous
-observation cannot anticipate demand, and augmenting the state with predictive
-(forecast) information has been shown to improve both cost and comfort in
-office-building HVAC control \citep{Gao2024Predictive}. The second is
-distributional: policies optimised on a fixed simulator or offline dataset degrade
-when the deployment distribution differs, the out-of-distribution problem
-catalogued for offline RL by \citet{RiahiSamani2026OOD}. The standard remedy for
-the cost of re-training is transfer learning --- \citet{Hou2024MultiSource}, for
-example, transfer pre-trained DRL parameters across building zones and weather
-conditions to cut training time --- but they also show that an ill-chosen source
-domain degrades performance, so transfer is neither automatic nor uniformly
-beneficial. This motivates treating cross-testcase transfer as a hypothesis to be
-\emph{tested} rather than assumed, which is the stance of our transferability study
-(Section~\ref{sec:results3-transfer}).
+\textbf{Surrogate and physics-informed models.} Since high-fidelity simulators are too slow for the millions of interactions DRL needs, controllers are trained on learned surrogates spanning a fidelity spectrum from black-box networks to physics-informed RC / Neural-ODE twins. \citet{HouEvins2024} formalize surrogate development into a reproducible protocol (adopted here as an audit standard), and fast surrogates reach extreme throughput \citep{Mshragi2026FastML}; in parallel, RL work studies how simulator data should be \emph{collected} \citep{Mayor2025Parallelized,Radac2025OnlineRL}. Crucially, this literature optimizes the surrogate along predictive accuracy and throughput and treats its \emph{use} as downstream --- never asking whether a more accurate predictor is thereby a better training environment, which we answer in the negative (Section~\ref{sec:results2-control}).
 
-\medskip
-\noindent\textbf{Positioning.} Across these strands the literature optimises the
-controller, the surrogate, and the transfer procedure largely in isolation, and
-evaluates each on the axis most natural to it --- algorithmic return, predictive
-accuracy, or training-time reduction. The assumption that ties them together ---
-that a more accurate or higher-fidelity model is a better basis for control, and
-that a recipe tuned on one controller or testcase carries over --- is rarely made
-explicit and almost never pre-specified and falsified. This paper isolates that
-assumption: it separates surrogate predictive fidelity from downstream control
-utility (Section~\ref{sec:results1-digital-twin}--\ref{sec:results2-control}),
-tests whether one physics-regularisation recipe holds across controller families
-(Section~\ref{sec:results2-control}), and audits cross-testcase transfer against
-pre-specified anchors (Section~\ref{sec:results3-transfer}).
+\textbf{Distribution shift and transfer.} Policies degrade off their training distribution: forecast augmentation improves cost and comfort \citep{Gao2024Predictive}, the out-of-distribution problem is catalogued for offline RL \citep{RiahiSamani2026OOD}, and transfer across zones/weather cuts training cost but is neither automatic nor uniformly beneficial \citep{Hou2024MultiSource}. We therefore treat cross-testcase transfer as a \emph{tested} hypothesis (Section~\ref{sec:results3-transfer}) and, across all three strands, isolate the rarely-explicit assumption that a higher-fidelity model --- or a recipe tuned on one controller/testcase --- carries over.
 
 \section{Methodology}\label{sec:methodology}
 This section gives the formal, self-contained statement of the control problem,
@@ -496,7 +405,14 @@ the three surrogate models, the controller families, and the evaluation protocol
 The detailed numerical instantiation of every quantity defined here --- network
 sizes, calibrated parameters, hyperparameters, and measured scores --- is reported
 with the corresponding evidence in Sections~\ref{sec:results1-digital-twin}--\ref{sec:results3-transfer};
-here we fix notation and cite the methods on which the design rests.
+here we fix notation and cite the methods on which the design rests. Figure~\ref{fig:system_overview} gives the end-to-end view: three surrogate training backends feed three controller families whose frozen policies are evaluated on the live BOPTEST testcases.
+
+\begin{figure}[pos={!ht}]
+  \centering
+  \includegraphics[width=\linewidth]{block2_system_overview.pdf}
+  \caption{System overview (schematic). Surrogate training backends (v3 coarse black-box, v3.5 calibrated RC+Neural-ODE, hybrid) $\to$ controller families (thermostatic PPO, HDRL, MORL) $\to$ live BOPTEST evaluation on \texttt{bestest\_air} (Blocks~1--2) and the hydronic family (Block~3). Backends are trained surrogate-only and transferred zero-shot (MORL adds a short live finetune); the hybrid uses v3 for rollout dynamics and a frozen v3.5 as a per-step reward censor.}
+  \label{fig:system_overview}
+\end{figure}
 
 \subsection{Reference environment}\label{ssec:m-env}
 The plant is a single-zone building emulator with electric heating, drawn from the
@@ -646,7 +562,7 @@ surrogate-internal score. For transferability we adopt a commit-anchored, versio
 protocol: each hypothesis (H1--H4 of Section~\ref{sec:related}), pass threshold, and
 recalibration adapter is fixed in a version-locked source-control commit
 \emph{before} the corresponding runs, and these commits are publicly available in
-the open-source repository (Section~\ref{sec:conclusion}, Data availability),
+the open-source repository,
 providing timestamped, immutable verifiability of the analysis plan in lieu of
 formal pre-registration on an external registry. Cross-test-case transfer is realised through a light recalibration adapter
 rather than assumed zero-shot, following the evidence that transfer is
@@ -658,80 +574,8 @@ a limitation stated explicitly in Section~\ref{ssec:b3lim}. The full statistical
 and audit protocol is given in Section~\ref{sec:setup} and the results in
 Sections~\ref{sec:results1-digital-twin}--\ref{sec:results3-transfer}.
 
-\section{Experimental Setup}\label{sec:setup}
-\subsection{Testbeds, serving layer, and runtime}\label{ssec:s-testbed}
-All controllers are evaluated on the Building Optimization Testing Framework
-(BOPTEST), an open, Modelica-based runtime that exposes building emulators through
-a uniform HTTP interface for simulation-based benchmarking of control strategies
-\citep{Blum2021BOPTEST,Wetter2014Modelica,Arroyo2021GymBOPTEST}; we use the
-\texttt{bestest\_air} testcase as the primary environment and a hydronic family
-(\texttt{bestest\_hydronic} variants) for the transferability study of
-Section~\ref{sec:results3-transfer}. The controller interacts with the plant at a
-fixed \SI{15}{\minute} control period through the same HTTP contract regardless of
-which of four interchangeable backends sits behind it: the live BOPTEST runtime,
-the black-box surrogate v3, the physically informed surrogate v3.5, or the hybrid.
-This common interface is what makes the surrogate-versus-live comparison clean ---
-only the dynamics backend changes. On a single commodity workstation the surrogate
-backends run \numrange{85.0}{114.2}$\times$ faster than the live BOPTEST RTE HTTP
-loop, which is what renders policy-gradient training (millions of environment
-steps) tractable without a GPU; the exact per-backend throughput is reported in
-Section~\ref{sec:results2-control}.
-
-\subsection{Data generation and preprocessing}\label{ssec:s-data}
-Surrogate training and calibration use three purpose-built corpora, generated by
-exciting the emulator under scripted heating schedules across cool, heat, mixed,
-ramp, and pulse scenarios: a \emph{canonical} v3 corpus ($51{,}200$ samples at
-\SI{1}{\hour} resolution), a \emph{15-minute exploration} corpus ($48{,}384$
-samples at \SI{900}{\second}), and a v3.5 \emph{calibration} corpus ($10{,}744$
-samples at \SI{900}{\second}); the full corpus specification is tabulated in
-Section~\ref{sec:results1-digital-twin}. The deliberate pairing of a one-hour and a
-fifteen-minute corpus is not incidental: it is the instrument that lets the
-matched-corpus ablation of Block~1 attribute the predictive-fidelity gain to data
-resolution versus physical calibration, rather than confounding the two. All
-channels (zone temperature, heating command, and exogenous disturbances) are
-normalised before training, and trajectories are windowed for multi-step rollout
-supervision.
-
-\subsection{Training and calibration workflow}\label{ssec:s-train}
-The black-box surrogate v3 ($8{,}482$ parameters) is fit by supervised
-multi-step rollout regression on the canonical corpus. The physically informed
-v3.5 is identified by the staged inverse calibration of
-Section~\ref{ssec:m-surrogate} \citep{Bacher2011RCIdentification}: Stage~A/B/C
-recover the RC parameters from the calibration corpus, yielding a zone capacitance
-$\Czon = \SI{4.413e5}{\joule\per\kelvin}$ ($+5.1\%$ relative to the
-$\SI{4.200e5}{\joule\per\kelvin}$ physical prior) subject to a capacitance floor
-$c_{\min}=\SI{5e4}{\joule\per\kelvin}$. Controllers in all three families are then
-trained with PPO \citep{Schulman2017PPO} using Stable-Baselines3
-\citep{Raffin2021SB3}; the hybrid configuration additionally loads the frozen v3.5
-as the reward-shaping censor of Eq.~\eqref{eq:m-hybrid}. Hyperparameters and the
-censor-weight sweep are reported with the corresponding results in
-Section~\ref{sec:results2-control}.
-
-\subsection{Statistical and audit protocol}\label{ssec:s-audit}
-Controller scores are reported with seed statistics where repeated-seed runs are
-available: the MORL family is evaluated over $N=5$ fixed seeds with the
-seed-to-seed variance stated explicitly, while the thermostatic PPO and HDRL
-targeted-window experiments are deterministic single-seed mechanistic comparisons
-(Section~\ref{ssec:b3lim}); every controller is benchmarked against BOPTEST's
-built-in PI controller; the predictive-fidelity and control-utility metrics
-themselves (CV(\RMSE), NMBE, and the maintenance score $m_s$ of
-Eq.~\eqref{eq:m-ms} \citep{Wang2025SafeDRL}) are defined once in
-Section~\ref{ssec:m-eval} and not repeated here. The transferability study follows
-a commit-anchored, version-locked discipline: each hypothesis (H1--H4) is bound to a
-versioned audit anchor committed \emph{before} the corresponding runs, so that an
-outcome can falsify a claim rather than merely illustrate it. The scripts,
-configurations, and artefact manifests that regenerate every number, figure, and
-table are listed under Data availability.
-
-\paragraph{Software environment.} Controllers are trained with Stable-Baselines3
-2.1.0 (PyTorch) under Python~3.11; the reference environment is the
-\texttt{ibpsa/project1-boptest} BOPTEST Docker image, driven through its HTTP API.
-The MORL runs use the five fixed seeds $\{42,43,44,45,46\}$, while the
-thermostatic-PPO and HDRL targeted-window comparisons are deterministic
-single-seed (seed~42) evaluations. The released
-repository pins these package versions, the controller and surrogate checkpoints,
-the per-seed configurations, and the random seeds, so that every result can be
-reproduced from the archived artefacts.
+\subsection{Implementation and protocol}\label{sec:setup}\label{ssec:s-testbed}\label{ssec:s-data}\label{ssec:s-train}\label{ssec:s-audit}
+All controllers are evaluated on BOPTEST \citep{Blum2021BOPTEST,Wetter2014Modelica,Arroyo2021GymBOPTEST}, using \texttt{bestest\_air} as the primary testcase and a \texttt{bestest\_hydronic} family for transfer (Section~\ref{sec:results3-transfer}), at a fixed \SI{15}{\minute} control period through one HTTP contract behind which four interchangeable backends sit (live BOPTEST, v3, v3.5, hybrid) --- so only the dynamics backend changes across the surrogate-versus-live comparison, and the surrogate backends run \numrange{85.0}{114.2}$\times$ faster than the live loop, making GPU-free policy-gradient training tractable. Surrogates use three corpora generated by scripted excitation: a canonical v3 corpus ($51{,}200$ at \SI{1}{\hour}), a $15$-minute exploration corpus ($48{,}384$ at \SI{900}{\second}), and a v3.5 calibration corpus ($10{,}744$ at \SI{900}{\second}); the deliberate one-hour/fifteen-minute pairing is the instrument behind the matched-corpus ablation. v3 ($8{,}482$ parameters) is fit by multi-step rollout regression; v3.5 is identified by the Stage~A/B/C inverse calibration of Section~\ref{ssec:m-surrogate} \citep{Bacher2011RCIdentification}, yielding $\Czon=\SI{4.413e5}{\joule\per\kelvin}$ ($+5.1\%$ over the physical prior). All controllers are trained with PPO \citep{Schulman2017PPO} in Stable-Baselines3~2.1.0 \citep{Raffin2021SB3} under Python~3.11; the hybrid loads the frozen v3.5 as the censor of Eq.~\eqref{eq:m-hybrid}. MORL is evaluated over $N=5$ fixed seeds with stated variance; thermostatic-PPO/HDRL targeted-window runs are deterministic single-seed (seed~42); all are benchmarked against BOPTEST's built-in PI \citep{Wang2025SafeDRL}. Each hypothesis (H1--H4) is bound to a versioned audit anchor committed \emph{before} its runs, and the released repository pins package versions, checkpoints, configs, and seeds so every result reproduces from the archived artefacts (provenance in Supplementary Tables~S1--S3).
 
 % ===== Results sections (auto-generated bodies; sections 5, 6, 7) =====
 \input{results1_body.tex}
@@ -740,182 +584,12 @@ reproduced from the archived artefacts.
 
 \section{Discussion}\label{sec:discussion}
 
-Before discussing the results in detail we separate the paper's primary claim from
-its secondary findings, because they rest on different strengths of evidence. The
-\emph{primary} claim is the fidelity--utility paradox and its mechanism: on the
-\texttt{bestest\_air} testcase, increasing a surrogate's predictive fidelity can
-remove the temporal smoothing that makes it a useful policy-gradient training
-substrate. This claim is the load-bearing contribution and carries the strongest
-evidence --- three matched-configuration comparisons scored on the live emulator
-(direct v3.5, the matched-resolution v3 ablation of
-Section~\ref{sec:results2-control}, and the canonical hourly v3), which together
-isolate the fidelity/smoothing trade-off from the surrogate model class. The
-remaining results are \emph{secondary}: they operationalise or bound the primary
-claim rather than establish it. The hybrid role-separation recipe and the
-controller-family-specific censor weight show \emph{one} engineering resolution of
-the paradox; the MORL preference and seed-stability analysis characterises a third
-controller family under a deliberately narrowed, audit-protected claim; and the
-transferability study reports a component-level boundary on a hydronic family. These
-secondary findings rest on narrower evidence (single-seed mechanistic comparisons, a
-single PI baseline, simulation only) and are framed accordingly; the limitations that
-bound each are collected in Section~\ref{ssec:b3lim}. A reader interested only in the
-core result can read Sections~\ref{sec:results1-digital-twin}--\ref{sec:results2-control}
-and the first subsection below; the transferability and MORL material extends rather
-than supports the central paradox.
+\textbf{Predictive fidelity and training utility are distinct, and over part of the range opposed.} The calibrated twin v3.5 is the far better predictor (24\,h rollout \RMSE{} $0.644$ vs $1.557\,^{\circ}$C) yet, used directly as the training environment, yields an unusable controller ($m_s=1.046$, $>77\%$ violation), while the weaker v3 yields a usable one ($m_s=0.073$/$0.095$). A matched-resolution closed-loop ablation settles the obvious confound: the \emph{same} black-box v3 retrained at $15$ minutes is strictly \emph{more accurate} ($0.876\,^{\circ}$C) yet also collapses ($m_s=1.14$/$1.21$; Table~\ref{tab:coarse_graining}), so the operative variable is the fidelity/smoothing trade-off induced by temporal resolution, not the model class --- and the matched-corpus decomposition shows the fidelity gain itself is only $25.4\%$ physical calibration against $74.6\%$ resolution. We read this as a distribution-shift effect \citep{Quinonero2009DatasetShift,RiahiSamani2026OOD}: the sharper response surface of the high-fidelity backends ($7.9$--$9.4\times$ rougher; Table~\ref{tab:surface_sharpness}) is exploited by policy-gradient search into a near bang-bang law that does not survive transfer. Separating the two roles --- v3 for smooth dynamics, a frozen v3.5 as a reward-shaping censor --- recovers the best cross-window robustness ($m_s=0.087$/$0.041$, sub-$5\%$ violation on both windows) at an $85\times$ training speed-up.
 
-\subsection{Predictive validity versus RL training utility}
-The central finding is that predictive fidelity and training utility are distinct,
-and over part of the range opposed. The calibrated physical twin v3.5 is the better
-predictor by a wide margin --- a 24-hour rollout \RMSE{} of $0.644\,^{\circ}$C
-against $1.557\,^{\circ}$C for the black-box v3 --- yet used directly as the
-training environment it produces an unusable controller ($m_s = 1.046$ live, comfort
-violation above $77\%$), whereas the weaker v3 yields a usable one
-($m_s = 0.073$/$0.095$). This inverts the working assumption of the surrogate
-literature, whose protocols and accelerators are optimised for predictive accuracy
-\citep{HouEvins2024} or raw throughput \citep{Mshragi2026FastML} on the implicit
-premise that a better model is a better basis for control. Our matched-corpus
-ablation further shows the fidelity gain itself is only $25.4\%$ physical
-calibration against $74.6\%$ data resolution, so even the predictive improvement is
-mostly an artefact of sampling rate rather than physics. A direct closed-loop
-control settles the obvious confound: retraining the \emph{same} black-box v3 at the
-matched fifteen-minute resolution produces a strictly \emph{more accurate} predictor
-yet an unusable training environment ($m_s = 1.14$/$1.21$ live, $>85\%$ comfort
-violation; Section~\ref{sec:results2-control}, Table~\ref{tab:coarse_graining}), so
-the operative variable in this comparison is the fidelity/smoothing trade-off induced
-by temporal resolution, not merely the black-box versus grey-box parameterisation. We read the paradox as a
-distribution-shift phenomenon \citep{Quinonero2009DatasetShift,RiahiSamani2026OOD}:
-a policy that exploits the sharply physics-constrained surface of v3.5 saturates
-into a near bang-bang law that does not survive transfer to the live plant. The
-hybrid resolution --- v3 for smooth dynamics, a frozen v3.5 as a reward-shaping
-censor --- recovers the best cross-window robustness ($m_s = 0.087$/$0.041$ on the
-peak/typical windows): although pure v3 edges it on the single-seed peak-window
-score ($0.073$ vs $0.087$), that ordering does not persist across seeds (over
-$N=3$ the hybrid is at least as good on both windows, $0.059$ vs $0.072$ on peak;
-Section~\ref{ssec:b3lim}), and the hybrid is the only backend with sub-$5\%$ comfort
-violation on \emph{both} windows across every seed, the lowest typical-window score,
-and lower energy than pure v3, all while retaining an $85\times$ training speed-up ---
-the practical pay-off of separating the two roles rather than seeking one maximally
-faithful model.
+\textbf{The physics-regularisation recipe is controller-family specific, and transfer resolves into a component-level boundary.} The optimal censor weight is $\lambda_{\mathrm{temp}}=0.10$ for thermostatic PPO but $0$ for the hierarchical and $17$D MORL agents, which already encode enough forecast/structural context that an external censor over-constrains them \citep{Liao2025HDRL,Byeon2025MaxMinMORL} --- so a single ``best'' regularisation strength cannot be reported without naming its controller family. For transfer, the calibration \emph{pipeline} ports (rollout \RMSE{} down $60.2$--$87.8\%$ on the hydronic family; $\Czon$ re-identifies as a near-uniform $1.918\pm0.032\times$ invariant across an order-of-magnitude volume change), whereas the frozen \emph{policy} does not transfer uniformly: the commercial case passes the $1.25\times$-PI comfort threshold but at a $35.3\%$ energy penalty, while the residential cases fail it zero-shot. The contribution is thus less a new controller than a corrected, quantified account of \emph{why} surrogate-trained controllers succeed or fail, under a commit-anchored protocol that lets H1/H3 be stated as \emph{falsified} rather than quietly dropped.
 
-\subsection{Controller-family specificity of the physical censor}
-The physics-regularisation recipe is not universal across controllers, which
-falsifies the natural expectation that one censor weight should serve all agents.
-The optimal disagreement weight is $\lambda_{\mathrm{temp}}=0.10$ for the
-thermostatic PPO agent but $\lambda_{\mathrm{temp}}=0$ for both the hierarchical
-controller and the $17$-dimensional MORL controller: the latter two already see
-enough forecast and structural context that an external physical censor only
-over-constrains them. This is consistent with the view that hierarchical and
-preference-conditioned agents shape their own effective dynamics through temporal
-abstraction or preference conditioning \citep{Bacon2017Options,Nachum2018HIRO,Liao2025HDRL,Byeon2025MaxMinMORL},
-and it cautions against reporting a single ``best'' regularisation strength without
-stating the controller family it was tuned on.
-
-\subsection{The transferability boundary}
-The transferability result is best read not as a failure of policy transfer but as
-a \emph{bounded generalization} claim with a sharp, component-level boundary: the
-calibration \emph{pipeline} transfers, the frozen \emph{policy} does not transfer
-uniformly. Re-running the Stage~A/B/C inverse calibration on the hydronic family
-reduces rollout \RMSE{} by $60.2$--$87.8\%$, and the (effective) zone capacitance
-re-identifies as a near-uniform ratio ($\Czon$ scales by $1.918\pm0.032\times$ the
-source value) even across an order-of-magnitude change in zone volume, so the
-calibration recipe is portable in a precise, quantified sense. Frozen-policy
-transfer, by contrast, is regime-dependent and we report its boundary explicitly:
-the commercial single-zone hydronic stretch testcase \emph{passes} the
-$1.25\times$ PI comfort-safety threshold but at a $35.3\%$ energy penalty relative
-to the baseline, whereas the residential hydronic cases \emph{fail} the
-comfort-safety threshold under zero-shot reuse. This is a sharper statement than
-the usual ``transfer reduces training cost'' claim \citep{Hou2024MultiSource}: it
-identifies \emph{what} transfers (the identified physics), \emph{what} does not
-(the control law), and \emph{under which regime} a frozen controller remains safe
---- a deployment-relevant boundary rather than an aggregate transfer benefit.
-
-\subsection{Methodological implications and positioning}
-Three methodological points follow. First, the choice of \emph{training environment}
---- not only the algorithm --- determines the resulting policy, so surrogate design
-should be evaluated by downstream control utility and not predictive accuracy
-alone; this complements, rather than contradicts, accuracy-oriented surrogate
-protocols \citep{HouEvins2024} and the forecast-augmentation results that improve
-RL-HVAC control \citep{Gao2024Predictive}. Second, because the failure mode is a
-distribution shift between surrogate and live plant, the live-plant score must be
-the reported metric, and safe-exploration framing \citep{Garcia2015SafeRL} applies
-even when training is entirely in simulation. Third, the commit-anchored, version-locked audit-
-anchored protocol is what lets us state H1 and H3 as \emph{falsified} rather than
-quietly dropped; binding each hypothesis to a versioned anchor before the runs is a
-discipline we recommend for surrogate-trained control studies, where the
-temptation to report only the favourable configuration is strong. Relative to the
-broader DRL-for-HVAC literature, which still reaches real-building deployment only
-rarely \citep{AlSayed2024Review} and typically benchmarks against rule-based or
-guideline baselines \citep{Savino2025ASHRAE}, our contribution is less a new
-controller than a corrected account of \emph{why} surrogate-trained controllers
-succeed or fail.
-
-\subsection{Threats to validity}\label{ssec:block1-limitations}\label{ssec:b3lim}
-Several limitations bound these claims. (i)~The primary testbed is a single-zone
-\texttt{bestest\_air} emulator; multi-zone coupling and richer HVAC topologies are
-not exercised, and the transferability evidence covers a hydronic family rather
-than an arbitrary building stock. (ii)~The surrogate models are validated on the
-temperature channel, where the calibration metrics are strong; the heating-power
-channel is reproduced less accurately and we treat it as a known limitation rather
-than a validated output. (iii)~Two caveats bound the core paradox claim. First, the mechanism is now
-\emph{measured} on the surrogate side: probing each surrogate's own one-step action map
-shows that both backends that collapse as training environments expose a response
-surface that is several times rougher (in scale-free, step-length-independent terms)
-than the usable hourly v3 ($7.9$--$9.4\times$; Table~\ref{tab:surface_sharpness}),
-the direct counterpart of the policy-side action-gap symptom we observe in closed loop.
-What remains open is a formal loss-landscape analysis along the full PPO training
-trajectory (as opposed to this static action-map probe); correspondingly, the paradox is demonstrated for PPO under
-a matched training configuration --- we did not separately re-tune PPO for the v3.5
-environment or test off-policy algorithms (e.g.\ SAC~\citep{Haarnoja2018SAC}, TD3), so its generality across
-RL algorithms is open. Second, the black-box v3 is trained at a one-hour step but
-used at the fifteen-minute control step, raising the question of whether v3's
-\emph{training} utility stems from its black-box nature or partly from this timestep
-mismatch. We resolved this confound directly with a matched-config closed-loop
-control, reported in full as the temporal-coarse-graining ablation of
-Section~\ref{sec:results2-control} (Table~\ref{tab:coarse_graining}): the \emph{same}
-black-box v3 retrained on the fifteen-minute corpus is a strictly \emph{more accurate}
-predictor ($0.876\,^{\circ}$C vs $1.557\,^{\circ}$C 24\,h rollout RMSE) yet, trained
-under the \emph{identical} pure-v3 recipe, \emph{collapses} on the live emulator
-($m_s = 1.14$/$1.21$, $85.6$/$91.4\%$ comfort violation), comparable to the
-direct-v3.5 failure and far worse than the hourly-trained controller
-($m_s = 0.073$/$0.095$). v3's training utility is therefore attributable to its
-\emph{coarser temporal resolution}, not to its black-box class alone: the same
-architecture at the finer, more faithful resolution is an unusable training
-environment. This sharpens the paradox into a
-near-monotonic statement along the fidelity axis---the least accurate surrogate
-(hourly v3) trains a usable controller, while the more accurate matched-resolution
-v3 and the most accurate calibrated v3.5 both fail---and is consistent with the
-distribution-shift mechanism above: higher-fidelity dynamics, whether from finer
-resolution or physical calibration, present the sharper response surface that
-policy-gradient search exploits into a non-transferable near-bang-bang law---measured
-directly as a $7.9$--$9.4\times$ rougher action map on the two collapsing surrogates
-relative to the usable hourly v3 (Table~\ref{tab:surface_sharpness}), with a formal
-loss-landscape characterisation along the training trajectory the open item noted above).
-(iv)~Statistical support varies across controller families. The MORL results are
-reported over $N=5$ seeds with explicit standard deviation and a 95\% confidence
-interval (for the neutral preference, $m_s = 0.187\pm0.078$, CI $[0.090,0.284]$,
-whose entire interval lies far below the PI score of $0.910$, so the improvement
-over PI holds across all five seeds). The two headline thermostatic controllers were
-extended to $N=3$ seeds (\{42,43,44\}): across seeds pure v3 stays usable
-($m_s = 0.072\pm0.019$ peak / $0.045\pm0.047$ typical) and the hybrid stays robust
-($m_s = 0.059\pm0.026$ peak / $0.014\pm0.024$ typical), with \emph{every} individual
-seed below the $5\%$ comfort-violation bar on both windows (per-seed values are
-tabulated in the supplementary seed-robustness table). The single-seed peak advantage
-of pure v3 over the hybrid does not persist across seeds---it lies within the seed
-spread. Only the hierarchical (HDRL) controller remains a single deterministic-seed
-evaluation, and its per-seed extension is the natural next step. (v)~The only
-baseline is BOPTEST's built-in PI controller (its reference controller); this study
-tests \emph{surrogate training utility}, not whether the controllers beat a tuned
-MPC, rule-based controller, or ASHRAE Guideline~36 sequence, and that
-stronger-baseline comparison is out of the present scope. (vi)~The censor weight for
-the MORL controller ($\lambda_{\mathrm{temp}}=0$) is adopted by analogy with the
-hierarchical-controller sweep rather than from an independent MORL sweep, so its
-optimality for MORL is asserted, not demonstrated. (vii)~The observation interface
-and the surrogate backend are not fully crossed: we report the MORL $5$D-versus-$17$D
-ablation, but not every backend$\times$observation combination, so the attribution
-between interface width and backend choice is only partial. (viii)~Evaluation is
-entirely in simulation: no live-building deployment is claimed, and the sim-to-real
-gap beyond BOPTEST remains open. These bounds motivate the Block~4 directions noted
-in the conclusion.
+\subsection{Limitations}\label{ssec:block1-limitations}\label{ssec:b3lim}
+Evaluation is simulation-only on a single-zone \texttt{bestest\_air} emulator (multi-zone and richer topologies untested; transfer limited to a hydronic family), and the surrogate power channel is reproduced less accurately than temperature. The paradox mechanism is \emph{measured} statically on each surrogate's one-step action map and corroborated by the matched-resolution ablation, but a loss-landscape analysis along the PPO trajectory --- and generality to off-policy algorithms (SAC~\citep{Haarnoja2018SAC}, TD3) --- remains open. Statistical support varies by family (MORL $N=5$, neutral $m_s=0.187\pm0.078$ with CI far below the PI $0.910$; the two headline thermostatic controllers $N=3$, every seed sub-$5\%$ violation; HDRL single-seed), the only baseline is BOPTEST's built-in PI, the MORL censor weight is adopted by analogy with the HDRL sweep, and the backend$\times$observation grid is only partially crossed.
 
 \section{Conclusion}\label{sec:conclusion}
 We asked whether a surrogate with higher predictive fidelity is automatically a
@@ -969,21 +643,6 @@ this paper.
 \section*{Funding}
 This research did not receive any specific grant from funding agencies in the
 public, commercial, or not-for-profit sectors. % TODO: replace if any funding applies.
-
-\section*{Data availability}
-The source code, configurations, trained controller checkpoints, calibration and
-training data, result tables, and all artefacts required to regenerate the figures
-and tables of this study are openly available on GitHub
-(\url{https://github.com/Almaz-2001/HVAC_fidelity-utility-paradox}); the repository
-will be archived with a citable DOI upon acceptance. Every reported quantity is
-mapped to its source artefact by the per-section provenance tables (Supplementary
-Tables~S1--S3). All figures and tables were generated programmatically from these
-versioned project artefacts under \texttt{reports/}, \texttt{outputs/}, and
-\texttt{configs/}; no numerical values were entered manually into the plotting scripts
-except display labels, axis limits, and pre-specified threshold constants. The BOPTEST
-emulator used as the reference environment is available separately as part of the
-BOPTEST project \citep{Blum2021BOPTEST} at
-\url{https://github.com/ibpsa/project1-boptest}.
 
 \section*{Supplementary material}
 Every figure, table, and inline number in Results~I--III is read directly from the

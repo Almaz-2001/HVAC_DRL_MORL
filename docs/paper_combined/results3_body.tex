@@ -8,7 +8,7 @@
 
 Blocks 1 and 2 established the source-case recipe on BOPTEST \texttt{bestest\_air}: a v3 rollout surrogate supplies smooth control-oriented dynamics, a calibrated v3.5 RC--NeuralODE supplies a frozen physical disagreement censor, and the thermostatic PPO policy trained on the resulting hybrid backend is the strongest verified controller on the targeted windows. Block 3 asks a narrower, more falsifiable question: does this fixed source-case recipe transfer to related BOPTEST hydronic-family testcases?
 
-The claim boundary is deliberately limited. Block 3 does not claim universal building generalization, cross-climate generalization, or transfer to arbitrary HVAC topologies. It evaluates transfer to three pre-selected single-zone hydronic-family cases under documented actuator adapters and pre-specified recalibration regimes, with controller fine-tuning on the target testcase explicitly excluded. That exclusion is methodologically central: it separates \emph{controller} transfer from \emph{surrogate-recalibration} transfer, so the evidence is reported component-wise.
+The claim is deliberately bounded: Block~3 evaluates transfer to three pre-selected single-zone hydronic cases under documented actuator adapters and pre-specified recalibration, with target-testcase controller fine-tuning explicitly excluded --- separating \emph{controller} transfer from \emph{surrogate-recalibration} transfer so the evidence is reported component-wise.
 
 \paragraph{Roadmap boundary and executed path.}
 Block 3 (\texttt{roadmap.md} Sections 14--15) was opened only after the Block 1/2 article state was committed, and runs strictly as:
@@ -39,11 +39,11 @@ The adapter maps the frozen source policy output to the target actuator interfac
   T^{\mathrm{sup}}_t = 18 + \tfrac{a_t+1}{2}(35-18),
   \label{eq:adapter}
 \end{equation}
-where $\mathcal{A}_{k}$ is the pre-specified adapter for testcase $k$, $a_t\in[-1,1]$ is the frozen policy output, and $y_t$ are available BOPTEST measurements used by rule-based adapter logic. Adapter smoke tests verify that low/high overrides produce directionally valid heating before any yearly run. Figure~\suppref{S24} shows the adapter-mediated transfer: one frozen controller drives three different actuator interfaces through the per-testcase adapters, with per-testcase controller verdicts. The recalibration regimes (Table~\suppref{S25}) keep the controller frozen and vary only how much of the surrogate adapts.
+where $\mathcal{A}_{k}$ is the pre-specified adapter for testcase $k$, $a_t\in[-1,1]$ is the frozen policy output, and $y_t$ are available BOPTEST measurements used by rule-based adapter logic. Adapter smoke tests verify that low/high overrides produce directionally valid heating before any yearly run. Figure~\suppref{S24} shows the adapter-mediated transfer: one frozen controller drives three different actuator interfaces through the per-testcase adapters, with per-testcase controller verdicts. The recalibration regimes (Table~\suppref{S26}) keep the controller frozen and vary only how much of the surrogate adapts.
 
 
 
-Concretely, each adapter first maps the policy command to a normalized heat-intensity $h=\mathrm{clip}\!\big((T^{\mathrm{sup}}_t-18)/17,\,0,\,1\big)$ and then drives the testcase's pre-specified BOPTEST override inputs (Table~\suppref{S24}). The mappings were finalized and committed before any control run (audit anchors \texttt{eb7091e} / \texttt{46fbaa9} / \texttt{645626e}), so the actuator interface cannot be tuned post hoc.
+Concretely, each adapter first maps the policy command to a normalized heat-intensity $h=\mathrm{clip}\!\big((T^{\mathrm{sup}}_t-18)/17,\,0,\,1\big)$ and then drives the testcase's pre-specified BOPTEST override inputs (Table~\suppref{S25}). The mappings were finalized and committed before any control run (audit anchors \texttt{eb7091e} / \texttt{46fbaa9} / \texttt{645626e}), so the actuator interface cannot be tuned post hoc.
 
 
 
@@ -60,25 +60,9 @@ where $\dot{Q}_{\mathrm{hyd}}$ is the delivered hydronic heat (whose actuation p
 
 
 
-Table~\ref{tab:physics} summarizes the architecture and the identified physics. The equivalent thermal mass $C_{\mathrm{zon}}/c_{p,\mathrm{air}}$ (with $c_{p,\mathrm{air}}=1005$~J\,kg$^{-1}$K$^{-1}$) is roughly $2\times$ the \texttt{bestest\_air} value for every hydronic case, consistent with the added water-loop and surface thermal mass. The mean delivered power exposes the operating regime: it is of order $10^3$~W for the residential cases (envelope-conduction / slow-hydronic dominated) but two orders of magnitude larger for the commercial case (roughly $28\times$), because that zone is ventilation/AHU-dominated. This ventilation dominance is the physical reason the commercial controller passes the comfort threshold yet overshoots energy by $+35.3\%$; it also makes a conduction-only time constant ill-defined from total power for that case.
+Table~\suppref{S27} summarizes the architecture and the identified physics. The equivalent thermal mass $C_{\mathrm{zon}}/c_{p,\mathrm{air}}$ (with $c_{p,\mathrm{air}}=1005$~J\,kg$^{-1}$K$^{-1}$) is roughly $2\times$ the \texttt{bestest\_air} value for every hydronic case, consistent with the added water-loop and surface thermal mass. The mean delivered power exposes the operating regime: it is of order $10^3$~W for the residential cases (envelope-conduction / slow-hydronic dominated) but two orders of magnitude larger for the commercial case (roughly $28\times$), because that zone is ventilation/AHU-dominated. This ventilation dominance is the physical reason the commercial controller passes the comfort threshold yet overshoots energy by $+35.3\%$; it also makes a conduction-only time constant ill-defined from total power for that case.
 
-\begin{table}[pos={!ht}]
-\centering
-\small
-\caption{Testcase architecture and identified physics. $C_{\mathrm{zon}}$ in $10^5$~J/K; equivalent mass $=C_{\mathrm{zon}}/c_{p,\mathrm{air}}$; mean delivered power from the Stage-C telemetry.}
-\label{tab:physics}
-\begin{tabularx}{\linewidth}{l l r r r >{\raggedright\arraybackslash}X}
-\toprule
-Testcase & Heat source & $C_{\mathrm{zon}}$ & eq.\ mass (kg) & mean power (W) & Thermal regime \\
-\midrule
-\texttt{bestest\_air} (source) & air supply & 4.413 & 439 & --- & reference \\
-\midrule
-hydronic heat pump & heat pump & 8.348 & 831 & 2,778 & conduction-dominated \\
-hydronic (boiler) & boiler/radiator & 8.623 & 858 & 679 & slow hydronic \\
-commercial hydronic & district + AHU & 8.426 & 838 & 76,860 & ventilation/AHU-dominated \\
-\bottomrule
-\end{tabularx}
-\end{table}
+
 
 \subsection{Engineering metrics and pass/fail rules}
 
@@ -136,7 +120,7 @@ commercial hydronic & 0.431 & 0.628 & 0.785 & PASS$^\dagger$ & 35.3 & 1.952 & 0.
 
 \subsection{Primary testcase: \texttt{bestest\_hydronic\_heat\_pump}}
 
-The primary testcase was pre-specified as the easiest target (closest to \texttt{bestest\_air} in envelope class, but with a hydronic heat-pump actuator). The yearly PI baseline is $m_s=0.464$ with threshold $\tau=0.579$. The frozen hybrid controller obtains $m_s=0.665$ with energy $-7.3\%$ relative to PI, so the controller verdict is FAIL: the policy saves energy but violates comfort too often. Full Stage A/B/C recalibration instead succeeds (Table~\suppref{S26}): RMSE$_T=0.565\,^\circ$C and $C_{\mathrm{zon}}=8.348\times10^5$ J/K $=1.892\times$ \texttt{bestest\_air}. The component-level split is explicit: surrogate recalibration transfers; the frozen controller does not.
+The primary testcase was pre-specified as the easiest target (closest to \texttt{bestest\_air} in envelope class, but with a hydronic heat-pump actuator). The yearly PI baseline is $m_s=0.464$ with threshold $\tau=0.579$. The frozen hybrid controller obtains $m_s=0.665$ with energy $-7.3\%$ relative to PI, so the controller verdict is FAIL: the policy saves energy but violates comfort too often. Full Stage A/B/C recalibration instead succeeds (Table~\suppref{S28}): RMSE$_T=0.565\,^\circ$C and $C_{\mathrm{zon}}=8.348\times10^5$ J/K $=1.892\times$ \texttt{bestest\_air}. The component-level split is explicit: surrogate recalibration transfers; the frozen controller does not.
 
 
 
@@ -153,7 +137,7 @@ The stretch testcase was pre-specified as the hardest, most informative falsific
 \subsection{Surrogate-side transfer and $C_{\mathrm{zon}}$ consistency}
 \label{ssec:czon}
 
-Full Stage A/B/C improves target rollout RMSE on all three testcases (gains $60.2\%$, $87.4\%$, $87.8\%$), supporting the weak surrogate-side transfer hypothesis on $N=3$ (Figure~\suppref{S29}). The strongest physical finding is the consistency of the re-identified capacitance: the three hydronic testcases cluster tightly around $1.918\times$ the \texttt{bestest\_air} value (Table~\ref{tab:czon}),
+Full Stage A/B/C improves target rollout RMSE on all three testcases (gains $60.2\%$, $87.4\%$, $87.8\%$), supporting the weak surrogate-side transfer hypothesis on $N=3$ (Figure~\suppref{S29}). The strongest physical finding is the consistency of the re-identified capacitance: the three hydronic testcases cluster tightly around $1.918\times$ the \texttt{bestest\_air} value (Table~\suppref{S29}),
 \begin{equation}
   \rho_C = \{1.892,\,1.954,\,1.909\},
   \qquad
@@ -162,24 +146,7 @@ Full Stage A/B/C improves target rollout RMSE on all three testcases (gains $60.
 \end{equation}
 The calibrated thermal capacitance is thus more closely associated with hydronic-family physics than with the obvious commercial zone-size proxy: despite the stretch testcase having an order-of-magnitude larger zone volume, its ratio sits within $\pm2\%$ of the family mean. This generalizes the calibration component of the v3.5 surrogate beyond a single building: the re-identified capacitance behaves as a transferable structural invariant of the hydronic family --- a successfully carried-over ``knowledge anchor'' in the sense of preserved, recombinable knowledge studied in lifelong reinforcement learning~\citep{Meng2025Lifelong}. The uniformity claim is, however, established on $N=3$ single-zone hydronic cases and is therefore a hydronic-family observation rather than a statistically powered law; it is not asserted for radiant, VRF, multi-zone, or cross-climate cases (Section~\ref{ssec:b3lim}).
 
-\begin{table}[pos={!ht}]
-\centering
-\small
-\caption{$C_{\mathrm{zon}}$ re-identification across the \texttt{bestest\_air} baseline and the three hydronic testcases (data: roadmap Section 15).}
-\label{tab:czon}
-\begin{tabular}{lrr}
-\toprule
-Testcase & $C_{\mathrm{zon}}$ (J/K) & $\rho_C$ vs \texttt{bestest\_air} \\
-\midrule
-\texttt{bestest\_air} (Block 1) & 4.413$\times10^5$ & 1.000 (baseline) \\
-hydronic heat pump & 8.348$\times10^5$ & 1.892 \\
-hydronic (boiler) & 8.623$\times10^5$ & 1.954 \\
-commercial hydronic & 8.426$\times10^5$ & 1.909 \\
-\midrule
-hydronic-family mean $\pm$ std & --- & 1.918 $\pm$ 0.032 \\
-\bottomrule
-\end{tabular}
-\end{table}
+
 
 
 
@@ -211,6 +178,6 @@ hierarchy & Verdict is monotone in recalibration depth. & SUPPORTED & Controller
 
 \subsection{Pre-specified predictions versus outcomes}
 
-The stretch testcase carried numerical a-priori predictions (audit anchor \texttt{645626e}, logged before any commercial-hydronic run). Reporting the predicted-vs-observed mapping is the central Popperian discipline of Block 3 (Table~\suppref{S27}): the evidence moved the interpretation toward lower-prior hypotheses rather than confirming only what was expected. Two predictions were falsified (the mode=none controller FAIL, and the scale-dependent $C_{\mathrm{zon}}$ hypothesis) and three were confirmed.
+The stretch testcase carried numerical a-priori predictions (audit anchor \texttt{645626e}, logged before any commercial-hydronic run). Reporting the predicted-vs-observed mapping is the central Popperian discipline of Block 3 (Table~\suppref{S30}): the evidence moved the interpretation toward lower-prior hypotheses rather than confirming only what was expected. Two predictions were falsified (the mode=none controller FAIL, and the scale-dependent $C_{\mathrm{zon}}$ hypothesis) and three were confirmed.
 
 

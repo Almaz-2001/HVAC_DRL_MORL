@@ -4,7 +4,7 @@
 \section{Digital-Twin Fidelity and the RL-Utility Paradox}
 \label{sec:results1-digital-twin}
 
-This Results~I section reports the Block~1 evidence chain exactly in the order used by the reproducibility roadmap. Its purpose is to establish the empirical foundation for the central claim of the article: predictive fidelity and reinforcement-learning training utility are related but not identical objectives. Block~1 proves the digital-twin side of this claim. It shows how a compact control-oriented v3 surrogate and a physically informed v3.5 surrogate differ in architecture, calibration, data resolution, rollout accuracy, and runtime feasibility. The downstream question---whether the more accurate twin is also the better PPO training environment---is intentionally carried forward to Results~II, where live BOPTEST controller transfer is evaluated. The mechanism invoked there is a \emph{distributional shift} between the surrogate's training distribution and the live closed-loop state distribution that a trained policy induces~\citep{RiahiSamani2026OOD,Quinonero2009DatasetShift}: a more faithful surrogate can present a sharper response surface that policy-gradient search exploits into a control law which does not survive transfer to the live plant.
+Block~1 establishes the digital-twin side of the central claim --- that predictive fidelity and RL training utility are related but distinct objectives --- by contrasting the compact control-oriented v3 surrogate with the physically informed v3.5 across architecture, calibration, data resolution, rollout accuracy, and runtime; whether the more accurate twin is the better PPO training environment is tested in Results~II.
 
 \paragraph{Roadmap boundary and artifact chain.}
 \label{ssec:block1-roadmap-boundary}
@@ -112,7 +112,7 @@ To keep the inverse problem well posed, \(\Czon\) is not a free scalar but a pos
 \end{equation}
 with \(\rho\) the learnable log-parameter and \(c_s=10^5\) a fixed scale; this guarantees a physically positive capacitance throughout optimization. Because \(\Czon\) is a property of the building rather than of the data-generating policy, it is expected to remain meaningful across testcases, which is what makes the inverse identification below worthwhile.
 
-The roadmap builds the canonical v3.5 artifact by two sequential preset runs. Stage~A aligns telemetry and removes latency/bias artifacts. Stage~B identifies \(\Czon\) on excitation-rich windows. Stage~C then calibrates residual heads while preserving the physical parameter. The first preset, \texttt{block1\_15min\_episodeaware}, performs the temperature-side inverse identification: Stage~B runs for 120 epochs and Stage~C runs for 60 epochs. The second preset, \texttt{block1\_15min\_power\_head\_only}, loads the first summary JSON, freezes \(\Czon\), skips Stage~B, and refines only the power residual head for 80 epochs. This two-pass structure is why the power-head JSON reports \texttt{stage\_b\_epochs\_ran=0}; it is not a missing calibration step.
+The canonical v3.5 is built by two sequential preset runs. \texttt{block1\_15min\_episodeaware} does the temperature-side inverse identification --- Stage~A aligns telemetry and removes latency/bias, Stage~B identifies \(\Czon\) on excitation-rich windows (120 epochs), Stage~C refines residual heads (60 epochs) while preserving the physical parameter. The second preset, \texttt{block1\_15min\_power\_head\_only}, freezes \(\Czon\), skips Stage~B, and refines only the power residual head (80 epochs) --- which is why its JSON reports \texttt{stage\_b\_epochs\_ran=0}.
 
 Stage A estimates a one-step latency compensation, a temperature bias correction of -0.105~$^\circ$C, and a postprocessed temperature RMSE of 0.238~$^\circ$C. Stage B uses the top-excitation subset: 403 of 8058 training rows at excitation quantile 0.95. This filtering is important because \(\Czon\) is identifiable mainly during transients, not quasi-steady operation.
 
@@ -189,30 +189,15 @@ Engineering tolerance is reported as an absolute-error CDF,
 \begin{equation}
   F_{|e|}(\epsilon)=\Pr(|\That-T_{\mathrm{BOPTEST}}|\leq \epsilon).
 \end{equation}
-The coefficient of determination follows the standard definition \(R^2 = 1 - \mathrm{SS}_{\mathrm{res}}/\mathrm{SS}_{\mathrm{tot}}\) against the held-out mean, so a \emph{negative} 24 h \(R^2\) (as for the hourly v3 in Table~\ref{tab:multi-horizon}) means the long-horizon rollout is worse than predicting that mean. The error tail is summarized by the 95th-percentile absolute error \(\mathrm{P95}=\inf\{\epsilon:F_{|e|}(\epsilon)\ge 0.95\}\).
+The coefficient of determination follows the standard definition \(R^2 = 1 - \mathrm{SS}_{\mathrm{res}}/\mathrm{SS}_{\mathrm{tot}}\) against the held-out mean, so a \emph{negative} 24 h \(R^2\) (as for the hourly v3 in Table~\suppref{S11}) means the long-horizon rollout is worse than predicting that mean. The error tail is summarized by the 95th-percentile absolute error \(\mathrm{P95}=\inf\{\epsilon:F_{|e|}(\epsilon)\ge 0.95\}\).
 
 
 
 The calibrated v3.5 surrogate reaches a 24 h rollout \(\RMSE_T=0.644\)~$^\circ$C, compared with raw v3.5 at 1.466~$^\circ$C and the canonical v3 hourly reference at 1.557~$^\circ$C.
 
-\begin{table}[pos={!ht}]
-\centering
-\small
-\caption{Multi-horizon teacher-forced rollout fidelity from the Hou-and-Evins predictive-validity table. Cells are temperature RMSE (\(^\circ\)C) at each horizon; the final column is the 24 h temperature \(R^2\) (n/a where not computed for the auxiliary baselines).}
-\label{tab:multi-horizon}
-\begin{tabular}{lccccc}
-\toprule
-Model & 1 h & 4 h & 8 h & 24 h & 24 h \(R^2_T\) \\
-\midrule
-v3 (hourly) & 1.471 & 1.579 & 1.579 & 1.558 & -1.411 \\
-v3 (15-min matched) & 0.875 & 0.874 & 0.873 & 0.876 & n/a \\
-raw v3.5 & 1.491 & 1.491 & 1.491 & 1.466 & n/a \\
-calibrated v3.5 & 0.321 & 0.575 & 0.638 & 0.644 & +0.588 \\
-\bottomrule
-\end{tabular}
-\end{table}
 
-Table~\ref{tab:multi-horizon} exposes the qualitative split between the two surrogate families. The hourly v3 model has a \emph{negative} 24 h temperature \(R^2\) -- it is worse than predicting the historical mean over long horizons -- yet it remains a usable control surrogate because PPO needs smooth local gradients, not long-horizon physical realism. The calibrated v3.5 surrogate instead keeps a positive 24 h \(R^2\) and bounds its error tail: its 24 h P95 absolute error is 1.207~$^\circ$C, so even in worst-case windows the calibrated twin stays within that band 95\% of the time. Reporting raw v3.5 and the corpus-matched v3 in the same table lets the matched-corpus attribution in Section~\ref{ssec:block1-corpus-matched} be read directly against the per-horizon numbers. As a model-free reference, a naive persistence forecast (\(\That(t{+}h)=T_t\)) on the same episodes gives 0.397~$^\circ$C at 1 h and 0.969~$^\circ$C at 24 h: calibrated v3.5 beats persistence at every horizon, whereas the hourly v3 is actually \emph{worse} than persistence at 24 h (1.557 vs 0.969~$^\circ$C), which quantitatively confirms that v3 is a control surrogate rather than a forecaster.
+
+Table~\suppref{S11} exposes the split between the two families. The hourly v3 has a \emph{negative} 24~h \(R^2\) --- worse than the historical mean over long horizons, and worse than a naive persistence forecast at 24~h (1.557 vs 0.969~$^\circ$C) --- yet it remains a usable control surrogate because PPO needs smooth local gradients, not long-horizon realism. Calibrated v3.5 instead keeps a positive 24~h \(R^2\), bounds its tail (24~h P95 1.207~$^\circ$C), and beats persistence at every horizon, confirming v3 is a control surrogate rather than a forecaster.
 
 
 
@@ -256,7 +241,7 @@ The attribution is an additive split of the legacy-v3-to-calibrated-v3.5 gap,
   + \underbrace{\Delta_{\mathrm{cal}}}_{\text{v3 15-min}\,\to\,\text{cal. v3.5}},
   \label{eq:decomp}
 \end{equation}
-which holds exactly because the matched-architecture path is constructed to be additive (the intermediate point is the same v3 architecture retrained on the 15-min corpus). The total 24 h RMSE drop from the legacy v3 reference to calibrated v3.5 is 0.913~$^\circ$C. The matched-corpus report attributes 0.681~$^\circ$C (74.6\%) to the corpus shift and 0.232~$^\circ$C (25.4\%) to Stage A/B/C. A second, equally valid attribution path runs through the raw v3.5 backbone: corpus and architecture together explain only 9.9\% of the drop (0.091~$^\circ$C), while Stage A/B/C applied to the physical backbone explains 90.1\% (0.822~$^\circ$C). The two paths differ because corpus and architecture effects interact non-additively; the matched-architecture split is quoted as the primary attribution because both of its endpoints are control-architecture surrogates. Either way the calibration claim is positive but bounded: corpus resolution and physical calibration jointly produce the final fidelity improvement.
+which holds because the matched-architecture path is additive (the intermediate point is the same v3 retrained on the 15-min corpus). Of the total 0.913~$^\circ$C drop from legacy v3 to calibrated v3.5, the matched-corpus report attributes 0.681~$^\circ$C (74.6\%) to the corpus shift and 0.232~$^\circ$C (25.4\%) to Stage~A/B/C. (An alternative split through the raw v3.5 backbone gives 9.9\% corpus / 90.1\% calibration; the two differ because corpus and architecture interact non-additively, and we quote the matched-architecture split since both endpoints are control-architecture surrogates.) Either way the calibration claim is positive but bounded.
 
 \subsection{Runtime Feasibility}
 \label{ssec:block1-runtime}
@@ -272,7 +257,7 @@ At the hybrid throughput, a single \(5\times10^6\)-step policy-optimization run 
 \subsection{Step-Size Design Disclosure}
 \label{ssec:block1-stepsize}
 
-The canonical v3 checkpoint is trained at a 3600~s step, whereas all downstream policy optimization runs at the 900~s control step. Because the v3 transition is \(\That_{t+1}=T_t+\Delta\That_{t+1}\) with no explicit timestep scaling, the hourly-trained increment is applied unchanged at the 900~s step. This is the structural reason the legacy v3 carries a 1.557~$^\circ$C 24 h rollout error, while the corpus-matched v3 trained directly on 900~s transitions reaches 0.876~$^\circ$C (Table~\ref{tab:matched}). The mismatch is preserved deliberately and is auditable: every controller-facing KPI in the later blocks is measured on the live BOPTEST RTE simulator, not on the surrogate, so the surrogate's only role is to supply a smooth gradient signal during policy updates. Swapping the matched-corpus checkpoint into the pre-specified \emph{canonical} controller experiments would break their frozen audit chain, so those experiments retain the hourly v3. The matched-corpus model grounds the predictive-fidelity attribution of Section~\ref{ssec:block1-corpus-matched} here, and is \emph{additionally} evaluated downstream as a standalone closed-loop control ablation in Block~2 (Results~II, Section~\ref{sec:results2-control}), which tests directly whether the canonical v3's training utility is caused by this temporal coarse-graining rather than by its black-box architecture. By contrast with v3, the v3.5 forward pass \eqref{eq:rc-euler} carries an explicit \(\Delta t\); a warm-started v3.5 therefore rescales the inherited v3 heat term by
+The canonical v3 checkpoint is trained at a 3600~s step but applied at the 900~s control step; since its transition \(\That_{t+1}=T_t+\Delta\That_{t+1}\) carries no explicit timestep scaling, the hourly increment is used unchanged --- the structural reason the legacy v3 carries a 1.557~$^\circ$C 24~h error while the corpus-matched v3 reaches 0.876~$^\circ$C (Table~\ref{tab:matched}). The mismatch is preserved deliberately: every controller-facing KPI is measured on the live BOPTEST simulator (the surrogate only supplies a smooth gradient signal), and swapping checkpoints would break the frozen audit chain of the canonical experiments. The matched-corpus model grounds the attribution here and is evaluated downstream as a closed-loop ablation in Results~II (Section~\ref{sec:results2-control}), testing whether v3's training utility comes from temporal coarse-graining rather than its black-box architecture. Unlike v3, the v3.5 forward pass \eqref{eq:rc-euler} carries an explicit \(\Delta t\), so a warm-started v3.5 rescales the inherited v3 heat term by
 \begin{equation}
   s = s_{\mathrm{legacy}}\,\frac{C_{\mathrm{init}}}{\Delta t_{\mathrm{legacy}}\,q_{\mathrm{scale}}},
   \label{eq:warmstart-scale}

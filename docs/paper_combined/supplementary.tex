@@ -311,6 +311,23 @@ $\Czon$ ($\times 10^5$ J/K) & 4.200 & 4.413 & +5.1\% \\
 \begin{table}[H]
 \centering
 \small
+\caption{Multi-horizon teacher-forced rollout fidelity from the Hou-and-Evins predictive-validity table. Cells are temperature RMSE (\(^\circ\)C) at each horizon; the final column is the 24 h temperature \(R^2\) (n/a where not computed for the auxiliary baselines).}
+\label{tab:multi-horizon}
+\begin{tabular}{lccccc}
+\toprule
+Model & 1 h & 4 h & 8 h & 24 h & 24 h \(R^2_T\) \\
+\midrule
+v3 (hourly) & 1.471 & 1.579 & 1.579 & 1.558 & -1.411 \\
+v3 (15-min matched) & 0.875 & 0.874 & 0.873 & 0.876 & n/a \\
+raw v3.5 & 1.491 & 1.491 & 1.491 & 1.466 & n/a \\
+calibrated v3.5 & 0.321 & 0.575 & 0.638 & 0.644 & +0.588 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\small
 \caption{Backend throughput under the 900 s control protocol from the speed-benchmark artifact (single CPU thread, BOPTEST reached through the same HTTP-Docker interface used in training).}
 \label{tab:speed}
 \begin{tabular}{lrrrr}
@@ -806,6 +823,24 @@ full & Stage A + Stage B + Stage C on target telemetry & frozen Block 2 hybrid c
 \begin{table}[H]
 \centering
 \small
+\caption{Testcase architecture and identified physics. $C_{\mathrm{zon}}$ in $10^5$~J/K; equivalent mass $=C_{\mathrm{zon}}/c_{p,\mathrm{air}}$; mean delivered power from the Stage-C telemetry.}
+\label{tab:physics}
+\begin{tabularx}{\linewidth}{l l r r r >{\raggedright\arraybackslash}X}
+\toprule
+Testcase & Heat source & $C_{\mathrm{zon}}$ & eq.\ mass (kg) & mean power (W) & Thermal regime \\
+\midrule
+\texttt{bestest\_air} (source) & air supply & 4.413 & 439 & --- & reference \\
+\midrule
+hydronic heat pump & heat pump & 8.348 & 831 & 2,778 & conduction-dominated \\
+hydronic (boiler) & boiler/radiator & 8.623 & 858 & 679 & slow hydronic \\
+commercial hydronic & district + AHU & 8.426 & 838 & 76,860 & ventilation/AHU-dominated \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{table}[H]
+\centering
+\small
 \caption{Primary-testcase per-regime detail. $m_s$ is invariant across rows because the controller is frozen by manifest scope; only surrogate fidelity changes (data: roadmap Section 15).}
 \label{tab:primary}
 \begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}p{42mm}rrr>{\raggedright\arraybackslash}X}
@@ -820,6 +855,25 @@ partial: all-rows heads & 0.781 & 1768 & 0.665 & surrogate cond.\ pass \\
 full: Stage A/B/C & 0.565 & 1767 & 0.665 & surrogate PASS, ctrl FAIL \\
 \bottomrule
 \end{tabularx}
+\end{table}
+
+\begin{table}[H]
+\centering
+\small
+\caption{$C_{\mathrm{zon}}$ re-identification across the \texttt{bestest\_air} baseline and the three hydronic testcases (data: roadmap Section 15).}
+\label{tab:czon}
+\begin{tabular}{lrr}
+\toprule
+Testcase & $C_{\mathrm{zon}}$ (J/K) & $\rho_C$ vs \texttt{bestest\_air} \\
+\midrule
+\texttt{bestest\_air} (Block 1) & 4.413$\times10^5$ & 1.000 (baseline) \\
+hydronic heat pump & 8.348$\times10^5$ & 1.892 \\
+hydronic (boiler) & 8.623$\times10^5$ & 1.954 \\
+commercial hydronic & 8.426$\times10^5$ & 1.909 \\
+\midrule
+hydronic-family mean $\pm$ std & --- & 1.918 $\pm$ 0.032 \\
+\bottomrule
+\end{tabular}
 \end{table}
 
 \begin{table}[H]
