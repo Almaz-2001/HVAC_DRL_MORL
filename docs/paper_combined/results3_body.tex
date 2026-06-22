@@ -39,7 +39,7 @@ The adapter maps the frozen source policy output to the target actuator interfac
   T^{\mathrm{sup}}_t = 18 + \tfrac{a_t+1}{2}(35-18),
   \label{eq:adapter}
 \end{equation}
-where $\mathcal{A}_{k}$ is the pre-specified adapter for testcase $k$, $a_t\in[-1,1]$ is the frozen policy output, and $y_t$ are available BOPTEST measurements used by rule-based adapter logic. Adapter smoke tests verify that low/high overrides produce directionally valid heating before any yearly run. Figure~\suppref{S24} shows the adapter-mediated transfer: one frozen controller drives three different actuator interfaces through the per-testcase adapters, with per-testcase controller verdicts. The recalibration regimes (Table~\suppref{S26}) keep the controller frozen and vary only how much of the surrogate adapts.
+where $\mathcal{A}_{k}$ is the pre-specified adapter for testcase $k$, $a_t\in[-1,1]$ is the frozen policy output, and $y_t$ are available BOPTEST measurements used by rule-based adapter logic. Adapter smoke tests verify that low/high overrides produce directionally valid heating before any yearly run. Figure~\suppref{S21} shows the adapter-mediated transfer: one frozen controller drives three different actuator interfaces through the per-testcase adapters, with per-testcase controller verdicts. The recalibration regimes (Table~\suppref{S26}) keep the controller frozen and vary only how much of the surrogate adapts.
 
 
 
@@ -51,7 +51,7 @@ Concretely, each adapter first maps the policy command to a normalized heat-inte
 
 \subsection{Testcase architecture and physical processes}
 
-The three targets differ in heat source, distribution path, and actuator set, but share the same single-zone energy balance (Figure~\suppref{S25}). For a hydronic zone the governing first-order balance is
+The three targets differ in heat source, distribution path, and actuator set, but share the same single-zone energy balance (Figure~\suppref{S22}). For a hydronic zone the governing first-order balance is
 \begin{equation}
   C_{\mathrm{zon}}\frac{dT_{\mathrm{zon}}}{dt} = \dot{Q}_{\mathrm{hyd}}(u_t) + \frac{T_{\mathrm{amb}}-T_{\mathrm{zon}}}{R_{\mathrm{env}}} + \dot{Q}_{\mathrm{gain}},
   \label{eq:hydronic_balance}
@@ -137,7 +137,7 @@ The stretch testcase was pre-specified as the hardest, most informative falsific
 \subsection{Surrogate-side transfer and $C_{\mathrm{zon}}$ consistency}
 \label{ssec:czon}
 
-Full Stage A/B/C improves target rollout RMSE on all three testcases (gains $60.2\%$, $87.4\%$, $87.8\%$), supporting the weak surrogate-side transfer hypothesis on $N=3$ (Figure~\suppref{S29}). The strongest physical finding is the consistency of the re-identified capacitance: the three hydronic testcases cluster tightly around $1.918\times$ the \texttt{bestest\_air} value (Table~\suppref{S29}),
+Full Stage A/B/C improves target rollout RMSE on all three testcases (gains $60.2\%$, $87.4\%$, $87.8\%$), supporting the weak surrogate-side transfer hypothesis on $N=3$ (Figure~\suppref{S26}). The strongest physical finding is the consistency of the re-identified capacitance: the three hydronic testcases cluster tightly around $1.918\times$ the \texttt{bestest\_air} value (Table~\suppref{S29}),
 \begin{equation}
   \rho_C = \{1.892,\,1.954,\,1.909\},
   \qquad

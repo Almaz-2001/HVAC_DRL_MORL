@@ -120,24 +120,6 @@ The following figures and tables provide supporting schematics, calibration and 
 
 \begin{figure}[H]
   \centering
-  \includegraphics[width=\linewidth]{\detokenize{rie_fig01_block1_artifact_chain.pdf}}
-  \caption{Roadmap-derived Block 1 artifact chain. The figure reports the actual row counts, 24 h rollout errors, identified physical parameter, and speed benchmark values used to close Results I.}
-  \label{fig:block1-chain}
-
-{\footnotesize\itshape Schematic; not derived from a dataset.}
-\end{figure}
-
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=\linewidth]{\detokenize{rie_fig02_surrogate_design.pdf}}
-  \caption{Surrogate role separation inside Block 1. v3 is the compact dual-head rollout model; v3.5 adds Stage A/B/C physical identification and residual-head calibration.}
-  \label{fig:surrogate-design}
-
-{\footnotesize\itshape Schematic; not derived from a dataset.}
-\end{figure}
-
-\begin{figure}[H]
-  \centering
   \includegraphics[width=0.78\linewidth]{\detokenize{rie_fig08_v3_learning_curve.pdf}}
   \caption{v3 supervised train/validation learning curves. Early stopping at the best validation epoch precedes any validation-loss upturn, indicating no overfitting at the selected checkpoint.}
   \label{fig:v3-learning-curve}
@@ -347,15 +329,6 @@ hybrid v3+v3.5 & 1,786.8 & 0.507 & 0.648 & 85.0$\times$ \\
   \includegraphics[width=0.94\linewidth]{fig_block2_pipeline.pdf}
   \caption{Block 2 controller-learning pipeline. The experiments separate the rollout model, the physical regularizer, the controller family, the observation interface, and live BOPTEST validation.}
   \label{fig:block2_pipeline}
-
-{\footnotesize\itshape Schematic; not derived from a dataset.}
-\end{figure}
-
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=0.90\linewidth]{fig_block2_reward_shaping.pdf}
-  \caption{Hybrid reward-shaping mechanism. v3 supplies rollout dynamics; frozen v3.5 supplies a disagreement penalty on the same state-action transition.}
-  \label{fig:hybrid_reward}
 
 {\footnotesize\itshape Schematic; not derived from a dataset.}
 \end{figure}

@@ -145,6 +145,20 @@ We find that this assumption can fail, and we name the phenomenon the \emph{fide
 
 \begin{figure}[pos={!ht}]
   \centering
+  \includegraphics[width=\linewidth]{block2_system_overview.pdf}
+  \caption{\textbf{The proposed surrogate-to-control framework} (schematic). Surrogate training backends (v3 coarse black-box, v3.5 calibrated RC+Neural-ODE, hybrid) $\to$ controller families (thermostatic PPO, HDRL, MORL) $\to$ live BOPTEST evaluation on \texttt{bestest\_air} (Blocks~1--2) and the hydronic family (Block~3). Backends are trained surrogate-only and transferred zero-shot (MORL adds a short live finetune); the hybrid uses v3 for rollout dynamics and a frozen v3.5 as a per-step reward censor.}
+  \label{fig:system_overview}
+\end{figure}
+
+\begin{figure}[pos={!ht}]
+  \centering
+  \includegraphics[width=\linewidth]{block2_paper_organization.pdf}
+  \caption{Organization of the paper: Introduction $\to$ Related Work $\to$ Proposed Work $\to$ Experimental Results (digital-twin fidelity, control utility, transferability) $\to$ Conclusion.}
+  \label{fig:paper_org}
+\end{figure}
+
+\begin{figure}[pos={!ht}]
+  \centering
   \includegraphics[width=0.98\linewidth]{block2_conceptual_overview.pdf}
   \caption{Quantified evidence chain for the fidelity--utility paradox. Each row is a training backend (v3 hourly, matched-resolution v3, direct v3.5, hybrid) and each column reports one \emph{measured} link of the chain from predictive fidelity to live utility: \textbf{(A)} 24\,h rollout RMSE$_T$ ($^\circ$C), \textbf{(B)} the scale-free relative action-surface roughness ($\times$ the usable v3), \textbf{(C)} the closed-loop policy saturation ($|a_0|\geq0.9$, \% of steps), and \textbf{(D)} the live BOPTEST maintenance score $m_s$ with the $m_s=1$ collapse line and the usable band ($m_s<0.1$). The paradox is the \emph{measured contradiction} between columns A and D: the RMSE$_T$ order (v3.5 $<$ matched-v3 $<$ v3) reverses in live $m_s$ --- the least accurate hourly v3 is the only usable single-model environment, while the two more accurate backends collapse. The hybrid inherits v3's rollout fidelity and surface (hatched, marked $\ast$) because it rolls out on v3, with the frozen v3.5 acting only as a reward censor, and lands in the usable band. Every value is loaded from the committed artefacts established in Sections~\ref{sec:results1-digital-twin}--\ref{sec:results2-control} (the per-figure source CSVs are listed in the supplementary provenance map).}
   \label{fig:concept}
@@ -152,7 +166,7 @@ We find that this assumption can fail, and we name the phenomenon the \emph{fide
 
 A second, orthogonal gap concerns the observation interface and the controller family. HVAC control is a partially observable Markov decision process (POMDP): a small ($5$-dimensional) observation of the instantaneous state is insufficient for preference-conditioned multi-objective control (MORL)~\citep{Byeon2025MaxMinMORL}, which needs forecast and actuation context to disambiguate heating demand~\citep{Gao2024Predictive}. It is also unclear whether a single physics-regularization recipe is universal across controller families, since thermostatic, hierarchical, and multi-objective agents have different loss-surface geometries, so a censor that helps one may over-constrain another. Existing studies seldom separate surrogate predictive fidelity from downstream controller utility, rarely audit the observation interface, and almost never pre-specify cross-testcase transfer hypotheses --- which is precisely the methodological gap this paper addresses.
 
-We propose a hybrid, role-separating architecture that decouples prediction from training. A compact control-oriented black-box surrogate (v3) supplies smooth, control-friendly Markov rollout dynamics, while an inverse-calibrated physics-informed twin (v3.5), whose zone thermal capacitance $\Czon$ is identified from telemetry, acts as a \emph{frozen per-step reward-shaping censor}: it adds a disagreement penalty to the reward, not a term to the policy loss, so the smooth v3 gradient field is preserved while physically implausible state--action regions are discouraged. To address the POMDP we widen the interface to a $17$-dimensional, forecast-augmented direct-supply-temperature observation, and we evaluate the recipe across three controller families --- thermostatic proximal policy optimization (PPO), hierarchical DRL (HDRL)~\citep{Liao2025HDRL}, and preference-conditioned MORL~\citep{Byeon2025MaxMinMORL}. Finally, the resulting frozen policies are subjected to a pre-specified transferability study on a hydronic family of BOPTEST testcases.
+We propose a hybrid, role-separating architecture that decouples prediction from training (Fig.~\ref{fig:system_overview}). A compact control-oriented black-box surrogate (v3) supplies smooth, control-friendly Markov rollout dynamics, while an inverse-calibrated physics-informed twin (v3.5), whose zone thermal capacitance $\Czon$ is identified from telemetry, acts as a \emph{frozen per-step reward-shaping censor}: it adds a disagreement penalty to the reward, not a term to the policy loss, so the smooth v3 gradient field is preserved while physically implausible state--action regions are discouraged. To address the POMDP we widen the interface to a $17$-dimensional, forecast-augmented direct-supply-temperature observation, and we evaluate the recipe across three controller families --- thermostatic proximal policy optimization (PPO), hierarchical DRL (HDRL)~\citep{Liao2025HDRL}, and preference-conditioned MORL~\citep{Byeon2025MaxMinMORL}. Finally, the resulting frozen policies are subjected to a pre-specified transferability study on a hydronic family of BOPTEST testcases.
 
 We organize the investigation around four pre-specified, falsifiable hypotheses:
 \begin{enumerate}[label=\textbf{H\arabic*.},leftmargin=2.6em]
@@ -170,6 +184,8 @@ This paper makes three commit-anchored, version-locked contributions, organized 
   \item \textbf{A commit-anchored, version-locked transferability study (Block 3).} Across a hydronic family of testcases, the identified zone capacitance $\Czon$ transfers as a near-uniform structural invariant (rollout-RMSE improvement up to $88\%$), while zero-shot transfer of the frozen controller fails or passes only with an energy penalty --- establishing a precise component-level transferability boundary rather than a universal generalization claim.
 \end{enumerate}
 
+The paper is organized as summarized in Fig.~\r\ref{fig:paper_org}.
+
 \section{Related Work}\label{sec:related}
 \textbf{DRL and multi-objective control for HVAC.} Deep RL is an increasingly studied alternative to PID/MPC for building HVAC, benchmarked against ASHRAE Guideline~36 sequences \citep{Savino2025ASHRAE} and extended to multi-agent and chance-constrained settings \citep{Deng2025MultiAgent,Alotaibi2025ContextAware}. Because comfort and energy compete, the problem is naturally multi-objective: hierarchical DRL decomposes it across timescales \citep{Liao2025HDRL} and preference-conditioned MORL studies trade-off policies \citep{Byeon2025MaxMinMORL,Nguyen2024Modelling}. What this work does not isolate is whether one training recipe holds \emph{across} controller families, or how the training \emph{environment} --- not the algorithm --- shapes the policy.
 
@@ -177,20 +193,13 @@ This paper makes three commit-anchored, version-locked contributions, organized 
 
 \textbf{Distribution shift and transfer.} Policies degrade off their training distribution: forecast augmentation improves cost and comfort \citep{Gao2024Predictive}, the out-of-distribution problem is catalogued for offline RL \citep{RiahiSamani2026OOD}, and transfer across zones/weather cuts training cost but is neither automatic nor uniformly beneficial \citep{Hou2024MultiSource}. We therefore treat cross-testcase transfer as a \emph{tested} hypothesis (Section~\ref{sec:results3-transfer}) and, across all three strands, isolate the rarely-explicit assumption that a higher-fidelity model --- or a recipe tuned on one controller/testcase --- carries over.
 
-\section{Methodology}\label{sec:methodology}
+\section{Proposed Work}\label{sec:methodology}
 This section gives the formal, self-contained statement of the control problem,
 the three surrogate models, the controller families, and the evaluation protocol.
 The detailed numerical instantiation of every quantity defined here --- network
 sizes, calibrated parameters, hyperparameters, and measured scores --- is reported
 with the corresponding evidence in Sections~\ref{sec:results1-digital-twin}--\ref{sec:results3-transfer};
-here we fix notation and cite the methods on which the design rests. Figure~\ref{fig:system_overview} gives the end-to-end view: three surrogate training backends feed three controller families whose frozen policies are evaluated on the live BOPTEST testcases.
-
-\begin{figure}[pos={!ht}]
-  \centering
-  \includegraphics[width=\linewidth]{block2_system_overview.pdf}
-  \caption{System overview (schematic). Surrogate training backends (v3 coarse black-box, v3.5 calibrated RC+Neural-ODE, hybrid) $\to$ controller families (thermostatic PPO, HDRL, MORL) $\to$ live BOPTEST evaluation on \texttt{bestest\_air} (Blocks~1--2) and the hydronic family (Block~3). Backends are trained surrogate-only and transferred zero-shot (MORL adds a short live finetune); the hybrid uses v3 for rollout dynamics and a frozen v3.5 as a per-step reward censor.}
-  \label{fig:system_overview}
-\end{figure}
+here we fix notation and cite the methods on which the design rests.
 
 \subsection{Reference environment}\label{ssec:m-env}
 The plant is a single-zone building emulator with electric heating, drawn from the

@@ -17,7 +17,14 @@ Block~1 asks whether the surrogate family is credible as a fast, physically inte
   \item build the Hou-and-Evins reporting tables and speed benchmark using \texttt{build-reports} and \texttt{speed-benchmark}.
 \end{enumerate}
 
+\begin{figure}[pos={!ht}]
+  \centering
+  \includegraphics[width=\linewidth]{\detokenize{rie_fig01_block1_artifact_chain.pdf}}
+  \caption{Roadmap-derived Block 1 artifact chain. The figure reports the actual row counts, 24 h rollout errors, identified physical parameter, and speed benchmark values used to close Results I.}
+  \label{fig:block1-chain}
 
+{\footnotesize\itshape Schematic; not derived from a dataset.}
+\end{figure}
 
 \subsection{Direct Supply-Temperature Control Interface}
 \label{ssec:block1-direct-tsup}
@@ -61,7 +68,14 @@ The v3 surrogate is a compact control-oriented direct-\Tsupply{} model. Its role
 
 
 
+\begin{figure}[pos={!ht}]
+  \centering
+  \includegraphics[width=\linewidth]{\detokenize{rie_fig02_surrogate_design.pdf}}
+  \caption{Surrogate role separation inside Block 1. v3 is the compact dual-head rollout model; v3.5 adds Stage A/B/C physical identification and residual-head calibration.}
+  \label{fig:surrogate-design}
 
+{\footnotesize\itshape Schematic; not derived from a dataset.}
+\end{figure}
 
 
 
@@ -139,7 +153,7 @@ where \(\Czon^{\mathrm{final}}=4.413 \times 10^5~\mathrm{J/K}\). The update rema
 
 Beyond the point estimate, two complementary uncertainty checks apply. The optimizer is well conditioned (over the final 20 Stage~B epochs the \(\Czon\) trajectory is stable to within \(\pm1,005\)~J/K, 0.23\%). More importantly, a Laplace/Fisher identifiability interval --- obtained from the local curvature of the one-step temperature SSE with respect to \(\Czon\) (residual heads fixed) over the high-excitation transients (\(n=1838\)) --- gives a \(1\sigma\) uncertainty of 6.6\% and a 95\% interval \([3.845,\,4.980]\times10^5\)~J/K. The \(+5.1\%\) data-driven update therefore sits within roughly one standard error of the prior: \(\Czon\) is identifiable with a moderate, honestly bounded signal rather than a tightly pinned value. Physically, the identified capacitance corresponds to an equivalent thermal mass of \(\Czon/c_{p,\mathrm{air}}\approx439\)~kg of air (\(c_{p,\mathrm{air}}=1005~\mathrm{J\,kg^{-1}K^{-1}}\)), or roughly 366~m\(^3\) of equivalent air volume at \(\rho=1.2~\mathrm{kg\,m^{-3}}\). This is the expected order of magnitude for the \texttt{bestest\_air} zone augmented by the effective thermal mass of its internal surfaces, which is exactly why the data-driven update over the air-only prior is small (\(+5\%\)) rather than large.
 
-\medskip\noindent\textbf{Physical-consistency audit.} As a final check we probe the learned dynamics directly: sweeping the supply-temperature command across its range with the state held fixed, the predicted next-step zone temperature increases with \Tsupply{} in 100\% of 400 sampled states (correct sign in every case), with a mean sensitivity of \(+0.061\)~\(^\circ\)C per \(^\circ\)C and a mean Spearman rank correlation of 0.91 (Figure~\suppref{S4}). The response is monotone in the physically expected direction; the small departures from strict monotonicity reflect the neural residual head and stay well inside the surrogate temperature tolerance.
+\medskip\noindent\textbf{Physical-consistency audit.} As a final check we probe the learned dynamics directly: sweeping the supply-temperature command across its range with the state held fixed, the predicted next-step zone temperature increases with \Tsupply{} in 100\% of 400 sampled states (correct sign in every case), with a mean sensitivity of \(+0.061\)~\(^\circ\)C per \(^\circ\)C and a mean Spearman rank correlation of 0.91 (Figure~\suppref{S2}). The response is monotone in the physically expected direction; the small departures from strict monotonicity reflect the neural residual head and stay well inside the surrogate temperature tolerance.
 
 
 
