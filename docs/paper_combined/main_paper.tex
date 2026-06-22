@@ -143,25 +143,18 @@ Deep reinforcement learning (DRL) is an attractive alternative because it learns
 
 We find that this assumption can fail, and we name the phenomenon the \emph{fidelity--utility paradox} (quantified as a measured contradiction across the evidence chain in Fig.~\ref{fig:concept}): the surrogate with the lowest multi-step rollout error can be the worst environment for policy-gradient search. When a controller is trained directly on the high-fidelity physical twin, the policy converges to a near bang-bang law (a surrogate-to-live action-gap norm of $2.0$) and fails on the live BOPTEST runtime environment ($m_s>1$, comfort violation above $77\%$), even though that twin is the more accurate offline predictor. We \emph{observe} this action saturation directly, and we \emph{measure} its surrogate-side cause: the higher-fidelity surrogates expose an action$\to$next-temperature response surface that is $7.9$--$9.4\times$ rougher (in a scale-free, step-length-independent sense) than the usable one, so policy-gradient optimizers such as PPO saturate into a near bang-bang law that does not survive the distribution shift to the live simulator~\citep{RiahiSamani2026OOD}. A full loss-landscape analysis along the training trajectory remains future work, but the mechanism is no longer established only in direction. Establishing the paradox cleanly is itself non-trivial: two surrogates of different fidelity also differ in their training corpus and time resolution, so any naive fidelity-versus-utility comparison is confounded and must be separated by a controlled decomposition.
 
-\begin{figure}[pos={!ht}]
+\begin{figure}[pos={t}]
   \centering
   \includegraphics[width=\linewidth]{block2_system_overview.pdf}
   \caption{\textbf{The proposed surrogate-to-control framework} (schematic). Surrogate training backends (v3 coarse black-box, v3.5 calibrated RC+Neural-ODE, hybrid) $\to$ controller families (thermostatic PPO, HDRL, MORL) $\to$ live BOPTEST evaluation on \texttt{bestest\_air} (Blocks~1--2) and the hydronic family (Block~3). Backends are trained surrogate-only and transferred zero-shot (MORL adds a short live finetune); the hybrid uses v3 for rollout dynamics and a frozen v3.5 as a per-step reward censor.}
   \label{fig:system_overview}
 \end{figure}
 
-\begin{figure}[pos={!ht}]
+\begin{figure}[pos={t}]
   \centering
   \includegraphics[width=\linewidth]{block2_paper_organization.pdf}
   \caption{Organization of the paper: Introduction $\to$ Related Work $\to$ Proposed Work $\to$ Experimental Results (digital-twin fidelity, control utility, transferability) $\to$ Conclusion.}
   \label{fig:paper_org}
-\end{figure}
-
-\begin{figure}[pos={!ht}]
-  \centering
-  \includegraphics[width=0.98\linewidth]{block2_conceptual_overview.pdf}
-  \caption{Quantified evidence chain for the fidelity--utility paradox. Each row is a training backend (v3 hourly, matched-resolution v3, direct v3.5, hybrid) and each column reports one \emph{measured} link of the chain from predictive fidelity to live utility: \textbf{(A)} 24\,h rollout RMSE$_T$ ($^\circ$C), \textbf{(B)} the scale-free relative action-surface roughness ($\times$ the usable v3), \textbf{(C)} the closed-loop policy saturation ($|a_0|\geq0.9$, \% of steps), and \textbf{(D)} the live BOPTEST maintenance score $m_s$ with the $m_s=1$ collapse line and the usable band ($m_s<0.1$). The paradox is the \emph{measured contradiction} between columns A and D: the RMSE$_T$ order (v3.5 $<$ matched-v3 $<$ v3) reverses in live $m_s$ --- the least accurate hourly v3 is the only usable single-model environment, while the two more accurate backends collapse. The hybrid inherits v3's rollout fidelity and surface (hatched, marked $\ast$) because it rolls out on v3, with the frozen v3.5 acting only as a reward censor, and lands in the usable band. Every value is loaded from the committed artefacts established in Sections~\ref{sec:results1-digital-twin}--\ref{sec:results2-control} (the per-figure source CSVs are listed in the supplementary provenance map).}
-  \label{fig:concept}
 \end{figure}
 
 A second, orthogonal gap concerns the observation interface and the controller family. HVAC control is a partially observable Markov decision process (POMDP): a small ($5$-dimensional) observation of the instantaneous state is insufficient for preference-conditioned multi-objective control (MORL)~\citep{Byeon2025MaxMinMORL}, which needs forecast and actuation context to disambiguate heating demand~\citep{Gao2024Predictive}. It is also unclear whether a single physics-regularization recipe is universal across controller families, since thermostatic, hierarchical, and multi-objective agents have different loss-surface geometries, so a censor that helps one may over-constrain another. Existing studies seldom separate surrogate predictive fidelity from downstream controller utility, rarely audit the observation interface, and almost never pre-specify cross-testcase transfer hypotheses --- which is precisely the methodological gap this paper addresses.
@@ -369,16 +362,16 @@ All controllers are evaluated on BOPTEST \citep{Blum2021BOPTEST,Wetter2014Modeli
 \input{results2_body.tex}
 \input{results3_body.tex}
 
-\section{Discussion}\label{sec:discussion}
+\section{Discussion and Conclusion}\label{sec:discussion}\label{sec:conclusion}
 
 \textbf{Predictive fidelity and training utility are distinct, and over part of the range opposed.} The calibrated twin v3.5 is the far better predictor (24\,h rollout \RMSE{} $0.644$ vs $1.557\,^{\circ}$C) yet, used directly as the training environment, yields an unusable controller ($m_s=1.046$, $>77\%$ violation), while the weaker v3 yields a usable one ($m_s=0.073$/$0.095$). A matched-resolution closed-loop ablation settles the obvious confound: the \emph{same} black-box v3 retrained at $15$ minutes is strictly \emph{more accurate} ($0.876\,^{\circ}$C) yet also collapses ($m_s=1.14$/$1.21$; Table~\ref{tab:coarse_graining}), so the operative variable is the fidelity/smoothing trade-off induced by temporal resolution, not the model class --- and the matched-corpus decomposition shows the fidelity gain itself is only $25.4\%$ physical calibration against $74.6\%$ resolution. We read this as a distribution-shift effect \citep{Quinonero2009DatasetShift,RiahiSamani2026OOD}: the sharper response surface of the high-fidelity backends ($7.9$--$9.4\times$ rougher; Table~\ref{tab:surface_sharpness}) is exploited by policy-gradient search into a near bang-bang law that does not survive transfer. Separating the two roles --- v3 for smooth dynamics, a frozen v3.5 as a reward-shaping censor --- recovers the best cross-window robustness ($m_s=0.087$/$0.041$, sub-$5\%$ violation on both windows) at an $85\times$ training speed-up.
 
 \textbf{The physics-regularisation recipe is controller-family specific, and transfer resolves into a component-level boundary.} The optimal censor weight is $\lambda_{\mathrm{temp}}=0.10$ for thermostatic PPO but $0$ for the hierarchical and $17$D MORL agents, which already encode enough forecast/structural context that an external censor over-constrains them \citep{Liao2025HDRL,Byeon2025MaxMinMORL} --- so a single ``best'' regularisation strength cannot be reported without naming its controller family. For transfer, the calibration \emph{pipeline} ports (rollout \RMSE{} down $60.2$--$87.8\%$ on the hydronic family; $\Czon$ re-identifies as a near-uniform $1.918\pm0.032\times$ invariant across an order-of-magnitude volume change), whereas the frozen \emph{policy} does not transfer uniformly: the commercial case passes the $1.25\times$-PI comfort threshold but at a $35.3\%$ energy penalty, while the residential cases fail it zero-shot. The contribution is thus less a new controller than a corrected, quantified account of \emph{why} surrogate-trained controllers succeed or fail, under a commit-anchored protocol that lets H1/H3 be stated as \emph{falsified} rather than quietly dropped.
 
-\subsection{Limitations}\label{ssec:block1-limitations}\label{ssec:b3lim}
+\paragraph{Limitations.}\label{ssec:block1-limitations}\label{ssec:b3lim}
 Evaluation is simulation-only on a single-zone \texttt{bestest\_air} emulator (multi-zone and richer topologies untested; transfer limited to a hydronic family), and the surrogate power channel is reproduced less accurately than temperature. The paradox mechanism is \emph{measured} statically on each surrogate's one-step action map and corroborated by the matched-resolution ablation, but a loss-landscape analysis along the PPO trajectory --- and generality to off-policy algorithms (SAC~\citep{Haarnoja2018SAC}, TD3) --- remains open. Statistical support varies by family (MORL $N=5$, neutral $m_s=0.187\pm0.078$ with CI far below the PI $0.910$; the two headline thermostatic controllers $N=3$, every seed sub-$5\%$ violation; HDRL single-seed), the only baseline is BOPTEST's built-in PI, the MORL censor weight is adopted by analogy with the HDRL sweep, and the backend$\times$observation grid is only partially crossed.
 
-\section{Conclusion}\label{sec:conclusion}
+\paragraph{Conclusion.}
 We asked whether a surrogate with higher predictive fidelity is automatically a
 better environment in which to train a reinforcement-learning HVAC controller, and
 tested the question across three controller families and a hydronic family of
