@@ -1,0 +1,1060 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{siunitx}
+\usepackage{longtable}
+\usepackage{float}
+\usepackage{subcaption}
+\usepackage{xcolor}
+\usepackage{caption}
+\usepackage{enumitem}
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage{hyperref}
+\geometry{margin=2.0cm}
+\graphicspath{{figures/}}
+\captionsetup{font=small,labelfont=bf}
+\newcommand{\RMSE}{\ensuremath{\mathrm{RMSE}}}
+\newcommand{\MAE}{\ensuremath{\mathrm{MAE}}}
+\newcommand{\Czon}{\ensuremath{C_{\mathrm{zon}}}}
+\newcommand{\Tsupply}{\ensuremath{T_{\mathrm{sup}}}}
+\newcommand{\That}{\ensuremath{\widehat{T}}}
+\renewcommand{\thetable}{S\arabic{table}}
+\renewcommand{\thefigure}{S\arabic{figure}}
+\renewcommand{\theHtable}{S\arabic{table}}
+\renewcommand{\theHfigure}{S\arabic{figure}}
+\title{Supplementary Materials for\\[2pt]
+\emph{Surrogate Selection for Reinforcement-Learning HVAC Control: Step Size,
+Not Predictive Accuracy, Predicts Training Utility}}
+\author{}
+\date{}
+\begin{document}
+\maketitle
+\section*{Supplementary Materials}
+The main article reports every numerical value needed to evaluate the surrogate-selection claim and the role-separated architecture, but not the reproduction detail behind them. This Supplement carries that detail. It collects the full nomenclature, the pre-specified hypotheses and their verdicts, the complete limitations statement, implementation formulas, calibration and hyperparameter tables, seed-robustness and per-regime summaries, and the supporting diagnostics for each part of the study. The full project codebase is not publicly released at this stage; the building emulators are provided by the open-source BOPTEST framework (Blum et al., 2021; \url{https://github.com/ibpsa/project1-boptest}) and are deployed as a Docker container as described in the run-time-environment section below. All schematic figures are conceptual diagrams and are not generated from numerical datasets unless stated otherwise.\par
+\medskip\noindent\textbf{How to read this Supplement.} Section~1 maps each main-article section to the supplementary items that support it. Sections~2 and~3 carry the pre-specified hypotheses and the full limitations statement. Section~4 is the bulk: supporting figures and tables organised in three parts mirroring the main article's evidence (predictive validation; controller utility and mechanism; transfer boundary), followed by the run-time environment, implementation-level formulas and additional tables.\par
+\medskip\noindent\fbox{\parbox{0.97\linewidth}{\textbf{Notation (read first).} This Supplement uses the same names as the main article: \textbf{BB} for the compact black-box surrogate and \textbf{GB} for the calibrated grey-box twin. Two figures, the BB learning curve (Figure~\ref{fig:v3-learning-curve}) and the warm-start negative control (Figure~\ref{fig:warmstart}), still carry the legacy implementation labels \texttt{v3} and \texttt{v3.5} inside the plotted artwork; there \texttt{v3} is BB and \texttt{v3.5} is GB.}}\par\medskip
+\section*{Supplementary Nomenclature}
+\renewcommand{\arraystretch}{1.12}
+\begin{longtable}{@{}l l p{0.60\linewidth}@{}}
+\textbf{Symbol} & \textbf{Unit} & \textbf{Meaning} \\
+\midrule
+\endfirsthead
+\textbf{Symbol} & \textbf{Unit} & \textbf{Meaning} \\
+\midrule
+\endhead
+\multicolumn{3}{@{}l}{\emph{Thermophysical quantities}}\\
+$T_{\mathrm{zone}}$ & \si{\celsius} & zone air temperature \\
+$T_{\mathrm{amb}}$ & \si{\celsius} & ambient air temperature \\
+$\Tsupply$ & \si{\celsius} & supply-air temperature command \\
+$\Czon$ & \si{\joule\per\kelvin} & zone thermal capacitance \\
+$R$ & \si{\kelvin\per\watt} & lumped envelope thermal resistance \\
+$\eta$ & -- & heating power conversion efficiency \\
+$\dot{Q}$ & \si{\watt} & net zone heat flow \\
+$P$ & \si{\watt} & total HVAC electrical power \\
+$\Delta t$ & \si{\second} & control / integration step (\SI{900}{\second}) \\[2pt]
+\multicolumn{3}{@{}l}{\emph{Reinforcement-learning formulation}}\\
+$s_t,\,a_t,\,o_t,\,d_t$ & -- & state, action, observation, disturbance at step $t$ \\
+$\Phi$ & -- & one-step plant (emulator) transition map \\
+$f_\theta,\,g_\phi$ & -- & black-box surrogate (BB) and frozen physical twin (GB) \\
+$r_t$ & -- & per-step (shaped) reward \\
+$\tilde{r}_t$ & -- & hybrid reward with disagreement censor \\
+$J(\pi)$ & -- & expected discounted return \\
+$\gamma$ & -- & discount factor \\
+$w_c,\,w_e,\,w_s$ & -- & comfort / energy / safety preference weights \\
+$\hat{A}_t$ & -- & generalized advantage estimate \\
+$\rho_t$ & -- & PPO probability ratio \\
+$\epsilon$ & -- & PPO clipping parameter \\
+$\delta$ & -- & surrogate--twin disagreement penalty \\
+$\lambda_T,\,\lambda_P$ & -- & hybrid temperature / power censor weights \\[2pt]
+\multicolumn{3}{@{}l}{\emph{Evaluation metrics}}\\
+$m_s$ & -- & operational maintenance score evaluated on BOPTEST (lower is better) \\
+$r_{\mathrm{time}},\,r_{\mathrm{sev}}$ & -- & time-in-violation and severity components of $m_s$ \\
+$m_{s,\mathrm{RL}},\,m_{s,\mathrm{PI}}$ & -- & operational score of the RL and built-in PI controller \\
+$\RMSE_T$ & \si{\celsius} & live closed-loop zone-temperature RMSE \\
+CV(\RMSE) & \si{\percent} & coefficient of variation of the RMSE \\
+NMBE & \si{\percent} & normalized mean bias error \\
+$R^2$ & -- & coefficient of determination \\
+Violation & \si{\percent} & fraction of steps outside the comfort band \\
+CV & -- & coefficient of variation (std/mean) over seeds \\
+$g_a$ & -- & $L_2$ action-gap norm (surrogate vs live) \\
+$\Delta m_s$ & -- & live-minus-surrogate $m_s$ transfer gap \\[2pt]
+\multicolumn{3}{@{}l}{\emph{Transferability (testcase $k$)}}\\
+$\tau$ & -- & pre-specified pass threshold $1.25\,m_{s,\mathrm{PI}}$ \\
+$\Delta E$ & \si{\percent} & energy change of the RL controller vs PI \\
+$G_{\mathrm{RMSE}}$ & \si{\percent} & rollout-RMSE improvement after Stage~A/B/C recalibration \\
+$\rho_C$ & -- & re-identified $\Czon$ ratio vs the \texttt{bestest\_air} baseline \\
+$\mathcal{A}_k$ & -- & pre-specified actuator adapter \\[2pt]
+\multicolumn{3}{@{}l}{\emph{Abbreviations}}\\
+BOPTEST & -- & Building Optimization Testing Framework \\
+RTE & -- & (BOPTEST) Run-Time Environment \\
+DRL / PPO & -- & deep RL / proximal policy optimization \\
+GAE & -- & generalized advantage estimation \\
+HDRL & -- & hierarchical deep reinforcement learning \\
+MORL & -- & multi-objective reinforcement learning \\
+POMDP & -- & partially observable Markov decision process \\
+RC / ODE & -- & resistance--capacitance / ordinary differential equation \\
+PI / RBC / MPC & -- & proportional--integral / rule-based / model predictive control \\
+\bottomrule
+\end{longtable}
+\renewcommand{\thetable}{S\arabic{table}}
+\setcounter{table}{0}
+
+\section*{1\quad Map to the main article}
+\begin{longtable}{@{}p{0.30\linewidth}p{0.64\linewidth}@{}}
+\toprule
+\textbf{Main-article section} & \textbf{Supporting material in this Supplement} \\
+\midrule
+\endfirsthead
+\textbf{Main-article section} & \textbf{Supporting material in this Supplement} \\
+\midrule
+\endhead
+\S1 Introduction & Pre-specified hypotheses H1--H4 and their verdicts (\S2) \\
+\S3.1--3.2 Test case, control problem, metrics & Full comfort-reward form (Table~\ref{tab:reward}); 17D observation breakdown (Table~\ref{tab:obs17}); evaluation scenarios (Table~\ref{tab:scenarios}); test-case list (Table~\ref{tab:testcases}); BOPTEST RTE loop (Figure~\ref{fig:rte_loop}) \\
+\S3.3 Surrogate backends & Data corpora (Table~\ref{tab:block1-corpora}); architectures (Table~\ref{tab:architecture-summary}); BB configuration and scaling (Tables~\ref{tab:v3-config}, \ref{tab:v3-scaling}); Stage A/B/C calibration (Tables~\ref{tab:stage-a}--\ref{tab:stage-abc}, \ref{tab:stage-abc-summary}); learning curve and physical-consistency audit (Figures~\ref{fig:v3-learning-curve}, \ref{fig:physics}); modeling assumptions and transition schema (Tables~\ref{tab:modelling}, \ref{tab:transition-schema}) \\
+\S3.4 Role-separated hybrid & Mechanism schematic (Figure~\ref{fig:hybrid_reward}); censor-weight sweep (Table~\ref{tab:hybrid_sweep}); censor formula (\S6) \\
+\S3.5 Controllers and protocol & Controller-learning pipeline (Figure~\ref{fig:block2_pipeline}); PPO hyperparameters (Table~\ref{tab:ppo_hparams}); runtime benchmark (Table~\ref{tab:speed}, Figure~\ref{fig:runtime_feasibility}) \\
+\S4.1 Predictive fidelity & Multi-horizon rollout errors (Table~\ref{tab:multi-horizon}); episode replicability (Figure~\ref{fig:episode-replicability}); corpus-matched attribution waterfall (Figure~\ref{fig:matched}) \\
+\S4.2 Fidelity does not imply utility & Live KPI breakdown (Figure~\ref{fig:live_kpi}); three-seed band (Table~\ref{tab:seed_band}, Figure~\ref{fig:seed_band}); maintenance-score decomposition (Table~\ref{tab:msdecomp}); controller-learning ledger (Table~\ref{tab:cl-ledger}) \\
+\S4.3 Mechanism & Response-surface sharpness (Table~\ref{tab:surface_sharpness}); action-density phase portrait (Figure~\ref{fig:action_phase}) \\
+\S4.4 Role separation restores control & Warm-start negative control (Table~\ref{tab:warmstart}, Figure~\ref{fig:warmstart}); transfer-gap diagnostics (Table~\ref{tab:transfer}, Figure~\ref{fig:transfer_gap}) \\
+\S4.5--4.6 Boundary tests & HDRL architecture and sweep (Figures~\ref{fig:hdrl_arch}, \ref{fig:lambda_specificity}, \ref{fig:hdrl_sweep}, Table~\ref{tab:hdrl}); MORL pipeline and seeds (Figures~\ref{fig:morl_pipeline}, \ref{fig:morl5d17d_supp}, \ref{fig:morl_heatmap}, Tables~\ref{tab:morl_pareto_seed}, \ref{tab:morl_per_seed}); transfer protocol, adapters and regimes (Figures~\ref{fig:protocol}, \ref{fig:adapter}, \ref{fig:topology}, Tables~\ref{tab:adapters}, \ref{tab:regimes}); identified physics and capacitance consistency (Tables~\ref{tab:physics}, \ref{tab:czon}); hypothesis closure (Tables~\ref{tab:hypothesis}, \ref{tab:predictions}, Figure~\ref{fig:hypothesis_closure}) \\
+\S4.7 Limitations & Full limitations statement (\S3) \\
+\bottomrule
+\end{longtable}
+
+\section*{2\quad Pre-specified hypotheses}
+Four claims were stated in advance of the corresponding runs and are reported whether supported or
+falsified. H1--H2 are the primary paradox and its remedy; H3--H4 are boundary tests that map the
+recipe's scope.
+\begin{enumerate}[label=\textbf{H\arabic*.},leftmargin=2.8em]
+\item \emph{Fidelity--utility:} a surrogate with higher predictive fidelity is a better RL training environment. \textbf{Falsified.}
+\item \emph{Role separation:} using the physical twin as a frozen reward-shaping censor over a smooth black-box rollout recovers the control utility that direct use of the twin destroys. \textbf{Supported.}
+\item \emph{Censor-weight universality:} a single model-disagreement censor weight is sufficient across controller families. \textbf{Falsified}, which is what establishes controller-family specificity.
+\item \emph{Transferability:} the inverse-calibration pipeline and the frozen controller transfer to related hydronic testcases under documented recalibration. \textbf{Partially supported:} the pipeline transfers, the frozen controller does not.
+\end{enumerate}
+Stating these in advance is what lets the negative outcomes be read as findings rather than tuning
+artifacts. At the controller-experiment level the same discipline is applied through the CL1--CL5
+ledger of Table~\ref{tab:cl-ledger}; at the transfer level through Tables~\ref{tab:hypothesis}
+and~\ref{tab:predictions}.
+
+\section*{3\quad Full limitations statement}
+The main article reports an abridged limitations paragraph. The complete statement is as follows.
+Evaluation is simulation-only on a single-zone \texttt{bestest\_air} emulator, with multi-zone and
+richer topologies untested and transfer limited to a hydronic family. First, the fidelity--utility
+relationship is established at three discrete operating points (hourly BB, matched 15-min BB, and
+the calibrated GB) rather than as a continuous fidelity--utility curve: the seed replication
+($N=3$, seeds $\{42,43,44\}$) shows that the usable controllers, the matched-resolution collapse
+and the direct-GB collapse are all seed-stable (Table~\ref{tab:seed_band}), but the fidelity axis
+is still sampled at three points rather than as a distribution, and an intermediate-resolution
+sweep (e.g.\ $1800$\,s) is left to future work. Second, the only comparison baseline is BOPTEST's
+built-in PI, a relatively weak reference, so controller utility is established comparatively
+against a modest baseline rather than against a strong tuned rule-based, Guideline-36 or MPC
+controller on the same RC model. Third, the surrogate power channel is reproduced less accurately
+than temperature (calibrated power-head MAE $482$\,W, about $9\%$ of $P_{\max}=5500$\,W, rising to
+${\sim}2.3$\,kW in the partial-calibration diagnostic regime); the reported energy KPIs
+(Figure~\ref{fig:live_kpi}) and the transfer $\Delta E$ are live-versus-live BOPTEST measurements
+and do not inherit this surrogate error, but the weaker power channel limits predictive-fidelity
+claims about the power head and adds noise to the training-time energy reward, and a cumulative
+surrogate-versus-BOPTEST energy balance for at least one window is left to future work. Fourth, the
+controller-family specificity of the censor weight that falsifies H3 rests on a non-uniform sweep
+density (a dense four-point $\lambda_T$ sweep for HDRL but only two measured endpoints for
+thermostatic PPO and a single adopted configuration for MORL), so it is read as consistent with
+family-specific regularization rather than as a fully-swept per-family optimum. Finally, the
+paradox mechanism is \emph{measured} statically on each surrogate's one-step action map and
+corroborated by the matched-resolution ablation, but a loss-landscape analysis along the PPO
+trajectory and generality to off-policy algorithms (SAC, TD3) remain open; statistical support
+otherwise varies by family (MORL $N=5$, neutral $m_s=0.187\pm0.078$ with CI far below the PI
+$0.910$; HDRL single-seed), and the backend$\times$observation grid is only partially crossed.
+
+\clearpage
+\section*{4\quad Supporting diagnostics}
+\subsection*{Supplementary figures and tables}
+The following figures and tables provide supporting schematics, calibration and controller diagnostics, and detailed per-regime and per-seed breakdowns. They are cited from the main text (as Supplementary Figure/Table references) but are not required to follow the main argument.
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.78\linewidth]{\detokenize{rie_fig08_v3_learning_curve.pdf}}
+  \caption{BB supervised train/validation learning curves. Early stopping at the best validation epoch precedes any validation-loss upturn, indicating no overfitting at the selected checkpoint.}
+  \label{fig:v3-learning-curve}
+\end{figure}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.74\linewidth]{\detokenize{rie_fig09_physics_consistency.pdf}}
+  \caption{Physical-consistency audit: predicted next-step zone temperature versus the supply-temperature command for representative initial states. The response has the correct control sign and is predominantly increasing (mean Spearman $0.91$), with small departures from strict monotonicity contributed by the neural residual head.}
+  \label{fig:physics}
+\end{figure}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{\detokenize{rie_fig07_episode_replicability.pdf}}
+  \caption{Replicative validity across the eight held-out BOPTEST episodes used by the predictive-validation prepared-rollout results. The dashed line marks a 1~$^\circ$C engineering reference.}
+  \label{fig:episode-replicability}
+\end{figure}
+\begin{table}[H]
+\centering
+\small
+\caption{Predictive-validation data corpora referenced by the experimental protocol.}
+\label{tab:block1-corpora}
+\begin{tabularx}{\linewidth}{lrrXX}
+\toprule
+Dataset & Rows & Step (s) & Policy mix & Scenario mix \\
+\midrule
+BB canonical corpus & 51,200 & 3600 & cool, heat, mixed, random & autumn, spring, summer, winter \\
+GB calibration corpus & 10,744 & 900 & hdrl, thermostatic & peak\_heat\_window, typical\_heat\_window \\
+15-min exploration corpus & 48,384 & 900 & cool, heat, mixed, pulse, random, thermostatic\_noise & autumn, spring, summer, winter \\
+\bottomrule
+\end{tabularx}
+\end{table}
+\begin{table}[H]
+\centering
+\scriptsize
+\caption{Architecture and calibration summary for the two surrogate roles.}
+\label{tab:architecture-summary}
+\begin{tabularx}{\linewidth}{lXXXX}
+\toprule
+Surrogate & Role & Architecture / physics & Corpus & Training or calibration protocol \\
+\midrule
+BB direct-TSup & Fast control-oriented rollout dynamics & 8D dual-head MLP: HeatFlowNetV2 (7,105 params, LayerNorm/Tanh/residual), PowerNetV2 (1,377 params, Tanh/Softplus); total 8,482 params & 51,200 hourly transitions & AdamW, lr=1e-3, batch=256, epochs=500 \\
+GB calibrated & Physics-informed predictive twin & RC-NeuralODE backbone with positive C\_zon reparameterization and residual temperature/power heads & 10,744 prepared 15-min transitions & Stage A latency/bias; Stage B 120 epochs; Stage C 60+80 epochs; C\_zon $=4.413\times10^5$ J/K \\
+\bottomrule
+\end{tabularx}
+\end{table}
+\begin{table}[H]
+\centering
+\small
+\caption{BB configuration from the active model class and Hou-and-Evins reporting results.}
+\label{tab:v3-config}
+\begin{tabularx}{0.86\linewidth}{lX}
+\toprule
+Item & Value \\
+\midrule
+Input dimension & 8 \\
+Temperature head & HeatFlowNetV2, 7,105 params \\
+Power head & PowerNetV2, 1,377 params \\
+Total parameters & 8,482 \\
+Epoch budget & 500 \\
+Batch size & 256 \\
+Learning rate & 1e-3 \\
+Optimizer & AdamW \\
+Early stopping & patience=30; improvement\_threshold=1e-6 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+\begin{table}[H]
+\centering
+\scriptsize
+\caption{Feature scaling and physical constraints used by the surrogate interface.}
+\label{tab:v3-scaling}
+\begin{tabularx}{\linewidth}{lXXX}
+\toprule
+Variable & Scaling method & Parameters & Engineering role \\
+\midrule
+surrogate\_t\_zone & affine min-max to [-1, 1] & min=15 C; max=35 C & Keeps the learned thermal state within the training support used by the direct-TSup surrogate. \\
+surrogate\_t\_amb & affine min-max to [-1, 1] & min=-10 C; max=40 C & Normalizes outdoor-air temperature for the heat and power heads. \\
+hour & cyclic sine/cosine & sin(2*pi*hour/24); cos(2*pi*hour/24) & Avoids discontinuity between hour 23 and hour 0. \\
+day & cyclic sine/cosine & sin(2*pi*day/365); cos(2*pi*day/365) & Represents seasonal phase without an artificial year-end jump. \\
+a0\_raw & native action domain & [-1, 1] maps to 18..35 C supply temperature & Preserves the PPO action coordinate while keeping physical supply-temperature bounds explicit. \\
+a1\_raw & native action domain & [-1, 1] maps to 0..1 fan command & Keeps fan modulation aligned with the controller action range. \\
+power\_head\_output & Softplus multiplied by P\_MAX & P\_MAX=5500 W & Guarantees non-negative predicted HVAC power. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+\begin{table}[H]
+\centering
+\small
+\caption{Stage A telemetry-alignment operations from the calibration-summary JSON.}
+\label{tab:stage-a}
+\begin{tabularx}{\linewidth}{llX}
+\toprule
+Operation & Estimated value & Effect \\
+\midrule
+Latency compensation & 1 step (15 min) & latency-search RMSE 0.378 C \\
+Temperature bias removal & -0.1049 C & median residual offset \\
+Power affine normalization & scale -0.702, bias 1148 W & global power-channel rescale \\
+Post-Stage-A temperature RMSE & 0.2383 C & baseline for Stage B \\
+Post-Stage-A power MAE & 514.4 W & baseline for Stage C \\
+\bottomrule
+\end{tabularx}
+\end{table}
+\begin{table}[H]
+\centering
+\small
+\caption{Stage B excitation filtering and physical identification of \(\Czon\).}
+\label{tab:stage-b}
+\begin{tabularx}{\linewidth}{llX}
+\toprule
+Parameter & Value & Notes \\
+\midrule
+C\_zon prior & $4.200\times10^5$ J/K & air volume $\times$ specific heat \\
+C\_zon after Stage B & $4.413\times10^5$ J/K & +5.1\% vs prior \\
+Stage B epochs & 120 & episode-aware run \\
+C\_zon learning rate & $10^{-3}$ & dedicated scalar LR \\
+Excitation quantile & 0.95 & |dT| threshold 0.1759 \\
+Excitation rows & 403 / 8058 & mean score 0.240 vs 0.069 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+\begin{table}[H]
+\centering
+\small
+\caption{Stage A/B/C calibration summary from the canonical JSON and rollout results.}
+\label{tab:stage-abc}
+\begin{tabular}{lrrr}
+\toprule
+Metric & Before & After & Relative change \\
+\midrule
+1-step RMSE$_T$ (\si{\celsius}) & 0.384 & 0.235 & -38.8\% \\
+24 h rollout RMSE$_T$ (\si{\celsius}) & 1.466 & 0.644 & -56.1\% \\
+Power MAE (\si{\watt}) & 808 & 482 & -40.3\% \\
+$\Czon$ ($\times 10^5$ J/K) & 4.200 & 4.413 & +5.1\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+\begin{table}[H]
+\centering
+\small
+\caption{Multi-horizon teacher-forced rollout fidelity from the Hou-and-Evins predictive-validity table. Cells are temperature RMSE (\(^\circ\)C) at each horizon; the final column is the 24 h temperature \(R^2\) (n/a where not computed for the auxiliary baselines).}
+\label{tab:multi-horizon}
+\begin{tabular}{lccccc}
+\toprule
+Model & 1 h & 4 h & 8 h & 24 h & 24 h \(R^2_T\) \\
+\midrule
+BB (hourly) & 1.471 & 1.579 & 1.579 & 1.557 & -1.411 \\
+BB (15-min matched) & 0.875 & 0.874 & 0.873 & 0.876 & n/a \\
+raw GB & 1.491 & 1.491 & 1.491 & 1.466 & n/a \\
+calibrated GB & 0.321 & 0.575 & 0.638 & 0.644 & +0.588 \\
+\bottomrule
+\end{tabular}
+\end{table}
+\begin{table}[H]
+\centering
+\small
+\caption{Backend throughput under the 900 s control protocol from the speed-benchmark result (single CPU thread, BOPTEST reached through the same HTTP-Docker interface used in training).}
+\label{tab:speed}
+\begin{tabular}{lrrrr}
+\toprule
+Backend & Steps/s & Median (ms) & P95 (ms) & Speed-up \\
+\midrule
+BOPTEST RTE HTTP loop & 21.0 & 14.915 & 19.251 & 1.0$\times$ \\
+BB surrogate & 4,626.3 & 0.165 & 0.273 & 220.2$\times$ \\
+GB calibrated & 2,399.5 & 0.359 & 0.495 & 114.2$\times$ \\
+hybrid BB+GB & 1,786.8 & 0.507 & 0.648 & 85.0$\times$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.94\linewidth]{fig_block2_pipeline.pdf}
+  \caption{Controller-learning pipeline. The experiments separate the rollout model, the physical regularizer, the controller family, the observation interface, and live BOPTEST validation.}
+  \label{fig:block2_pipeline}
+{\footnotesize\itshape }
+\end{figure}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.70\linewidth]{block2_runtime_fidelity.pdf}
+  \caption{\textbf{Surrogates make policy-gradient training computationally feasible.} Environment throughput (env steps/s, log scale) versus 24\,h rollout RMSE$_T$ for the BOPTEST emulator (ground truth) and the three in-process surrogate backends. The surrogates run $85$--$220\times$ faster than the BOPTEST RTE HTTP testbed, turning a days-long PPO run into hours; the hybrid is plotted at BB's rollout RMSE because it rolls out on BB. The plotted values combine measured throughput with 24\,h rollout-RMSE estimates.}
+  \label{fig:runtime_feasibility}
+\end{figure}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.90\linewidth]{fig_block2_reward_shaping.pdf}
+  \caption{Hybrid reward-shaping mechanism. BB supplies rollout dynamics; frozen GB supplies a disagreement penalty on the same state-action transition.}
+  \label{fig:hybrid_reward}
+{\footnotesize\itshape }
+\end{figure}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.96\linewidth]{final17_fig06_live_boptest_controller_comparison.pdf}
+  \caption{Detailed live BOPTEST KPI breakdown (per-metric bars) for pure BB, direct GB, and hybrid PPO. Direct GB is a negative control: higher predictive fidelity does not imply a useful RL training environment. These per-metric bars give the underlying $m_s$, violation, RMSE, and energy behind the compact fidelity--utility scatter in the main text.}
+  \label{fig:live_kpi}
+\end{figure}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.96\linewidth]{block2_q1_polish_phase_density.pdf}
+  \caption{Action-density phase portrait of the three thermostatic controllers on the live BOPTEST \texttt{typical\_heat\_window}: empirical hexbin density of the normalized supply-temperature action $a_0$ (one hue per backend) against the thermal error $T_{\mathrm{zone}}-T_{\mathrm{set}}$, on \emph{identical} axes, with the marginal $a_0$ distribution in the right strip of each panel and the measured saturation share ($|a_0|\geq0.9$). The red bands mark the actuator-saturation region. Direct GB collapses onto $a_0=-1$ (100\% saturation, a bang-bang law) whereas the usable hourly BB and the hybrid modulate ($\approx$19--20\%).}
+  \label{fig:action_phase}
+\end{figure}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.92\linewidth]{block2_seed_band.pdf}
+  \caption{Across $N=3$ seeds the fidelity--utility paradox is not a seed result: the usable hourly-BB and hybrid controllers stay below both the $m_s=1$ closed-loop-collapse line and the $5\%$ comfort-violation reference on every seed, while the matched-resolution BB and the direct GB both collapse on every seed ($m_s>1$, $>75\%$ violation) with small seed variance. Markers are the mean over seeds \{42,43,44\} (filled = peak-heat window, open = typical-heat window); whiskers are $\pm$ one standard deviation; colour encodes the controller (green = coarse BB, salmon = matched-resolution BB, purple = direct GB, blue = hybrid). \textbf{(left)} live maintenance score $m_s$ (lower is better, with the usable $m_s<0.1$ band shaded); \textbf{(right)} comfort-violation fraction. Same data as Table~\ref{tab:seed_band}.}
+  \label{fig:seed_band}
+\end{figure}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.82\linewidth]{block2_warmstart_negative_eval_kpis.pdf}
+  \caption{Warm-start negative control. Pretraining on direct GB and then fine-tuning on the hybrid backend is inferior to training the hybrid policy from scratch.}
+  \label{fig:warmstart}
+\end{figure}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.86\linewidth]{block1_q1_fig10_transfer_gap_diagnostics.pdf}
+  \caption{Transfer-gap diagnostics. Direct GB has high action-gap norm and live-surrogate mismatch; the hybrid backend suppresses both.}
+  \label{fig:transfer_gap}
+\end{figure}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.96\linewidth]{fig_block2_hdrl_architecture.pdf}
+  \caption{HDRL architecture: a high-level seasonal gate $k(t)$ routes the 17D observation to one of two low-level PPO setpoint specialists (winter / summer). Because the low level is already comfort-aware, the GB temperature censor over-regularizes it.}
+  \label{fig:hdrl_arch}
+{\footnotesize\itshape }
+\end{figure}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.70\linewidth]{block2_lambda_specificity.pdf}
+  \caption{\textbf{The optimal censor weight $\lambda_T$ is controller-family specific.} Live BOPTEST maintenance score $m_s$ (cross-window mean of the peak and typical windows) versus $\lambda_T$ for each controller family; $\star$ marks the per-family optimum. Thermostatic PPO improves with the censor (optimum $\lambda_T=0.10$, the canonical hybrid), HDRL is best \emph{without} it ($\lambda_T=0.00$) and degrades monotonically, and MORL adopts $\lambda_T=0.00$. HDRL has a dense four-point sweep; PPO is shown at its two measured endpoints (pure BB $=\lambda_T0$, hybrid $=0.10$) and MORL at its single adopted configuration. The panel compares the \emph{location} of each optimum, not absolute $m_s$ across families (they use different observation/action interfaces).}
+  \label{fig:lambda_specificity}
+\end{figure}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.88\linewidth]{block2_hdrl_lambda_sweep_sensitivity.pdf}
+  \caption{HDRL $\lambda_T$ sensitivity. The thermostatic regularization weight does not transfer; the best HDRL policy uses no temperature-disagreement term.}
+  \label{fig:hdrl_sweep}
+\end{figure}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.98\linewidth]{fig_block2_morl_pipeline.pdf}
+  \caption{MORL observation-interface schematic. The 5D instantaneous observation fails because it is blind to forecasted disturbances, whereas the 17D forecast-augmented observation makes MORL control-viable. The quantitative ablation of this schematic is in Figure~\ref{fig:morl5d17d_supp}.}
+  \label{fig:morl_pipeline}
+{\footnotesize\itshape }
+\end{figure}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.84\linewidth]{final17_fig09_morl_5d_failure_17d_success.pdf}
+  \caption{MORL observation-interface ablation. The main article reports the headline 5D-versus-17D numbers in its controller-family boundary-test paragraph; this supplementary plot includes the current-code 5D rerun, the frozen historical 5D audit result, and the 17D power-only recovery.}
+  \label{fig:morl5d17d_supp}
+\end{figure}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.88\linewidth]{block2_morl_17d_seasonal_heatmap.pdf}
+  \caption{MORL seasonal performance heatmap under the 17D interface. The figure shows monthly structure but does not support the N=3 mechanism claim after N=5 extension.}
+  \label{fig:morl_heatmap}
+\end{figure}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.88\linewidth]{block2_morl_seasonal_variance_inversion.pdf}
+  \caption{Post-N=5 seasonal variance diagnostic. The earlier seasonal-inversion hypothesis is reported as falsified, not retained as a positive mechanism claim.}
+  \label{fig:seasonal_falsification}
+\end{figure}
+\begin{table}[H]
+\centering
+\caption{Targeted-window and yearly scenario definitions.}
+\label{tab:scenarios}
+\small
+\begin{tabular}{lrrrr>{\raggedright\arraybackslash}p{40mm}}
+\toprule
+Scenario & Day idx & Start (s) & Dur. (d) & Ambient ($^\circ$C) & Role \\
+\midrule
+\texttt{peak\_heat\_window} & 3 & 259200 & 14 & -24.4 & January coldest, heating stress test \\
+\texttt{typical\_heat\_window} & 37 & 3196800 & 14 & 2.4 & February moderate, deployment-realistic \\
+yearly evaluation & 12 months & --- & 14/mo & varied & MORL + PI yearly summary \\
+\bottomrule
+\end{tabular}
+\end{table}
+\begin{table}[H]
+\centering
+\caption{PPO training configuration used in the controller-learning experiments.}
+\label{tab:ppo_hparams}
+\small
+\begin{tabular}{lllll}
+\toprule
+Parameter & Thermostatic PPO & HDRL & MORL pretrain & MORL finetune \\
+\midrule
+Algorithm & PPO, MlpPolicy & PPO, MlpPolicy & PPO, MlpPolicy & PPO load+continue \\
+Learning rate & $3.0{\times}10^{-4}$ & $3.0{\times}10^{-4}$ & $3.0{\times}10^{-4}$ & $1.0{\times}10^{-4}$ \\
+\texttt{n\_steps} & 1024 & 1024 & 2048 & inherited \\
+\texttt{batch\_size} & 4096 & 2048 & 64 & inherited \\
+\texttt{n\_epochs} & 10 & 10 & 10 & 10 \\
+$\gamma$ & 0.99 & 0.99 & 0.99 & 0.99 \\
+GAE $\lambda$ & 0.95 & 0.95 & 0.95 & 0.95 \\
+Clip range & 0.20 & 0.20 & 0.20 & 0.20 \\
+Total timesteps & 10M & 12M & 2M & 100k \\
+Seed & 42 & 42 & 42 & 42--46 (N=5) \\
+\bottomrule
+\end{tabular}
+\end{table}
+\begin{table}[H]
+\centering
+\caption{Extended 17D observation feature groups.}
+\label{tab:obs17}
+\small
+\begin{tabularx}{\linewidth}{llX}
+\toprule
+Feature group & Dim. & Contents \\
+\midrule
+Physical state (basic) & 5 & $T_{\mathrm{zone}}$, CO$_2$, clipped-log power, prev. $T_{\mathrm{sup}}$, $T_{\mathrm{amb}}$ \\
+Cyclic time & 4 & hour and day sine/cosine encodings \\
+Ambient forecast & 5 & $T_{\mathrm{amb}}$ at $+1,+3,+6,+12,+24$ h \\
+Previous action & 2 & $(a_{T_{\mathrm{sup}}}, a_{\mathrm{fan}})$ from last step \\
+Temperature delta & 1 & causal-smoothed $\Delta T_{\mathrm{zone}}$ \\
+Total (extended) & 17 & obs\_mode = extended \\
+\bottomrule
+\end{tabularx}
+\end{table}
+The shaped training reward is $r_t=-(w_c\,c_t + w_e\,e_t)$, with a piecewise-linear, asymmetric comfort term
+\begin{equation}
+ r_{\mathrm{comfort},t} =
+ \begin{cases}
+ -w_u\,(T_{\ell} - T_t) + b_{\mathrm{heat}} & T_t < T_{\ell}, \\
+ +\beta & T_{\ell}+\delta \le T_t \le T_h-\delta, \\
+ -w_o\,(T_t - T_h) + b_{\mathrm{cool}} & T_t > T_h,
+ \end{cases}
+ \label{eq:comfort}
+\end{equation}
+and an energy term $r_{\mathrm{energy},t}=-\eta P_t$ ($\eta=2\times10^{-4}$); the cold/hot weights are ambient-dependent and fixed a priori. The parameters are listed below.
+\begin{table}[H]
+\centering
+\caption{Reward-shaping parameters.}
+\label{tab:reward}
+\small
+\begin{tabularx}{\linewidth}{llX}
+\toprule
+Component & Value & Role \\
+\midrule
+Comfort band & 21.0 / 24.0 C & comfort interval (band\_low/high) \\
+Comfort deadband & 0.50 C & soft margin around band edges \\
+In-band bonus & 0.050/step & reward for staying inside the band \\
+Undershoot / overshoot weight & 1.15 / 1.15 & generic violation penalties \\
+Cold-ambient asymmetry & 1.60 (amb $<8.0$ C) & extra cold-undershoot penalty \\
+Hot-ambient asymmetry & 1.80 (amb $>24.0$ C) & extra hot-overshoot penalty \\
+Heating action bonus & 0.04 ($T_{\mathrm{sup}}\ge 29.0$ C) & anti-degenerate shaping \\
+Cooling action bonus & 0.06 ($T_{\mathrm{sup}}\le 21.0$ C) & anti-degenerate shaping \\
+MORL weights ($w_c/w_e/w_s$) & 0.80 / 0.20 / 0.00 & canonical scalarization \\
+Energy scale & $2e-4$ (W$\to$reward) & energy-to-reward conversion \\
+\bottomrule
+\end{tabularx}
+\end{table}
+\begin{table}[H]
+\centering
+\caption{Seed robustness ($N=3$ seeds \{42,43,44\}) of the thermostatic controllers on the live BOPTEST targeted windows; mean $\pm$ standard deviation. The usable controllers (pure BB, hybrid) stay below the $5\%$ comfort-violation bar on every seed, while the collapse controls (matched-resolution BB, direct GB, and the $\Delta t$-rescaled hourly BB) exceed $m_s=1$ on every seed with small seed variance. The $\Delta t$-rescaled control keeps the hourly BB but rescales its increment to the $900$~s runtime step; its collapse shows the hourly BB's usability rests on its large coarse-scale increment.}
+\label{tab:seed_band}
+\small
+\begin{tabular}{llrll}
+\toprule
+Controller & Window & $N$ & $m_s$ (mean $\pm$ std) & Violation \% (mean $\pm$ std) \\
+\midrule
+pure BB & peak & 3 & 0.072 $\pm$ 0.019 & 2.6 $\pm$ 1.2 \\
+pure BB & typical & 3 & 0.045 $\pm$ 0.047 & 2.4 $\pm$ 2.2 \\
+matched BB (15-min) & peak & 3 & 1.142 $\pm$ 0.000 & 85.6 $\pm$ 0.0 \\
+matched BB (15-min) & typical & 3 & 1.211 $\pm$ 0.000 & 91.4 $\pm$ 0.0 \\
+direct GB & peak & 3 & 1.071 $\pm$ 0.022 & 76.4 $\pm$ 0.7 \\
+direct GB & typical & 3 & 1.131 $\pm$ 0.026 & 82.5 $\pm$ 0.7 \\
+$\Delta t$-rescaled BB & peak & 3 & 1.187 $\pm$ 0.010 & 83.2 $\pm$ 0.7 \\
+$\Delta t$-rescaled BB & typical & 3 & 1.215 $\pm$ 0.006 & 86.0 $\pm$ 0.3 \\
+hybrid ($\lambda_T{=}0.10$) & peak & 3 & 0.059 $\pm$ 0.026 & 3.0 $\pm$ 1.6 \\
+hybrid ($\lambda_T{=}0.10$) & typical & 3 & 0.014 $\pm$ 0.024 & 0.8 $\pm$ 1.4 \\
+\bottomrule
+\end{tabular}
+\end{table}
+\begin{table}[H]
+\centering
+\caption{Measured response-surface smoothness of the three single-model backends, probed directly on each surrogate's one-step action map (no controller, no BOPTEST). The scale-free relative roughness (curvature normalized by slope) is independent of the step length and tracks closed-loop usability: the usable hourly BB is the smoothest; both collapsed backends are several times rougher.}
+\label{tab:surface_sharpness}
+\small
+\begin{tabular}{lrrll}
+\toprule
+Surrogate backend & Slope $\overline{|\partial\hat T/\partial a_0|}$ & Rel.\ roughness & vs.\ BB & Closed-loop role \\
+\midrule
+canonical BB (hourly) & 3.368 & 0.169 & 1.0 (ref) & usable \\
+matched BB (15-min) & 0.272 & 1.578 & 9.4$\times$ & collapse \\
+calibrated GB & 0.467 & 1.338 & 7.9$\times$ & collapse \\
+\bottomrule
+\end{tabular}
+\end{table}
+\begin{table}[H]
+\centering
+\caption{Thermostatic hybrid $\lambda_T$ sweep \emph{design} (experimental protocol \S5; $\lambda_P=5\times10^{-5}$ throughout); the mid point is the retained canonical. Of these pre-specified brackets, the live-BOPTEST two-window evaluation reported in the paper covers thermostatic PPO at $\lambda_T=0.10$ (canonical hybrid) and $\lambda_T=0$ (pure BB), so the controller-family $\lambda_T$ figure shows PPO at these two measured endpoints; the $0.05$ and $0.15$ brackets were not carried to full live two-window evaluation. The dense four-point $\lambda_T$ sweep is the HDRL family, not PPO.}
+\label{tab:hybrid_sweep}
+\small
+\begin{tabular}{lll}
+\toprule
+$\lambda_T$ & Tag & Role \\
+\midrule
+0.05 & hybrid\_l005 & weaker censor (sweep bracket) \\
+0.10 & hybrid\_l010 & \textbf{canonical} (retained; $m_s=0.087$ peak, $0.041$ typical) \\
+0.15 & hybrid\_l015 & stronger censor (sweep bracket) \\
+\bottomrule
+\end{tabular}
+\end{table}
+\begin{table}[H]
+\centering
+\caption{Direct-GB warm-start utility.}
+\label{tab:warmstart}
+\small
+\begin{tabular}{llrr}
+\toprule
+Mode & Scenario & $m_s$ & Violation (\%) \\
+\midrule
+scratch (random init) & peak & 0.465 & 31.70 \\
+scratch (random init) & typical & 0.578 & 45.54 \\
+warm-start (from GB) & peak & 1.270 & 83.93 \\
+warm-start (from GB) & typical & 1.289 & 86.83 \\
+\bottomrule
+\end{tabular}
+\end{table}
+\begin{table}[H]
+\centering
+\caption{Transfer diagnostics across three backends. $\Delta m_s=$ surrogate $-$ live (negative $\Rightarrow$ surrogate optimistic); Temp gap is the live closed-loop RMSE$_T$.}
+\label{tab:transfer}
+\small
+\begin{tabular}{llrrrrl}
+\toprule
+Variant & Scenario & Temp gap ($^\circ$C) & $\Delta m_s$ & Action gap & First div. & Top driver \\
+\midrule
+pure BB & peak & 0.894 & -0.102 & 0.377 & 1 & p\_total\_norm \\
+pure BB & typical & 0.745 & -0.068 & 0.333 & 1 & p\_total\_norm \\
+hybrid $\lambda_T=0.10$ & peak & 0.633 & -0.023 & 0.473 & 1 & p\_total\_norm \\
+hybrid $\lambda_T=0.10$ & typical & 0.612 & -0.021 & 0.253 & 16 & p\_total\_norm \\
+direct GB & peak & 4.320 & -0.886 & 2.000 & 1 & t\_zone\_norm \\
+direct GB & typical & 4.401 & -1.014 & 2.014 & 1 & t\_zone\_norm \\
+\bottomrule
+\end{tabular}
+\end{table}
+\begin{table}[H]
+\centering
+\caption{HDRL sweep over $\lambda_T$ on the targeted windows; best is $\lambda_T=0$, and performance degrades monotonically as the temperature censor strengthens.}
+\label{tab:hdrl}
+\small
+\begin{tabular}{llrrrr}
+\toprule
+$\lambda_T$ & Scenario & $m_s$ & Violation (\%) & RMSE$_T$ ($^\circ$C) & Energy (kWh) \\
+\midrule
+0.00 & peak & 0.180 & 6.10 & 0.751 & 329.6 \\
+0.03 & peak & 0.307 & 11.90 & 0.993 & 311.5 \\
+0.05 & peak & 0.418 & 20.98 & 1.303 & 298.1 \\
+0.10 & peak & 0.440 & 22.99 & 1.343 & 300.4 \\
+0.00 & typical & 0.234 & 3.12 & 0.691 & 385.1 \\
+0.03 & typical & 0.296 & 9.38 & 0.959 & 369.6 \\
+0.05 & typical & 0.512 & 27.38 & 1.491 & 354.5 \\
+0.10 & typical & 0.511 & 30.65 & 1.455 & 357.1 \\
+\bottomrule
+\end{tabular}
+\end{table}
+\begin{table}[H]
+\centering
+\caption{MORL Pareto (seed 42) and N=5 canonical seed analysis.}
+\label{tab:morl_pareto_seed}
+\small
+\begin{tabular}{lrrll}
+\toprule
+Preference / statistic & RMSE$_T$ ($^\circ$C) & Violation (\%) & $m_s$ & Interpretation \\
+\midrule
+0/100 (seed 42) & 8.359 & 86.76 & 1.588 & energy-only collapse \\
+25/75 (seed 42) & 0.912 & 11.39 & 0.173 & energy-weighted usable \\
+50/50 (N=5 mean$\pm$std) & 0.893$\pm$0.081 & 13.01$\pm$6.62 & 0.187$\pm$0.078 & neutral, CV=0.42 \\
+75/25 (N=5 mean$\pm$std) & 0.799$\pm$0.100 & 9.23$\pm$6.67 & 0.139$\pm$0.085 & practical, CV=0.61 \\
+100/0 (seed 42) & 0.631 & 1.49 & 0.032 & best seed-42 comfort \\
+\bottomrule
+\end{tabular}
+\end{table}
+\begin{table}[H]
+\centering
+\caption{Per-seed MORL yearly metrics for the two canonical weight pairs.}
+\label{tab:morl_per_seed}
+\small
+\begin{tabular}{lrrrrrr}
+\toprule
+Pair (c/e) & Seed & RMSE$_T$ & Within 1$^\circ$C (\%) & Violation (\%) & Energy (kWh) & $m_s$ \\
+\midrule
+50/50 & 42 & 0.939 & 74.9 & 12.92 & 2843.6 & 0.193 \\
+50/50 & 43 & 0.769 & 82.9 & 6.77 & 2872.0 & 0.103 \\
+50/50 & 44 & 0.879 & 76.9 & 9.34 & 2858.4 & 0.141 \\
+50/50 & 45 & 0.895 & 77.7 & 11.97 & 2839.8 & 0.187 \\
+50/50 & 46 & 0.985 & 65.4 & 24.05 & 2554.1 & 0.310 \\
+75/25 & 42 & 0.700 & 83.3 & 3.08 & 2994.3 & 0.057 \\
+75/25 & 43 & 0.716 & 84.9 & 5.47 & 2963.9 & 0.087 \\
+75/25 & 44 & 0.769 & 81.7 & 7.82 & 2819.1 & 0.117 \\
+75/25 & 45 & 0.903 & 78.5 & 9.42 & 3036.7 & 0.160 \\
+75/25 & 46 & 0.909 & 70.3 & 20.37 & 2602.8 & 0.276 \\
+\bottomrule
+\end{tabular}
+\end{table}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.97\linewidth]{fig_block3_protocol.pdf}
+  \caption{Pre-specified transferability protocol. Controller-side transfer is tested against a testcase-specific PI threshold; surrogate-side transfer is tested by full Stage A/B/C recalibration on target telemetry.}
+  \label{fig:protocol}
+{\footnotesize\itshape }
+\end{figure}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.97\linewidth]{fig_block3_adapter.pdf}
+  \caption{Adapter-mediated transfer schematic. The frozen hybrid policy is routed through a pre-specified actuator adapter $\mathcal{A}_k$ to each testcase's actuator interface; the controller-side verdict (against the $1.25\times$ PI threshold) is per-testcase, while full Stage A/B/C surrogate recalibration passes on all three.}
+  \label{fig:adapter}
+{\footnotesize\itshape }
+\end{figure}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.97\linewidth]{fig_block3_topology.pdf}
+  \caption{Schematic (no data). Comparative HVAC topology of the source case and the three hydronic targets (source $\to$ distribution $\to$ zone). Transfer changes the heat source, distribution path, and actuator set, while the single-zone energy balance and the zone thermal capacitance $C_{\mathrm{zon}}$ are shared across the family.}
+  \label{fig:topology}
+{\footnotesize\itshape }
+\end{figure}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.80\linewidth]{fig_block3_controller_bar.pdf}
+  \caption{Controller-side transfer: frozen-hybrid $m_{s,\mathrm{RL}}$ against the PI baseline $m_{s,\mathrm{PI}}$ and the pre-specified threshold $\tau=1.25\,m_{s,\mathrm{PI}}$ (dashed). The two residential cases exceed the threshold (FAIL); the commercial case is below it (PASS, with the separate energy caveat).}
+  \label{fig:controller_bar}
+\end{figure}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.92\linewidth]{fig_block3_regime_progression.pdf}
+  \caption{Primary-testcase surrogate-fidelity progression across recalibration regimes. Temperature and power fidelity improve monotonically toward full Stage A/B/C, while the frozen controller's live $m_s$ is invariant by experimental design.}
+  \label{fig:regime_progression}
+\end{figure}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.88\linewidth]{final17_fig17_hypothesis_closure_matrix.pdf}
+  \caption{Hypothesis closure matrix: the transfer-boundary experiment supports surrogate-side transferability but falsifies deployment-ready frozen-controller transfer.}
+  \label{fig:hypothesis_closure}
+\end{figure}
+\begin{table}[H]
+\centering
+\small
+\caption{Pre-specified target testcases and actuator adapters.}
+\label{tab:testcases}
+\begin{tabularx}{\linewidth}{l l >{\raggedright\arraybackslash}X l}
+\toprule
+Role & Testcase & Structural difference vs \texttt{bestest\_air} & Adapter \\
+\midrule
+Primary & \texttt{bestest\_hydronic\_heat\_pump} & hydronic loop driven by a heat pump & \texttt{hydronic\_t\_supply\_v1} \\
+Secondary & \texttt{bestest\_hydronic} & boiler/radiator hydronic distribution & \texttt{hydronic\_direct\_supply\_v1} \\
+Stretch & \texttt{singlezone\_commercial\_hydronic} & order-of-magnitude larger commercial zone + hydronic valve & \texttt{commercial\_hydronic\_valve\_v1} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+\begin{table}[H]
+\centering
+\small
+\caption{Per-testcase actuator-adapter mapping. All adapters share $h=\mathrm{clip}((T_{\mathrm{sup},t}-18)/17,0,1)$; setpoint overrides are in kelvin.}
+\label{tab:adapters}
+\begin{tabularx}{\linewidth}{l l >{\raggedright\arraybackslash}p{40mm} >{\raggedright\arraybackslash}X}
+\toprule
+Testcase & Primary override & Override formula & Auxiliary overrides \\
+\midrule
+\texttt{heat\_pump} & \texttt{oveTSet\_u} (K) & $288.15+9h$ (zone setpoint $15$--$24^\circ$C) & \texttt{oveHeaPumY\_u}, \texttt{ovePum\_u}, \texttt{oveFan\_u} from $h$ \\
+\texttt{hydronic} & \texttt{oveTSetSup\_u} (K) & $T_{\mathrm{sup},t}+273.15$ (direct supply) & \texttt{ovePum\_u} from $h$; fixed comfort-band context \\
+\texttt{commercial} & \texttt{dh\_oveTSupSetHea\_u} (K) & $T_{\mathrm{sup},t}+273.15$ (district supply) & heating valves + pump from $h$; fixed zone/air context \\
+\bottomrule
+\end{tabularx}
+\end{table}
+\begin{table}[H]
+\centering
+\small
+\caption{Pre-specified recalibration regimes. The controller is frozen in every regime.}
+\label{tab:regimes}
+\begin{tabular}{lll}
+\toprule
+Regime & Surrogate action & Controller action \\
+\midrule
+none & frozen \texttt{bestest\_air} surrogate recipe & frozen hybrid controller \\
+partial & Stage C residual-head recalibration only & frozen hybrid controller \\
+full & Stage A + Stage B + Stage C on target telemetry & frozen hybrid controller \\
+\bottomrule
+\end{tabular}
+\end{table}
+\begin{table}[H]
+\centering
+\small
+\caption{Testcase architecture and identified physics. $C_{\mathrm{zon}}$ in $10^5$~J/K; equivalent mass $=C_{\mathrm{zon}}/c_{p,\mathrm{air}}$; mean delivered power from the Stage-C telemetry.}
+\label{tab:physics}
+\begin{tabularx}{\linewidth}{l l r r r >{\raggedright\arraybackslash}X}
+\toprule
+Testcase & Heat source & $C_{\mathrm{zon}}$ & eq.\ mass (kg) & mean power (W) & Thermal regime \\
+\midrule
+\texttt{bestest\_air} (source) & air supply & 4.413 & 439 & --- & reference \\
+\midrule
+hydronic heat pump & heat pump & 8.348 & 831 & 2,778 & conduction-dominated \\
+hydronic (boiler) & boiler/radiator & 8.623 & 858 & 679 & slow hydronic \\
+commercial hydronic & district + AHU & 8.426 & 838 & 76,860 & ventilation/AHU-dominated \\
+\bottomrule
+\end{tabularx}
+\end{table}
+\begin{table}[H]
+\centering
+\small
+\caption{Primary-testcase per-regime detail. $m_s$ is invariant across rows because the controller is frozen by experimental design; only surrogate fidelity changes.}
+\label{tab:primary}
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}p{42mm}rrr>{\raggedright\arraybackslash}X}
+\toprule
+Regime / result & RMSE$_T$ ($^\circ$C) & Power MAE (W) & $m_{s,\mathrm{RL}}$ & Status \\
+\midrule
+PI baseline (yearly) & -- & -- & 0.464 & reference \\
+none: frozen controller & -- & -- & 0.665 & control FAIL \\
+partial: Stage C top-5\% & 1.006 & 2336 & 0.665 & diagnostic \\
+partial: all-rows power head & 0.977 & 1765 & 0.665 & diagnostic (power) \\
+partial: all-rows heads & 0.781 & 1768 & 0.665 & surrogate cond.\ pass \\
+full: Stage A/B/C & 0.565 & 1767 & 0.665 & surrogate PASS, ctrl FAIL \\
+\bottomrule
+\end{tabularx}
+\end{table}
+\begin{table}[H]
+\centering
+\small
+\caption{$C_{\mathrm{zon}}$ re-identification across the \texttt{bestest\_air} baseline and the three hydronic testcases.}
+\label{tab:czon}
+\begin{tabular}{lrr}
+\toprule
+Testcase & $C_{\mathrm{zon}}$ (J/K) & $\rho_C$ vs \texttt{bestest\_air} \\
+\midrule
+\texttt{bestest\_air} (source case) & 4.413$\times10^5$ & 1.000 (baseline) \\
+hydronic heat pump & 8.348$\times10^5$ & 1.892 \\
+hydronic (boiler) & 8.623$\times10^5$ & 1.954 \\
+commercial hydronic & 8.426$\times10^5$ & 1.909 \\
+\midrule
+hydronic-family mean $\pm$ std & --- & 1.918 $\pm$ 0.032 \\
+\bottomrule
+\end{tabular}
+\end{table}
+\begin{table}[H]
+\centering
+\small
+\caption{Stretch-testcase pre-specified predictions versus observed outcomes.}
+\label{tab:predictions}
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}X l l l l}
+\toprule
+Prediction & Pre-reg.\ & A-priori & Observed & Verdict \\
+\midrule
+mode=none controller verdict & FAIL & 0.80 & threshold PASS & FALSIFIED \\
+full surrogate RMSE gain & $[50,90]\%$ & 0.70 & 87.8\% & CONFIRMED \\
+$C_{\mathrm{zon}}$ hyp.\ A (uniform) & $[1.7,2.2]\times$ & 0.35 & 1.91$\times$ & CONFIRMED \\
+$C_{\mathrm{zon}}$ hyp.\ B (scale-dep.) & $[3,10]\times$ & 0.50 & 1.91$\times$ & FALSIFIED \\
+$C_{\mathrm{zon}}$ hyp.\ C (failure) & non-convergence & 0.15 & converged (N=3) & FALSIFIED \\
+\bottomrule
+\end{tabularx}
+\end{table}
+\section*{5\quad BOPTEST RTE control loop and supply-temperature actuation}
+The live evaluation runtime is the BOPTEST Run-Time Environment (RTE): a Dockerised
+Modelica emulator with embedded baseline local-loop and supervisory controllers, a
+disturbance forecaster, and a KPI calculator, all exposed through a RESTful HTTP API
+(Blum et al., 2021). The test controller does not replace the plant; following the
+BOPTEST formalism it \emph{overwrites} a chosen subset $u_c$ of the emulator's control
+inputs while the remaining embedded loops keep running at baseline. In this study $u_c$ is
+the single supply-temperature set-point of each test case, activated through the BOPTEST
+overwrite pair (the point's \texttt{\_activate} flag set to $1$ and its \texttt{\_u} value
+written); on \texttt{bestest\_air} this point is the supply-air-temperature set-point
+\texttt{oveTSetSup}.
+At every control step $\Delta t=\SI{900}{\second}$ (Option-1 synchronisation, in which the
+controller defines the step and the emulator advances when an action is returned) the
+controller reads measurements $y_t$ (zone temperature, CO$_2$, power) and disturbance
+forecasts $\omega_t$ from the API, maps its policy output $a_t\in[-1,1]$ to the
+supply-temperature command $T_{\mathrm{sup}}=18+\tfrac{a_t+1}{2}(35-18)\,^\circ$C, writes
+it to the overwrite signal, and issues \texttt{POST /advance} to integrate the emulator
+forward one step. The RTE then returns the next measurements and the live key performance
+indicators (including the maintenance score $m_s$) computed from the closed-loop
+trajectory rather than from the surrogate. For the hydronic transfer cases the same
+supply-temperature command is routed through the per-test-case adapter to that case's
+overwrite signal (heat-pump modulation, valve position, or supply-water set-point), so the
+frozen policy interface is unchanged across test cases (Figure~\ref{fig:rte_loop}).
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth]{rte_control_loop.pdf}
+\caption{BOPTEST RTE closed-loop control interface (topology after Blum et al., 2021,
+Figs.~1--3). At each \SI{900}{\second} step the policy overwrites only the supply-temperature
+set-point through the \texttt{oveTSetSup} signal pair and advances the Dockerised emulator,
+which returns measurements, forecasts, and the live maintenance score $m_s$.}
+\label{fig:rte_loop}
+\end{figure}
+\section*{6\quad Detailed formulas}
+The following standard or implementation-level equations were moved here to keep the main
+article focused on results; they are reproduced for completeness.
+\noindent\textbf{PPO clipped surrogate objective} (Schulman et al., 2017), with $\hat{A}_t$ the GAE advantage:
+\begin{equation}
+L_{\mathrm{CLIP}}(\theta)=\mathbb{E}_t\!\left[\min\!\big(\rho_t(\theta)\,\hat{A}_t,\;
+\operatorname{clip}(\rho_t(\theta),1-\epsilon,1+\epsilon)\,\hat{A}_t\big)\right],
+\qquad \rho_t(\theta)=\frac{\pi_\theta(a_t\mid o_t)}{\pi_{\theta_{\mathrm{old}}}(a_t\mid o_t)}.
+\end{equation}
+\noindent\textbf{Black-box (BB) multi-horizon training loss} with physical-consistency penalty:
+\begin{equation}
+ \mathcal{L}_{\mathrm{BB}}
+ = \sum_{k\in\{1,2,4\}} \frac{1}{N}\sum_{i}\big(\That_i(t{+}k)-T_i(t{+}k)\big)^2
+ + \lambda_{\mathrm{phys}}\,\mathrm{ReLU}\!\big(|\Delta\That|-\Delta T_{\max}\big).
+\end{equation}
+\noindent\textbf{Grey-box (GB) positive reparameterization} of the zone capacitance:
+\begin{equation}
+ \Czon = c_s\big(\mathrm{softplus}(\rho) + c_{\min}/c_s\big),
+ \qquad \Czon \ge c_{\min} = 5\times10^4~\mathrm{J/K}.
+\end{equation}
+\noindent\textbf{Stage B maximum-a-posteriori identification} of $\Czon$ on the excitation subset $\mathcal{E}$ under a weak Gaussian prior:
+\begin{equation}
+ \widehat{C}_{\mathrm{zon}}
+ = \arg\min_{C}\ \sum_{i\in\mathcal{E}}\big(\That_i(C)-T_i\big)^2
+ + \frac{1}{2\sigma_p^2}\big(C-C_{\mathrm{prior}}\big)^2.
+\end{equation}
+\noindent\textbf{Warm-started GB heat-term scaling}: when a GB surrogate is warm-started from legacy BB weights, the inherited heat term is rescaled so that the per-step increment is dimensionally consistent at the runtime control step (the BB update lacks this scaling because its increment carries no explicit $\Delta t$):
+\begin{equation}
+ s = s_{\mathrm{legacy}}\,\frac{C_{\mathrm{init}}}{\Delta t_{\mathrm{legacy}}\,q_{\mathrm{scale}}}.
+\end{equation}
+\noindent\textbf{Transfer-gap diagnostics}: surrogate$-$live maintenance-score mismatch and mean action-gap norm:
+\begin{equation}
+\begin{aligned}
+ \Delta m_s &= m_{s,\mathrm{surrogate}} - m_{s,\mathrm{BOPTEST}}, \\
+ g_a &= \frac{1}{N}\sum_{t=1}^{N}\big\|\,a_{t,\mathrm{BOPTEST}}-a_{t,\mathrm{surrogate}}\,\big\|_{2}.
+\end{aligned}
+\end{equation}
+\section*{7\quad Additional tables cited from the main article}
+The following tables were moved here to reduce the float load of the main article; they are cited from it as Supplementary Tables.
+\begin{table}[H]
+\centering
+\caption{Maintenance-score decomposition across controller families (cited in the main article's controller-family synthesis). Thermostatic/HDRL are 14-day windows; MORL/PI are yearly means.}
+\label{tab:msdecomp}
+\small
+\begin{tabular}{lrrr}
+\toprule
+Controller (window/eval) & $m_s$ & $r_{\mathrm{time}}$ & $r_{\mathrm{sev}}$ \\
+\midrule
+pure BB (peak) & 0.073 & 0.015 & 0.058 \\
+direct GB (peak) & 1.046 & 0.771 & 0.276 \\
+hybrid $\lambda_T{=}0.10$ (peak) & 0.087 & 0.047 & 0.040 \\
+HDRL $\lambda_T{=}0$ (peak) & 0.180 & 0.061 & 0.119 \\
+pure BB (typical) & 0.095 & 0.044 & 0.051 \\
+direct GB (typical) & 1.102 & 0.824 & 0.278 \\
+hybrid $\lambda_T{=}0.10$ (typical) & 0.041 & 0.024 & 0.017 \\
+HDRL $\lambda_T{=}0$ (typical) & 0.234 & 0.031 & 0.202 \\
+MORL 50/50 (yearly, N=5) & 0.187 & 0.130 & 0.057 \\
+MORL 75/25 (yearly, N=5) & 0.139 & 0.092 & 0.047 \\
+PI (yearly) & 0.910 & 0.636 & 0.274 \\
+\bottomrule
+\end{tabular}
+\end{table}
+\begin{table}[H]
+\centering
+\caption{Controller-learning falsifiable-hypothesis ledger (CL1--CL5), cited in the main article's central fidelity--utility test. These are distinct from the paper-level hypotheses H1--H4: CL1--CL3 are the controller-experiment counterparts of H1--H3, and CL4--CL5 add MORL-specific checks. Each hypothesis is tested on the live BOPTEST RTE.}
+\label{tab:cl-ledger}
+\small
+\begin{tabular}{>{\raggedright\arraybackslash}p{5mm}>{\raggedright\arraybackslash}p{66mm}l>{\raggedright\arraybackslash}p{40mm}}
+\toprule
+ & Hypothesis & Evidence & Verdict \\
+\midrule
+CL1 & The higher-fidelity twin (GB) used directly as the rollout environment yields the best controller. & central test & FALSIFIED (direct GB $m_s>1.0$) \\
+CL2 & Calibrated GB is useful when its role changes from dynamics provider to a frozen reward-shaping censor. & hybrid remedy & SUPPORTED (hybrid gives best cross-window robustness) \\
+CL3 & The thermostatic-optimal censor weight $\lambda_T=0.10$ transfers to the HDRL family. & HDRL sweep & FALSIFIED (HDRL best at $\lambda_T=0$) \\
+CL4 & MORL viability is determined by the reward scalarization alone. & MORL 5D/17D & FALSIFIED (needs the 17D observation) \\
+CL5 & The single-seed MORL canonical ($m_s\approx0.10$) is representative. & MORL N=5 & FALSIFIED at N=5 (best of five; CV $0.42$--$0.61$) \\
+\bottomrule
+\end{tabular}
+\end{table}
+\begin{table}[H]
+\centering
+\small
+\caption{Modeling assumptions of the direct supply-temperature ($T_{\mathrm{sup}}$) control interface (cited in the main article's predictive-validation section).}
+\label{tab:modelling}
+\begin{tabularx}{\linewidth}{lX}
+\toprule
+Assumption & Statement \\
+\midrule
+Actuator abstraction & Supply-air temperature is commanded directly; valve/coil dynamics are not modelled beyond the Stage A latency term. \\
+Command bounds & $T_{\mathrm{sup}}\in[18,35]\,^\circ$C; fan command $u_{\mathrm{fan}}\in[0,1]$. \\
+Power non-negativity & $\widehat{P}=\mathrm{Softplus}(\cdot)\ge 0$, capped at $P_{\max}=5500$~W. \\
+State support & Zone and ambient temperatures normalized to $[-1,1]$ over $[15,35]$ and $[-10,40]\,^\circ$C. \\
+Interface invariance & All four backends share the same transition signature; only the internal dynamics differ. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Transition-dataset schema for the surrogate models. Every field of a training tuple $(s_t,a_t,d_t,s_{t+1})$ is tagged by role: \textbf{M} BOPTEST measurement, \textbf{X} exogenous disturbance, \textbf{D} derived feature, \textbf{A} control action, \textbf{T} regression target. In a recursive rollout the predicted targets update the physical-state block of the next observation ($\widehat{T}_{\mathrm{zone},t+1}=T_{\mathrm{zone},t}+\Delta\widehat{T}_{\mathrm{zone},t+1}$, power, previous action), while exogenous, forecast, and time fields advance from the disturbance stream; the policy then emits $a_{t+1}$ and the map $f_\theta$ is re-applied.}
+\label{tab:transition-schema}
+\small
+\begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{0.30\linewidth}cX@{}}
+\toprule
+Field & Role & Description \\
+\midrule
+$T_{\mathrm{zone},t}$ & M & zone air temperature (BOPTEST sensor); in the observation and, via $\Delta T$, in the target \\
+$P_t$ (HVAC power) & M & measured heating/cooling power; observation and power-head target \\
+CO$_2$ & M & zone CO$_2$ concentration; observation only \\
+$T_{\mathrm{amb},t}$ & X & ambient temperature (weather); observation \\
+solar gain, occupancy, comfort set-points & X & exogenous drivers in $d_t$; affect the dynamics, not all directly observed \\
+$\widehat{T}_{\mathrm{amb},\,t+1:t+24\mathrm{h}}$ & D & 5 ambient forecasts ($+1,+3,+6,+12,+24$\,h); observation \\
+cyclic time features & D & hour/day sine--cosine encodings; observation \\
+prev.\ supply temp.\ $T_{\mathrm{sup},t-1}$, prev.\ action $a_{t-1}$ & D & control history; observation \\
+$\Delta T_{\mathrm{zone},t}$ & D & causal-smoothed temperature delta; observation \\
+$a_t=a_0$ (supply-T) & A & commanded supply-temperature set-point (main-text action map); the only deployed control input \\
+$a_1$ (fan) & A & fan command; excited only during offline corpus generation, held at the BOPTEST baseline at deployment \\
+$\Delta\widehat{T}_{\mathrm{zone},t+1}$ & T & predicted next-step zone-temperature increment \\
+$\widehat{P}_{t+1}$ & T & predicted next-step HVAC power (power head) \\
+internal surrogate state (GB: RC state / $C_{\mathrm{zon}}$) & --- & latent; propagated by the RC balance (GB) or carried within $s_t$ (BB) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{table}[H]
+\centering
+\small
+\caption{Staged inverse calibration of the GB surrogate under the \texttt{block1\_15min\_episodeaware} preset; a second \texttt{power\_head\_only} preset freezes \(\Czon\) and refines only the power residual head (80 epochs).}
+\label{tab:stage-abc-summary}
+\begin{tabularx}{\linewidth}{@{}c >{\hsize=0.92\hsize}X >{\hsize=1.08\hsize}X@{}}
+\toprule
+Stage & Calibrates & Key result \\
+\midrule
+A & telemetry alignment: one-step latency \& bias & bias \(-0.105\,^\circ\)C; post-fit temperature RMSE \(0.238\,^\circ\)C \\
+\addlinespace
+B & zone capacitance \(\Czon\) on the top-excitation subset (403/8058 rows, quantile 0.95; 120 epochs) & \(\Czon=4.413\times10^5\)~J/K (\(+5.1\%\) over prior); last-20-epoch stability \(\pm1{,}005\)~J/K (0.23\%); Laplace/Fisher \(1\sigma=6.6\%\), 95\% CI \([3.845,4.980]\times10^5\)~J/K (\(n=1838\)) \\
+\addlinespace
+C & neural residual heads, \(\Czon\) frozen (60 epochs) & refines residual fit while preserving the physical parameter \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{figure}[H]
+ \centering
+ \includegraphics[width=\linewidth]{\detokenize{rie_fig03_stage_abc_diagnostics.pdf}}
+ \caption{Stage A/B/C diagnostics: $C_{\mathrm{zon}}$ convergence, rollout temperature-error reduction, and residual tightening.}
+ \label{fig:stage-abc}
+\end{figure}
+
+\begin{figure}[H]
+ \centering
+ \includegraphics[width=\linewidth]{\detokenize{rie_fig05_matched_corpus_attribution.pdf}}
+ \caption{Matched-corpus attribution. The BB-to-GB gain is split into the 15-minute corpus contribution and the Stage A/B/C calibration contribution.}
+ \label{fig:matched}
+\end{figure}
+
+\begin{figure}[H]
+ \centering
+ \begin{minipage}{0.49\linewidth}
+ \centering
+ \includegraphics[width=\linewidth]{final17_fig15_full_stage_transfer_rmse_improvement.pdf}
+ \textbf{(a)} Full Stage A/B/C RMSE improvement.
+ \end{minipage}\hfill
+ \begin{minipage}{0.49\linewidth}
+ \centering
+ \includegraphics[width=\linewidth]{final_eng_fig12_czon_hypothesis_interval.pdf}
+ \textbf{(b)} $C_{\mathrm{zon}}$ hypothesis interval.
+ \end{minipage}
+ \caption{Surrogate-side transfer and physical consistency. Full Stage A/B/C reduces target rollout error on all hydronic-family testcases, while the re-identified $C_{\mathrm{zon}}$ ratios fall inside the uniform hydronic-family interval and outside the scale-dependent interval.}
+ \label{fig:surrogate_physics_transfer}
+\end{figure}
+
+\begin{table}[H]
+\centering
+\small
+\caption{Pre-specified hypothesis closure.}
+\label{tab:hypothesis}
+\begin{tabularx}{\linewidth}{l >{\raggedright\arraybackslash}p{42mm} l >{\raggedright\arraybackslash}X}
+\toprule
+Hypothesis & Claim & Verdict & Evidence \\
+\midrule
+T1 (strong) & Frozen mode=none recipe gives deployment-ready transfer. & FALSIFIED & Residential cases fail the $1.25\times$ PI threshold; commercial is threshold-pass only with $+35.3\%$ energy. \\
+T2 (medium) & Partial Stage C recovers controller transfer. & FALSIFIED (structural) & Partial recalibrates only the surrogate; the controller is frozen by scope, so live KPI cannot change. \\
+T3 (surrogate) & Full Stage A/B/C gives a usable target surrogate. & SUPPORTED (N=3) & RMSE$_T$ gains 60.2\%, 87.4\%, 87.8\%; $C_{\mathrm{zon}}$ re-identified consistently. \\
+T3 (controller) & Frozen controller transfers given a valid adapter. & FALSIFIED & Residential cases fail comfort; commercial passes safety but overuses energy, regime-dependent failure. \\
+hierarchy & Verdict is monotone in recalibration depth. & SUPPORTED & Controller KPI invariant under surrogate-only recalibration; surrogate fidelity improves with full recalibration. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth]{testcase_schematics.pdf}
+\caption{Schematics of the four BOPTEST test cases (source \texttt{bestest\_air} plus the three hydronic transfer targets), from the official BOPTEST documentation. All share the single-zone energy balance but differ in heat source, distribution path, and actuator interface; the highlighted arrow marks the scalar command channel or adapter-mediated actuator interface used by the controller in each case.}
+\label{fig:testcases}
+\end{figure}
+\end{document}

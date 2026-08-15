@@ -1,0 +1,137 @@
+\subsection{Predictive fidelity: establishing the asymmetry}
+\label{sec:results1-digital-twin}
+
+\emph{The calibrated GB RC--NeuralODE is the more faithful predictor}, reaching a 24-hour rollout RMSE of $0.644\,^\circ$C against $1.557\,^\circ$C for the compact BB. This predictive-validation experiment establishes that digital-twin result by contrasting the two surrogates across architecture, calibration, data resolution, rollout accuracy, and runtime; whether the more accurate twin is the better PPO training environment is tested in the central fidelity--utility experiment (Section~\ref{sec:results2-control}).
+
+
+\label{ssec:block1-scope}
+
+This subsection asks whether the surrogate family is credible as a fast, physically interpretable digital twin. It does not yet ask whether a controller trained on that surrogate transfers to the live BOPTEST RTE. The fixed experimental order is:
+\begin{enumerate}
+ \item collect and train the BB direct-\Tsupply{} surrogate;
+ \item prepare the 15-minute corpus and run GB Stage~A/B/C inverse calibration;
+ \item retrain BB on the same 15-minute corpus to bound the calibration claim;
+ \item build the Hou-and-Evins reporting tables and the speed benchmark.
+\end{enumerate}
+
+
+
+\subsubsection{Surrogate construction and inverse calibration}
+\label{ssec:block1-direct-tsup}
+
+All predictive-validation surrogates share a single \emph{direct supply-temperature} (direct-\Tsupply{}) parameterization: the policy commands the supply-air setpoint directly (the two-dimensional action \(a=(a_0,a_1)\in[-1,1]^2\) maps affinely to the supply temperature through Eq.~\eqref{eq:action_map} and to a fan command), and every surrogate exposes the same transition signature \((T_{\mathrm{zone}},T_{\mathrm{amb}},h,d,a_0,a_1)\mapsto(\That_{t+1},\widehat{P}_{t+1})\) with \(\widehat{P}\ge 0\) (Softplus output, capped at \(P_{\max}=5500~\mathrm{W}\)). A single adapter wraps four interchangeable backends behind this interface (legacy BB, raw GB, calibrated GB, and the hybrid pairing), which is what makes the like-for-like fidelity comparisons in this section well posed: only the internal dynamics change, never the control interface or the observation map (interface details and modelling assumptions in Supplementary Table~\suppref{S31}).
+
+
+The BB surrogate is a compact, control-oriented model: its role is not long-horizon accuracy but smooth, fast rollout dynamics for downstream PPO. It predicts a temperature increment and a power head, \(\That_{t+1}=T_t+f_{\theta,T}(x_t)\) and \(\widehat{P}_{t+1}=f_{\theta,P}(x_t)\), trained by a multi-horizon (1-, 2-, 4-step) supervised rollout objective with a physical-consistency penalty (full form in the Supplementary Material); the update carries \emph{no} explicit time step, a design choice revisited in Section~\ref{ssec:block1-stepsize}. The canonical checkpoint is the early-stopped optimum of a 215-epoch run (best validation epoch 185, held-out one-step \(R^2=0.991\)), a single-step score deliberately optimistic relative to the multi-step rollout error (Section~\ref{ssec:block1-predictive-diagnostics}) that actually governs whether the surrogate can substitute for BOPTEST. Its input vector is deliberately low-dimensional (thermal state, outdoor disturbance, cyclic time embedding, and the direct-\Tsupply{} action~\citep{Sun2024DirectTSup}), with a non-negative power head, making BB a control-oriented surrogate rather than a generic forecaster (hyperparameters in Supplementary Table~\suppref{S3}).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+\paragraph{Physics-informed GB and Stage A/B/C calibration.}
+\label{ssec:block1-BB5-calibration}
+
+Unlike the purely black-box BB head, the GB surrogate is built on a first-principles lumped-capacity zone balance with a single effective parameter, the zone thermal capacitance \(\Czon\),
+\begin{equation}
+ \Czon\,\frac{\mathrm{d}T_{\mathrm{zone}}}{\mathrm{d}t} = \dot{Q}(x;\phi),
+ \qquad \dot{Q}(x;\phi)=q_{\mathrm{scale}}\,q_\phi(x),
+ \label{eq:rc-ode}
+\end{equation}
+where \(\dot{Q}\) is a learned net heat-flow head (\(q_{\mathrm{scale}}=3000\)~W) that absorbs HVAC input, envelope coupling, and internal gains through the feature vector \(x\); embedding this thermodynamic structure follows the physics-informed reinforcement-learning paradigm~\citep{Hedayat2025PINN}. The balance is integrated by a clipped explicit Euler step, and \(\Czon\) is a positively reparameterized scalar bounded below by \(5\times10^4\)~J/K (integration and reparameterization details in the Supplementary Material). Because \(\Czon\) is a property of the building rather than of the data-generating policy, it is expected to remain meaningful across testcases, which is what makes the inverse identification below worthwhile.
+
+The canonical GB is calibrated by a staged inverse identification (Supplementary Table~\suppref{S33}): Stage~A aligns telemetry and removes latency/bias; Stage~B identifies \(\Czon\) as a maximum-a-posteriori estimate under a weak Gaussian prior, restricting the fit to excitation-rich transients where the sensitivity \(\partial\That/\partial C\) is large (quasi-steady windows are uninformative and would merely pull the estimate back to the prior; Table~\suppref{S6}); and Stage~C refines the neural residual heads with \(\Czon\) frozen.
+
+
+
+
+
+
+
+The identified \(\Czon=4.413\times10^5~\mathrm{J/K}\) is a \(+5.1\%\) update over the physical prior, within one standard error (Laplace/Fisher interval in Supplementary Table~\suppref{S33}); physically it corresponds to \(\sim\)439~kg of air (\(\sim\)366~m\(^3\)), the expected order for the \texttt{bestest\_air} zone. As a direct check, sweeping the supply-temperature command with the state held fixed yields the physically correct sign in 100\% of 400 sampled states (mean sensitivity \(+0.061\)~\(^\circ\)C per~\(^\circ\)C; the full monotonicity sweep is in Supplementary Figure~\suppref{S2}).
+
+
+
+
+
+
+
+
+\subsubsection{Predictive fidelity and matched-corpus attribution}
+\label{ssec:block1-predictive-diagnostics}
+
+
+
+For horizon \(h\), predictive accuracy is reported as the multi-step rollout RMSE \(\RMSE_T(h)=\sqrt{N^{-1}\sum_i e_i(h)^2}\) of the per-step error \(e_i(h)=\That_i(t+h)-T_i(t+h)\), the engineering-tolerance CDF \(F_{|e|}(\epsilon)=\Pr(|\That-T_{\mathrm{BOPTEST}}|\le\epsilon)\), and its 95th-percentile absolute-error tail \(\mathrm{P95}\). The coefficient of determination follows the standard definition \(R^2=1-\mathrm{SS}_{\mathrm{res}}/\mathrm{SS}_{\mathrm{tot}}\) against the held-out mean, so a \emph{negative} 24~h \(R^2\) (as for the hourly BB in Table~\suppref{S8}) means the long-horizon rollout is worse than predicting that mean.
+
+\begin{figure}[pos={!ht}]
+ \centering
+ \includegraphics[width=\linewidth]{\detokenize{rie_fig04_predictive_validity.pdf}}
+ \caption{Multi-horizon predictive validity, residual spread, and engineering error CDFs from BOPTEST rollouts.}
+ \label{fig:predictive-validity}
+
+\end{figure}
+
+The calibrated GB surrogate reaches a 24 h rollout \(\RMSE_T=0.644\)~$^\circ$C, compared with raw GB at 1.466~$^\circ$C and the canonical BB hourly reference at 1.557~$^\circ$C (Figure~\ref{fig:predictive-validity}).
+
+
+
+Table~\suppref{S8} exposes the split between the two families. The hourly BB has a \emph{negative} 24~h \(R^2\), worse than the historical mean over long horizons, and worse than a naive persistence forecast at 24~h (1.557 vs 0.969~$^\circ$C), yet it remains a usable control surrogate because PPO needs smooth local gradients, not long-horizon realism. Calibrated GB instead keeps a positive 24~h \(R^2\), bounds its tail (24~h P95 1.207~$^\circ$C), and beats persistence at every horizon, confirming BB is a control surrogate rather than a forecaster.
+
+
+
+The episode-level diagnostic is important because a low aggregate RMSE can hide a single unstable rollout. The calibrated GB artifact remains below the 1~$^\circ$C reference in all eight held-out episodes; its best episode is the peak-heat thermostatic case at 0.486~$^\circ$C and its worst episode is the typical-heat HDRL case at 0.964~$^\circ$C. This supports predictive validity as a repeated-episode result rather than a single-window artifact.
+
+
+\label{ssec:block1-corpus-matched}
+
+The study includes a corpus-matched BB retraining step because the original BB and canonical GB artifacts use different data resolutions. This is not a cosmetic check: without it, a reviewer could correctly attribute the GB gain to the 15-minute corpus rather than Stage A/B/C calibration.
+
+\begin{table}[pos={!ht}]
+\centering
+\small
+\caption{Corpus-matched comparison.}
+\label{tab:matched}
+\begin{tabular}{lrlr}
+\toprule
+Variant & Step (s) & Calibration & 24 h \(\RMSE_T\) \\
+\midrule
+BB hourly & 3600 & n/a (control-oriented black box) & 1.557 \\
+BB 15-min matched & 900 & n/a (control-oriented black box) & 0.876 \\
+raw GB & 900 & OFF (no Stage A/B/C) & 1.466 \\
+calibrated GB & 900 & FULL (Stage A + B + C, $\Czon = 4.413\times10^5$ J/K) & 0.644 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+The attribution is an additive split of the legacy-BB-to-calibrated-GB gap into a corpus term (BB hourly\,$\to$\,BB 15-min) and a calibration term (BB 15-min\,$\to$\,calibrated GB), shown as the waterfall in Supplementary Figure~\suppref{S27}; the split is additive because the intermediate point is BB retrained on the 15-min corpus. Of the total $0.913\,^\circ$C drop from legacy BB to calibrated GB, $0.681\,^\circ$C (74.6\%) is the corpus shift and $0.232\,^\circ$C (25.4\%) Stage~A/B/C (an alternative split through the raw GB backbone gives 9.9\%/90.1\%; they differ because corpus and architecture interact non-additively). Either way the calibration claim is positive but bounded.
+
+\subsubsection{Runtime feasibility and predictive-validation synthesis}
+\label{ssec:block1-runtime}
+
+The final predictive-validation step builds the speed benchmark. The benchmark compares the same BOPTEST RTE HTTP loop used by the paper against local surrogate stepping under a 900 s control step. The result is not a controller claim; it only establishes feasibility for downstream policy optimization.
+
+
+
+
+
+At the hybrid throughput, a single \(5\times10^6\)-step policy-optimization run costs about 46.6 minutes of pure environment time, versus roughly 66.1 hours on the live BOPTEST RTE HTTP loop. The calibrated GB surrogate is 114.2$\times$ faster than the BOPTEST RTE HTTP loop, and the hybrid reference remains 85.0$\times$ faster. This closes the runtime part of the predictive-validation experiment: the surrogate family is not only more accurate after calibration, but also fast enough to support repeated policy-training experiments without using the RTE HTTP loop as the inner training environment.
+
+
+\label{ssec:block1-stepsize}
+
+The canonical BB is trained at a 3600~s step but applied at 900~s; since its transition carries no explicit timestep scaling, the hourly increment is used unchanged, the structural reason the legacy BB carries a 1.557~$^\circ$C 24~h error while the corpus-matched BB reaches 0.876~$^\circ$C (Table~\ref{tab:matched}). The mismatch is kept deliberately: every controller-facing KPI is measured on live BOPTEST and swapping checkpoints would break the frozen evaluation protocol. The matched-corpus model is evaluated downstream as a closed-loop ablation in the central fidelity--utility test (Section~\ref{sec:results2-control}). Unlike BB, the GB forward pass~\eqref{eq:rc-ode} carries an explicit \(\Delta t\), so a warm-started GB rescales the inherited BB heat term to keep the per-step increment dimensionally consistent at the 900~s runtime step (scaling factor in the Supplementary Material); this time-scaling is exactly what the BB update lacks.
+
+
+The predictive-validation experiment closes the predictive-fidelity claim only. Calibrated GB is the best 24-hour predictor, and matched-resolution BB shows that much of the predictive gain comes from temporal resolution. Whether this additional fidelity improves PPO training is a separate control question tested in the central fidelity--utility experiment.

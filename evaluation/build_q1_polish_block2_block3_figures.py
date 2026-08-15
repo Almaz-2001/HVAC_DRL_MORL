@@ -26,6 +26,7 @@ OUT = ROOT / "reports" / "figures" / "article_real"
 import sys as _sys
 _sys.path.insert(0, str(ROOT / "evaluation"))
 import _figstyle as fs
+fs.enable_latex(plt)   # LaTeX-typeset all figure text (matches manuscript fonts)
 
 BLUE = "#2f5d8c"
 TEAL = "#21867a"
@@ -83,7 +84,8 @@ def fig_block2_closed_loop_disturbance() -> None:
         axes[1].plot(t, df["t_zone_c"], label=name, color=TRACE_COLORS[name], linewidth=1.5)
     axes[1].axhspan(21, 24, color="#1b7837", alpha=0.07, label="comfort band 21-24 degC")
     style(axes[1], "(b) Zone temperature response", ylabel="$T_{zone}$ (degC)")
-    axes[1].legend(ncol=4, frameon=False, fontsize=10)
+    h1, l1 = axes[1].get_legend_handles_labels()
+    fig.legend(h1, l1, ncol=4, frameon=False, fontsize=10, loc="lower center", bbox_to_anchor=(0.5, -0.01))
 
     for name, df in traces.items():
         axes[2].plot(t, df["t_supply_cmd_c"], label=name, color=TRACE_COLORS[name], linewidth=1.3)
@@ -96,7 +98,7 @@ def fig_block2_closed_loop_disturbance() -> None:
         axes[3].plot(t, df["p_total_w"] / 1000.0, label=name, color=TRACE_COLORS[name], linewidth=1.2)
     style(axes[3], "(d) HVAC power", xlabel="Time since start of typical window (h)", ylabel="Power (kW)")
 
-    fig.suptitle("Block 2 closed-loop traces with physical bounds and ambient disturbance", fontsize=14, weight="bold")
+    fig.suptitle("Closed-loop traces with physical bounds and ambient disturbance", fontsize=14, weight="bold")
     save(fig, "block2_q1_polish_closed_loop_disturbance")
 
 
@@ -125,9 +127,9 @@ def fig_block2_phase_density() -> None:
         axh.axhline(0, color="0.6", lw=0.7); axh.axvline(0, color="0.6", lw=0.7)
         axh.set_xlim(*xlim); axh.set_ylim(*ylim)
         sat = float((act.abs() >= 0.9).mean() * 100.0)
-        style(axh, fs.LABEL[k], xlabel=r"$T_{zone}-T_{set}$ (°C)",
-              ylabel=("normalised action $a_0$" if i == 0 else None))
-        axh.text(0.04, 0.5, f"saturation\n{sat:.0f}%", transform=axh.transAxes, fontsize=8.5,
+        style(axh, fs.LABEL[k], xlabel=r"$T_{zone}-T_{set}$ ($^{\circ}$C)",
+              ylabel=("normalized action $a_0$" if i == 0 else None))
+        axh.text(0.04, 0.5, f"saturation\n{sat:.0f}\\%", transform=axh.transAxes, fontsize=8.5,
                  va="center", ha="left", weight="bold", color=c,
                  bbox=dict(boxstyle="round,pad=0.2", fc="white", ec=c, alpha=0.8))
         # marginal action distribution (shares the a0 axis)
@@ -215,7 +217,7 @@ def fig_block3_czon_hypothesis_box() -> None:
     ax.axvline(vals.mean(), color=PURPLE, linestyle="--", linewidth=1.4, label=f"mean {vals.mean():.3f}x")
     ax.set_yticks([])
     ax.set_xlim(0.8, 4.2)
-    style(ax, "$C_{zon}$ hydronic-family consistency against version-locked hypothesis intervals", "$C_{zon}$ ratio vs bestest_air", "")
+    style(ax, "$C_{zon}$ hydronic-family consistency against version-locked hypothesis intervals", r"$C_{zon}$ ratio vs \texttt{bestest\_air}", "")
     ax.legend(frameon=False, fontsize=8, loc="upper right")
     save(fig, "block3_q1_polish_czon_hypothesis_box")
 
@@ -255,9 +257,9 @@ def fig_block3_deployment_quadrants() -> None:
     ax.text(xl, yt, "REJECT\nfail + energy penalty", ha="center", va="center", fontsize=8.5, color="#7d1f1f", weight="bold")
 
     ax.set_xlim(xlo, xhi); ax.set_ylim(ylo, yhi)
-    style(ax, "Block 3 deployment plane: comfort/safety margin vs energy",
+    style(ax, "Deployment plane: comfort/safety margin vs energy",
           r"comfort/safety margin $M_k=\tau_k-m_s^{RL}$   ($M_k>0$ = pass; $\tau_k=1.25\,m_s^{PI}$)",
-          "energy $\\Delta$ vs PI (%)")
+          r"energy $\Delta$ vs PI (\%)")
     save(fig, "block3_q1_polish_deployment_quadrants")
 
 
@@ -283,7 +285,7 @@ def fig_block3_radar_transfer_profiles() -> None:
     ax.set_xticklabels(labels)
     ax.set_ylim(0, 1)
     ax.set_yticks([0.25, 0.5, 0.75, 1.0])
-    ax.set_title("Block 3 transfer profile radar: surrogate gain vs controller deployability", pad=20, weight="bold")
+    ax.set_title("Transfer profile radar: surrogate gain vs controller deployability", pad=20, weight="bold")
     ax.legend(loc="upper right", bbox_to_anchor=(1.28, 1.12), frameon=False)
     save(fig, "block3_q1_polish_transfer_radar")
 

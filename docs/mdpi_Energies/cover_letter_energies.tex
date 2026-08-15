@@ -1,0 +1,108 @@
+% Cover letter for the MDPI Energies submission.
+%
+% Framing: contribution-first. The paper's earlier framing led with the HVAC
+% application and described the contribution as "less a new controller than a
+% corrected account", which read as low novelty on editorial screening. This
+% letter leads with the transferable design rule, keeps the energy relevance to
+% one paragraph, and states the reproducibility case briefly.
+%
+% Prior desk rejections are deliberately not mentioned: they are not required
+% disclosure and would invite prejudgment. The WCCM-ECCOMAS talk IS disclosed,
+% because the manuscript shares an abstract with it and similarity checking will
+% surface that anyway.
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{mathptmx}
+\usepackage[margin=2.4cm]{geometry}
+\usepackage{microtype}
+\usepackage{enumitem}
+\pagestyle{empty}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{7pt}
+
+\begin{document}
+
+To the Editors\\
+\emph{Energies}, MDPI
+
+Dear Editors,
+
+We submit the article \textbf{``Surrogate Selection for Reinforcement-Learning HVAC Control:
+Step Size, Not Predictive Accuracy, Predicts Training Utility''} for consideration in
+\emph{Energies}, for the Special Issue \emph{``Design, Modeling, and Testing of Heating,
+Ventilation, and Air Conditioning (HVAC) and Building Energy Systems for Energy Efficiency''}.
+
+\textbf{The problem the paper solves.} Reinforcement-learning controllers for building HVAC cannot
+be trained on a real building or on a high-fidelity simulator, so the field trains them against fast
+learned surrogates. That forces a design decision on every such study: which surrogate should serve
+as the training environment? In practice the choice is made on predictive error, and to our
+knowledge no published work has tested whether that criterion actually predicts downstream control
+performance. We show that it does not, and over part of the range it is inverted: on the open
+BOPTEST benchmark the least accurate surrogate in our study is the only one that trains a usable
+controller, the most accurate one trains a controller that fails outright, and making a surrogate
+more accurate can move it from the usable regime into the failing one. We then identify a criterion that
+does work, the magnitude of the surrogate's per-step state increment, and isolate it causally with a
+rescaling control that holds response-surface smoothness fixed while varying only the increment.
+Because the increment is a property of the surrogate alone, it can be evaluated before any
+controller is trained, which makes it usable as a selection rule rather than as a post-hoc
+explanation.
+
+\textbf{Contributions.} The manuscript makes three methodological contributions:
+
+\begin{enumerate}[leftmargin=*,itemsep=1pt,topsep=2pt]
+\item a controller-independent criterion for selecting a surrogate as an RL training environment,
+established against the criterion the field currently uses;
+\item \emph{role-separated surrogate training}, an architecture that stops trading optimization
+smoothness against physical fidelity by assigning the two requirements to two models, with the
+physics-informed twin restricted to a frozen, forward-only reward censor;
+\item a pre-registered falsification protocol for surrogate-based RL claims, under which four
+hypotheses were fixed before the corresponding runs and two, including one of our own, are reported
+as not supported.
+\end{enumerate}
+
+\textbf{Fit to the Special Issue.} The Special Issue calls for the design, modeling and testing of
+HVAC and building energy systems for energy efficiency, and the manuscript addresses the modeling
+and the testing halves together. It is a modeling study, in that it compares black-box, grey-box
+resistance--capacitance and hybrid representations of the same zone and quantifies what each is
+good for; and it is a testing study, in that it proposes and validates a test that qualifies a
+model \emph{before} it is put to use, on the open BOPTEST benchmark. The central result joins the
+two: the modeling choice cannot be made on modeling criteria alone, because the property that
+decides control performance is invisible to the accuracy metrics by which models are normally
+tested. The energy-efficiency payoff is measured rather than asserted, at comfort violation below
+5\% on both evaluation windows and 85 times live-simulator throughput.
+
+\textbf{Relevance to \emph{Energies}.} The result is directly actionable for building-energy
+practice. The role-separated architecture reaches a maintenance score of 0.041 with comfort
+violation below 5\% on both evaluation windows at 85 times live-simulator throughput, turning a
+policy-optimization run that would take roughly 66 hours against the emulator into about 47 minutes.
+More broadly, any group building a digital twin to train an HVAC controller currently qualifies that
+twin on predictive error; the paper shows what to measure instead, on standard open tooling
+(BOPTEST, Modelica, Stable-Baselines3) so that the check is reproducible elsewhere.
+
+\textbf{Evidence and reproducibility.} The central comparison is replicated over three random seeds
+and the usable-versus-collapse verdict is separated by more than an order of magnitude. A
+matched-resolution ablation rules out model class as the explanation, and two negative controls
+(warm-starting from the twin, and using it as an accuracy-oriented partner) locate the benefit in
+the role assignment itself. Boundary tests across three controller families and three hydronic test
+cases delimit where the recipe holds; both negative outcomes are reported. Supplementary Materials
+contain the full protocol, hyperparameters, calibration stages, seed tables and per-regime
+diagnostics.
+
+\textbf{Prior dissemination.} Preliminary results were presented as a conference talk with a
+published abstract at the WCCM--ECCOMAS Congress 2026 (Munich, 19--24 July 2026), under the title
+``Deep reinforcement learning for energy-efficient control in smart buildings''. The present
+manuscript is a substantially extended full-length study and has not been published elsewhere.
+
+The work is original, is not under consideration by another journal, and all authors have approved
+the submission. The authors declare no conflicts of interest.
+
+Thank you for considering our manuscript.
+
+Sincerely,
+
+Almaz Sapargali, on behalf of all authors\\
+Corresponding author\\
+almaz.sapargali2001@gmail.com
+
+\end{document}

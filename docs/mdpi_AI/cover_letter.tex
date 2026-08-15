@@ -1,0 +1,82 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage[margin=0.85in]{geometry}
+\usepackage{parskip}
+\setlength{\parskip}{0.55em}
+\usepackage{hyperref}
+\hypersetup{hidelinks}
+\pagestyle{empty}
+
+\begin{document}
+
+\noindent
+Almaz Sapargali (Corresponding Author)\\
+LLP Digit Alem, Almaty, Kazakhstan\\
+Al-Farabi Kazakh National University, Almaty, Kazakhstan\\
+\href{mailto:almaz.sapargali2001@gmail.com}{almaz.sapargali2001@gmail.com}
+
+\vspace{1em}
+\noindent\today
+
+\vspace{1em}
+\noindent
+To the Editorial Office / Editor-in-Chief\\
+\textit{AI} (MDPI), ISSN 2673-2688
+
+\vspace{1.2em}
+\noindent Dear Editor,
+
+\vspace{0.6em}
+We are pleased to submit our manuscript, ``\textbf{The Fidelity--Utility Paradox
+in Surrogate-Based Reinforcement Learning: A Role-Separated Hybrid Methodology in
+an HVAC Control Case Study},'' for consideration as an original research Article in
+\textit{AI}.
+
+Deep reinforcement learning (DRL) for building HVAC control almost universally
+relies on fast learned surrogates as training environments, under the tacit
+assumption that a more predictively accurate surrogate is a better environment in
+which to train a controller. To our knowledge, our study is the first to test
+this assumption directly and, under a pre-specified, version-locked protocol, to report that it
+can fail. On the BOPTEST \texttt{bestest\_air} benchmark, a calibrated grey-box
+physical twin that is more than twice as accurate as a coarse black-box surrogate
+(24-hour rollout RMSE $0.644$ vs.\ $1.557\,^{\circ}$C) nevertheless yields
+controllers that collapse on every seed on the live simulator, whereas the weaker
+surrogate trains a usable controller. We show that the operative variable is the
+surrogate's temporal resolution (its coarse per-step increment) rather than
+model class or predictive accuracy, and we resolve the paradox with a
+role-separating hybrid: black-box rollouts combined with a frozen physics twin
+used only as a per-step model-disagreement reward censor, which recovers robust
+control at roughly $85\times$ live-simulator throughput. A pre-specified transferability
+study then delineates a precise, component-level boundary: the inverse-calibration
+pipeline transfers across a hydronic family of buildings, whereas a frozen policy
+does not.
+
+We believe this work is a strong fit for \textit{AI} because it speaks directly to
+how learned world models and surrogate environments should be evaluated and used
+for control. HVAC serves as the concrete case study for a broader
+surrogate-based-RL hypothesis: rather than proposing yet another controller, the
+paper provides a corrected, quantified account of \emph{why} surrogate-trained
+controllers succeed or fail, together with a reusable role-separating recipe, of
+practical significance for the growing literature on physics-informed digital twins
+and safe RL for buildings.
+
+This manuscript is original, has not been published previously, and is not under
+consideration elsewhere. All authors have read and approved the submitted version
+and agree to its submission to \textit{AI}. The authors declare no conflicts of
+interest, and this simulation-only study involves no human or animal subjects. This
+research was funded by the Committee of Science of the Ministry of Science and
+Higher Education of the Republic of Kazakhstan (Grant No.~AP23488794). Thank you for
+considering our submission; we look forward to the reviewers' comments.
+
+\vspace{1.2em}
+\noindent Sincerely,
+
+\vspace{0.4em}
+\noindent
+Almaz Sapargali\\
+on behalf of all co-authors\\
+(Aksultan Mukhanbet, Serik Aibagarov, Beimbet Daribayev, Shona Shinassylov, Paulo Trigo)
+
+\end{document}

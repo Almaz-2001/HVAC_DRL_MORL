@@ -39,6 +39,9 @@ plt.rcParams.update({
     "axes.labelsize": 9.5, "legend.fontsize": 8.5,
     "xtick.labelsize": 8.5, "ytick.labelsize": 8.5, "figure.dpi": 130,
 })
+sys.path.insert(0, str(ROOT / "evaluation"))
+import _figstyle as fs
+fs.enable_latex(plt)   # LaTeX-typeset all figure text (matches manuscript fonts)
 
 
 def read_csv(rel: str) -> pd.DataFrame:
@@ -120,7 +123,7 @@ def fig_ms_decomposition(rows: list) -> None:
     ax.set_title("Maintenance-score decomposition on the live BOPTEST windows", loc="left", weight="bold")
     ax.grid(True, axis="y", color="#e6e8eb", linewidth=0.7)
     ax.spines["top"].set_visible(False); ax.spines["right"].set_visible(False)
-    ax.legend(frameon=False, fontsize=8)
+    ax.legend(frameon=False, fontsize=8, loc="upper center", bbox_to_anchor=(0.5, -0.22), ncol=2)
     fig.tight_layout()
     _save(fig, "fig_block2_ms_decomposition")
 
@@ -1251,10 +1254,13 @@ def main() -> None:
             dec_rows.append((label, rt, max(float(ms) - rt, 0.0)))
 
     try:
-        fig_reward_shaping(ctx)
+        # schematics are slated for the TikZ pass; keep them non-usetex so their
+        # free-text labels need no LaTeX escaping. Data figure stays usetex.
+        with plt.rc_context({"text.usetex": False}):
+            fig_reward_shaping(ctx)
+            fig_hdrl_architecture()
+            fig_morl_pipeline()
         fig_ms_decomposition(dec_rows)
-        fig_hdrl_architecture()
-        fig_morl_pipeline()
     except Exception as exc:
         print(f"[warn] figure regeneration skipped: {exc}")
 

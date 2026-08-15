@@ -63,6 +63,7 @@ plt.rcParams.update(
         "figure.dpi": 130,
     }
 )
+fs.enable_latex(plt)   # LaTeX-typeset all figure text (matches manuscript fonts)
 
 
 def read_csv(rel: str) -> pd.DataFrame:
@@ -237,7 +238,7 @@ def fig03_stage_abc(ep: dict, power: dict, corpus: pd.DataFrame) -> None:
 
     # (a) Stage B C_zon identification, with prior +/-10% band and final estimate
     a = axes[0]
-    a.axhspan(prior * 0.9 / 1e5, prior * 1.1 / 1e5, color=LIGHT, label="prior ±10%")
+    a.axhspan(prior * 0.9 / 1e5, prior * 1.1 / 1e5, color=LIGHT, label=r"prior $\pm$10\%")
     a.axhline(prior / 1e5, color=SLATE, linestyle="--", linewidth=1.2, label="prior")
     a.plot(hist["epoch"], hist["c_zon_j_per_k"] / 1e5, color=GREEN, linewidth=2.4)
     a.scatter([hist["epoch"].iloc[-1]], [final / 1e5], s=55, color=BURGUNDY, edgecolor="#111827",
@@ -254,12 +255,12 @@ def fig03_stage_abc(ep: dict, power: dict, corpus: pd.DataFrame) -> None:
     b2.bar([2.6 - 0.19], [before[2]], width=0.38, color=RAW, edgecolor="#111827", linewidth=0.4)
     b2.bar([2.6 + 0.19], [after[2]], width=0.38, color=CAL, edgecolor="#111827", linewidth=0.4)
     for x, bef, aft in zip([0, 1, 2.6], before, after):
-        (b if x < 2 else b2).text(x + 0.19, aft, f"−{(bef-aft)/bef*100:.0f}%", ha="center", va="bottom",
+        (b if x < 2 else b2).text(x + 0.19, aft, f"$-${(bef-aft)/bef*100:.0f}\\%", ha="center", va="bottom",
                                   fontsize=8, weight="bold", color="#14532d")
     b.set_xticks([0, 1, 2.6]); b.set_xticklabels(["1-step\nRMSE$_T$", "24 h\nRMSE$_T$", "Power\nMAE"], fontsize=8.5)
-    b.set_ylabel("RMSE$_T$ (°C)"); b2.set_ylabel("Power MAE (W)")
+    b.set_ylabel(r"RMSE$_T$ ($^{\circ}$C)"); b2.set_ylabel("Power MAE (W)")
     b.set_ylim(0, max(before[:2]) * 1.35); b2.set_ylim(0, before[2] * 1.35)
-    style(b, "(b) Absolute error: raw → calibrated")
+    style(b, r"(b) Absolute error: raw $\rightarrow$ calibrated")
     b.legend(frameon=False, fontsize=7.8, loc="upper center", ncol=1)
 
     # (c) one-step temperature-residual distribution: calibration tightens the residuals
@@ -268,9 +269,9 @@ def fig03_stage_abc(ep: dict, power: dict, corpus: pd.DataFrame) -> None:
         ("raw v3.5", "outputs/surrogate_v35_rollout_prepared_15min_episodeaware/raw_v35/all_full_rollouts.csv", RAW),
         ("calibrated v3.5", "outputs/surrogate_v35_rollout_prepared_15min_episodeaware/calibrated_v35/all_full_rollouts.csv", CAL)]:
         err = read_csv(rel)["temp_error_c"].dropna().to_numpy()
-        c.hist(err, bins=70, range=(-3, 3), density=True, color=color, alpha=0.55, label=f"{label} (σ={err.std():.2f})")
+        c.hist(err, bins=70, range=(-3, 3), density=True, color=color, alpha=0.55, label=f"{label} ($\\sigma$={err.std():.2f})")
     c.axvline(0, color="0.5", lw=0.8)
-    style(c, "(c) One-step residual distribution", "prediction error (°C)", "density")
+    style(c, "(c) One-step residual distribution", r"prediction error ($^{\circ}$C)", "density")
     c.legend(frameon=False, fontsize=8)
 
     fig.suptitle("Stage A/B/C calibration: bounded $C_{zon}$, lower absolute error, tighter residuals", fontsize=12.5, weight="bold")
@@ -317,7 +318,7 @@ def fig04_predictive_validity() -> None:
         axes[1].axvline(threshold, color="#9ca3af", linestyle="--", linewidth=0.8)
     axes[1].set_xlim(0, 5.0)
     axes[1].set_ylim(0, 1.01)
-    style(axes[1], "(b) Engineering tolerance CDF", "|prediction error| (C)", "fraction below threshold")
+    style(axes[1], "(b) Engineering tolerance CDF", r"$|$prediction error$|$ (C)", "fraction below threshold")
     axes[1].legend(frameon=False, fontsize=8)
     fig.suptitle("Predictive validity across horizons and engineering error tolerances", fontsize=13, weight="bold")
     save(fig, "rie_fig04_predictive_validity")
@@ -347,18 +348,18 @@ def fig05_matched_corpus(corpus: pd.DataFrame, corpus_json: dict) -> None:
     # level/delta value labels
     for x, v in [(0, start), (2, mid), (4, end)]:
         ax.text(x, v + 0.03, f"{v:.3f}", ha="center", va="bottom", fontsize=9, weight="bold")
-    ax.text(1, mid + dc / 2, f"−{dc:.3f}\nresolution\n({sc:.0f}%)", ha="center", va="center", fontsize=8, color="white", weight="bold")
-    ax.text(3, end + dk / 2, f"−{dk:.3f}\nStage A/B/C\n({sk:.0f}%)", ha="center", va="center", fontsize=8, color="white", weight="bold")
+    ax.text(1, mid + dc / 2, f"$-${dc:.3f}\nresolution\n({sc:.0f}\\%)", ha="center", va="center", fontsize=8, color="white", weight="bold")
+    ax.text(3, end + dk / 2, f"$-${dk:.3f}\nStage A/B/C\n({sk:.0f}\\%)", ha="center", va="center", fontsize=8, color="white", weight="bold")
     # raw v3.5 reference: the v3.5 architecture WITHOUT calibration does not even beat matched-v3
     ax.axhline(raw, color=AMBER, ls="--", lw=1.3, zorder=2)
     ax.text(4.5, raw, f" raw v3.5 (uncalibrated) {raw:.3f}\n architecture alone < matched-v3", va="center", ha="right",
             fontsize=7.6, color=AMBER, style="italic")
 
     ax.set_xticks([0, 1, 2, 3, 4])
-    ax.set_xticklabels(["v3 hourly", "− resolution", "matched-v3\n(15 min)", "− calibration", "calibrated\nv3.5"], fontsize=8.6)
+    ax.set_xticklabels(["v3 hourly", r"$-$ resolution", "matched-v3\n(15 min)", r"$-$ calibration", "calibrated\nv3.5"], fontsize=8.6)
     ax.set_ylim(0, max(start, raw) * 1.12)
     style(ax, r"Matched-corpus decomposition: $\Delta$RMSE = $\Delta_{\mathrm{resolution}}$ + $\Delta_{\mathrm{physics\text{-}calibration}}$",
-          ylabel="24 h rollout RMSE$_T$ (°C)")
+          ylabel=r"24 h rollout RMSE$_T$ ($^{\circ}$C)")
     fig.tight_layout()
     save(fig, "rie_fig05_matched_corpus_attribution")
 
@@ -1264,8 +1265,11 @@ def main() -> None:
     nmbe_power = float(cal_rollout["power_error_w"].mean()) / mean_power * 100.0
     mae_power = float(cal_rollout["power_error_w"].abs().mean())
 
-    fig01_roadmap_artifact_chain(sample, ep, corpus, speed)
-    fig02_surrogate_design(params, ep)
+    # rie_fig01/02 are matplotlib schematics slated for the TikZ pass; keep them
+    # non-usetex for now so their free-text labels need no LaTeX escaping.
+    with plt.rc_context({"text.usetex": False}):
+        fig01_roadmap_artifact_chain(sample, ep, corpus, speed)
+        fig02_surrogate_design(params, ep)
     fig03_stage_abc(ep, power, corpus)
     fig04_predictive_validity()
     fig05_matched_corpus(corpus, corpus_json)

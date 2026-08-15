@@ -35,6 +35,9 @@ CZON_AIR = 4.413e5  # bestest_air canonical C_zon (Block 1), J/K
 NAVY = "#1f4e79"; TEAL = "#008080"; AMBER = "#c9822b"
 GREEN = "#3b7d3a"; SLATE = "#5d6875"; PURPLE = "#6b5b95"; BURGUNDY = "#9b3d3d"
 plt.rcParams.update({"font.family": "serif", "font.size": 10, "figure.dpi": 130})
+sys.path.insert(0, str(ROOT / "evaluation"))
+import _figstyle as fs
+fs.enable_latex(plt)   # LaTeX-typeset all figure text (matches manuscript fonts)
 
 
 def _save(fig, stem: str) -> None:
@@ -189,7 +192,7 @@ def fig_topology() -> None:
 
 def fig_regime_progression(ps: pd.DataFrame) -> None:
     """Primary-testcase surrogate-fidelity progression across recalibration regimes."""
-    order = [("partial", "stage_c_top5_heads", "Stage C\ntop-5%"),
+    order = [("partial", "stage_c_top5_heads", "Stage C\ntop-5\\%"),
              ("partial", "stage_c_allrows_power", "Stage C\nall-rows pwr"),
              ("partial", "stage_c_allrows_heads", "Stage C\nall-rows heads"),
              ("full", "stage_abc_allrows_heads", "full\nStage A/B/C")]
@@ -234,7 +237,7 @@ def fig_controller_bar(tm: pd.DataFrame) -> None:
     ax.set_ylabel("$m_s$ (lower better)")
     ax.set_title("Controller-side transfer vs the pre-specified threshold", loc="left", weight="bold")
     ax.grid(True, axis="y", color="#e6e8eb", linewidth=0.7); ax.spines["top"].set_visible(False); ax.spines["right"].set_visible(False)
-    ax.legend(frameon=False, fontsize=8.5)
+    ax.legend(frameon=False, fontsize=8.5, loc="upper center", bbox_to_anchor=(0.5, -0.12), ncol=2)
     fig.tight_layout()
     _save(fig, "fig_block3_controller_bar")
 
@@ -759,9 +762,11 @@ def main() -> None:
 
     try:
         verdicts = {r.testcase: str(r.none_controller_verdict) for _, r in tm.iterrows()}
-        fig_adapter(verdicts)
-        fig_protocol()
-        fig_topology()
+        # schematics slated for the TikZ pass -> keep non-usetex; data figs stay usetex
+        with plt.rc_context({"text.usetex": False}):
+            fig_adapter(verdicts)
+            fig_protocol()
+            fig_topology()
         fig_regime_progression(ps)
         fig_controller_bar(tm)
     except Exception as exc:

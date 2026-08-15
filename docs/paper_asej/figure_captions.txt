@@ -1,0 +1,73 @@
+Figure captions (supplied separately, as required by the journal).
+Figure files: figure_files/Fig1.pdf ... Fig9.pdf (vector PDF, fonts embedded),
+numbered in order of first citation in the text.
+
+Fig. 1. Study overview. Top, primary paradox test: four surrogate backends (coarse hourly BB,
+matched-resolution BB, calibrated GB, and the role-separated hybrid) each train a thermostatic PPO
+controller scored live on BOPTEST bestest_air; the higher-fidelity backends collapse (maintenance
+score above 1) while the coarse BB and the hybrid stay usable. Bottom, boundary checks (dashed box):
+hierarchical DRL, multi-objective RL and a three-case hydronic transfer study map the scope of the
+recipe and are not part of the central test.
+
+Fig. 2. Hybrid reward-shaping mechanism. The black-box surrogate (BB) supplies the smooth rollout
+dynamics; the frozen grey-box surrogate (GB) is evaluated forward-only on the same state-action pair
+and enters only as a per-step reward penalty on BB-GB disagreement, Eq. (5). GB is neither the
+rollout model nor a policy-loss term.
+
+Fig. 3. Multi-horizon predictive validity, residual spread and engineering error CDFs from BOPTEST
+rollouts. The calibrated grey-box twin is the better predictor at every horizon; the coarse
+black-box surrogate degrades beyond a few hours yet remains the usable training environment.
+
+Fig. 4. The fidelity-utility paradox at a glance. For the four thermostatic-PPO backends the
+measured chain runs (A) 24 h rollout RMSE, (B) action-surface roughness, (C) policy saturation, (D)
+live maintenance score. The higher-fidelity backends win on (A) yet are rougher, saturate and
+collapse in (D), and the contradiction between (A) and (D) is the paradox. For the hybrid, panel (A)
+shows the BB rollout RMSE because the hybrid rolls out on BB; panel (D) reports the cross-window
+mean.
+
+Fig. 5. Predictive fidelity against live control utility: a lower rollout RMSE can raise the live
+maintenance score, and the role-separated hybrid returns to the usable region. Filled and open
+markers denote the peak and typical windows; error bars are +/-1 seed standard deviation over three
+seeds.
+
+Fig. 6. Live BOPTEST maintenance-score decomposition. Direct GB fails through sustained out-of-band
+time; pure BB and the hybrid keep both duration and severity small.
+
+Fig. 7. Measured roughness mechanism. The collapsing single-model backends expose rougher
+action-response surfaces, produce near bang-bang saturation and fail on the live emulator; the
+pattern is mechanistically consistent with the fidelity-utility paradox but does not by itself prove
+full loss-landscape causality.
+
+Fig. 8. Live closed-loop behavior on the typical window: zone temperature against the comfort band,
+with ambient disturbance and HVAC power, for the pure-BB, direct-GB and hybrid controllers. Direct
+GB saturates the actuator and leaves the band; the coarse BB and the hybrid track it.
+
+Fig. 9. Comfort-energy deployment plane. Residential hydronic cases save energy but fail the comfort
+threshold; the commercial case passes the threshold with a 35.3% energy penalty. No frozen-policy
+transfer is deployment-ready.
+
+
+Table captions (tables are editable text inside the manuscript file).
+
+Table 1. Experimental taxonomy. The first four backends define the central fidelity-utility test;
+hierarchical DRL, multi-objective RL and hydronic transfer are boundary tests.
+
+Table 2. BOPTEST test cases used in this study. All are single-zone or single-zone-like and
+heating-capable.
+
+Table 3. Corpus-matched comparison. The second row is what separates the corpus-resolution
+contribution from the Stage A/B/C calibration contribution.
+
+Table 4. Central fidelity-utility paradox. Each backend trains the same thermostatic PPO controller,
+evaluated zero-shot in closed loop on the live BOPTEST runtime over the peak/typical 14-day windows.
+Predictive fidelity (24 h rollout RMSE) is set against live control utility (maintenance score,
+unusable above 1, and comfort violation). Values are the canonical seed-42 runs; the three-seed band
+is in the Supplementary Material. The hybrid rolls out on BB, so it has no independent predictive
+RMSE.
+
+Table 5. Transferability matrix. m_s,RL and m_s,PI are the maintenance scores of the frozen RL
+controller and the built-in PI baseline; the pass threshold is tau = 1.25 m_s,PI and the controller
+verdict is PASS when m_s,RL <= tau; Delta-E is the energy change against PI; raw and full RMSE are
+24 h rollout errors before and after staged recalibration, with relative gain G; rho_C is the
+re-identified capacitance ratio against the source value 4.413e5 J/K. Dagger: threshold pass with an
+energy penalty.

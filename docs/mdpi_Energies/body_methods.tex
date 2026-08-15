@@ -1,0 +1,260 @@
+\section{Materials and methods}\label{sec:methods}
+
+This section defines the experimental objects: the BOPTEST control problem, the surrogate taxonomy,
+the hybrid backend, the controller families and the evaluation metrics. Table~\ref{tab:taxonomy}
+fixes the naming used throughout. Only the first four backends are part of the central
+fidelity--utility test.
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabularx}{\linewidth}{@{}p{14mm}p{13mm}X@{}}
+\toprule
+Label & Step & Role in the study \\
+\midrule
+BB hourly & 3600 s & Smooth rollout baseline and positive control. \\
+matched BB & 900 s & Temporal-resolution ablation isolating whether BB's utility comes from smoothing rather than black-box structure. \\
+raw GB & 900 s & Uncalibrated predictive reference quantifying the calibration gain. \\
+calib.\ GB & 900 s & High-fidelity physical twin; direct-training negative control. \\
+hybrid & 900 s & Remedy: BB rollout dynamics plus frozen GB as a model-disagreement reward censor. \\
+\bottomrule
+\end{tabularx}
+\caption{Experimental taxonomy. The central fidelity--utility test of Table~\ref{tab:paradox}
+compares BB hourly, matched BB, calibrated GB and the hybrid; raw GB appears only in the predictive
+comparison of Table~\ref{tab:matched}, to quantify the calibration gain. Hierarchical DRL,
+multi-objective RL and hydronic transfer are boundary tests.}
+\label{tab:taxonomy}
+\end{table}
+
+\subsection{Test case and runtime environment}\label{ssec:testcase}
+The plant is the BOPTEST \texttt{bestest\_air} emulator~\cite{Blum2021BOPTEST,Wetter2014Modelica}, a
+single-zone office of $6\times8\times2.7$~m (\SI{48}{\meter\squared}) whose envelope follows the
+ASHRAE Standard~140 BESTEST Case~900 definition, with heavyweight concrete-block walls, an insulated
+slab and \SI{12}{\meter\squared} of south glazing. Conditioning is an idealized four-pipe fan-coil
+unit: a gas boiler of constant efficiency 0.9 feeds the heating coil and a chiller of constant
+COP~3.0 the cooling coil, with a variable-speed supply fan. The zone is a two-person office occupied
+08:00--18:00 with light internal gains and occupied comfort setpoints of 21/\SI{24}{\celsius}, under
+Denver-Stapleton TMY weather.
+
+Control is applied through the BOPTEST Run-Time Environment, a Dockerized Modelica emulator with
+embedded baseline local-loop and supervisory controllers, a disturbance forecaster and a KPI
+calculator, all exposed through a RESTful HTTP API~\cite{Arroyo2021GymBOPTEST}. The agent does not
+replace the plant: it \emph{overwrites} one control input, the supply-air temperature setpoint,
+while the remaining embedded loops run at baseline. At each \SI{900}{\second} control step it reads
+measurements (zone temperature, CO$_2$, power) and disturbance forecasts, forms the observation,
+writes the setpoint through the BOPTEST overwrite pair, and advances the emulator one step; the KPIs
+are then computed by the runtime from the resulting live trajectory rather than from the surrogate.
+
+The transfer study holds out three single-zone-like hydronic test cases with different heat sources,
+distribution paths and actuator interfaces (Table~\ref{tab:testcases}). They form an
+increasing-difficulty ladder away from the source case and share the same single-zone first-order
+energy balance.
+
+% Full width: the official BOPTEST identifiers plus the emitter descriptions do not
+% fit a 240 pt column -- squeezed into one, the emitter text breaks one word per line
+% and the climate column collides with it.
+\begin{table}[H]
+\centering
+\small
+\begin{tabularx}{\linewidth}{@{}llXl@{}}
+\toprule
+Test case & Type & Heat source / emitter & Climate \\
+\midrule
+\texttt{bestest\_air} (source) & Office, \SI{48}{\meter\squared} & Gas boiler + chiller / 4-pipe fan-coil & Denver \\
+\texttt{bestest\_hydronic} & Residential, \SI{48}{\meter\squared} & Gas water heater / radiator (\SI{5}{\kilo\watt}) & Brussels \\
+\texttt{bestest\_hydronic\_heat\_pump} & Residential, \SI{192}{\meter\squared} & Air-to-water heat pump (\SI{15}{\kilo\watt}) / floor loop & Brussels \\
+\texttt{singlezone\_commercial\_hydronic} & Commercial, \SI{8500}{\meter\squared} & District heating / AHU + radiator circuit & Copenhagen \\
+\bottomrule
+\end{tabularx}
+\caption{BOPTEST test cases used in this study~\cite{Blum2021BOPTEST}. All are single-zone or
+single-zone-like and heating-capable. The first is the source case on which the surrogates are
+built; the other three are held out for the transfer study of Section~\ref{sec:transfer}.}
+\label{tab:testcases}
+\end{table}
+
+\subsection{Problem formulation and evaluation metrics}\label{ssec:pomdp}
+Because the controller never observes the full latent state, control is a partially observable
+Markov decision process. The agent receives an observation $o_t$ and selects
+$a_t\sim\pi(\cdot\mid o_t)$ so as to maximize the expected discounted return~\cite{Sutton2018RL}
+\begin{equation}
+J(\pi)=\mathbb{E}_{\pi}\!\left[\sum_{t=0}^{T-1}\gamma^{t} r_t\right],
+\qquad r_t=-\big(w_{\mathrm{c}} c_t + w_{\mathrm{e}} e_t\big),
+\label{eq:return}
+\end{equation}
+with $c_t$ a thermal-discomfort term, $e_t$ the heating energy over the step, and
+$w_{\mathrm{c}},w_{\mathrm{e}}$ fixed trade-off weights. This scalarized comfort--energy objective
+follows the standard multi-objective treatment of HVAC control, where preferences are represented by
+explicit weights rather than hidden inside a single black-box
+reward~\cite{Roijers2013MOSurvey,Yang2019MORL,Hayes2022MOSurvey}. The comfort component is
+piecewise-linear with an asymmetric, ambient-dependent slope, steeper for cold-weather undershoot
+and fixed a priori from this physical asymmetry rather than tuned to any backend, plus a small
+in-band bonus; the energy component is proportional to heating power.
+
+Because HVAC control depends on forecasts, a purely instantaneous five-dimensional observation is
+insufficient~\cite{Gao2024Predictive}: the canonical interface is a 17-dimensional observation
+comprising physical states, cyclic time features, ambient forecasts and previous actions. The agent
+acts through a single normalized supply-temperature command,
+\begin{equation}
+a_t\in[-1,1], \qquad T_{\mathrm{sup},t}=18+\tfrac{a_t+1}{2}\,(35-18)\quad[\si{\celsius}],
+\label{eq:action}
+\end{equation}
+with a \SI{1.0}{\celsius} deadband, a per-step rate limit and a 21--\SI{24}{\celsius} comfort band.
+The surrogate transition is \emph{trained} on a two-dimensional command, the supply-temperature
+action together with a normalized fan setting, both excited only while the offline corpus is
+generated; during every RL rollout and every live evaluation the fan is held at its BOPTEST baseline
+and only the supply-temperature setpoint is commanded.
+
+For evaluation, as opposed to training, deployed controllers are scored with the
+duration-and-severity maintenance score of Wang et al.~\cite{Wang2025SafeDRL},
+\begin{equation}
+\ms = r_{\mathrm{time}} + r_{\mathrm{sev}},
+\label{eq:ms}
+\end{equation}
+where $r_{\mathrm{time}}=N_{\mathrm{viol}}/N\in[0,1]$ is the fraction of control steps in which the
+zone temperature leaves the comfort band $[T_{\mathrm{lo}},T_{\mathrm{hi}}]$ and
+\begin{equation*}
+r_{\mathrm{sev}}=\max_t\max\!\big((T_{\mathrm{zone},t}-T_{\mathrm{hi}})/T_{\mathrm{hi}},\,
+(T_{\mathrm{lo}}-T_{\mathrm{zone},t})/T_{\mathrm{lo}},\,0\big)
+\end{equation*}
+is the largest single-step band exceedance normalized by the band bound. Both terms are
+dimensionless and lower is better; because $r_{\mathrm{time}}\le 1$, the threshold $\ms>1$ flags a
+controller that is either out of band for a large fraction of the horizon or commits a severe
+worst-case excursion, the regime treated here as a failed deployment. Separating the shaped training
+reward~\eqref{eq:return} from this unshaped safety score follows safe-RL
+practice~\cite{Garcia2015SafeRL}. Predictive fidelity is reported as the multi-step rollout \RMSE{}
+of the zone temperature; control utility as \ms{}, the comfort-violation fraction and heating
+energy, always measured on the live emulator and never on the surrogate.
+
+\subsection{Surrogate backends}\label{ssec:surrogates}
+All surrogates approximate the same discrete-time transition $s_{t+1}=\Phi(s_t,a_t,d_t)$ and are
+exposed behind a single adapter, so that only the internal dynamics change across comparisons, never
+the control interface or the observation map. Each is fit to BOPTEST-generated transition tuples and
+used as a \emph{deterministic point-transition} map rather than a learned conditional distribution,
+which is appropriate where the zone's conditional dynamics are effectively deterministic given the
+observed drivers, but does not represent transition uncertainty.
+
+\paragraph{Control-oriented black-box surrogate (BB)}
+BB is a compact black-box neural predictor (8482 parameters) of a temperature increment and a power
+head, $\widehat{T}_{t+1}=T_t+f_{\theta,T}(x_t)$ and $\widehat{P}_{t+1}=f_{\theta,P}(x_t)$ with
+$\widehat{P}\ge 0$, trained by a multi-horizon (1-, 2-, 4-step) supervised rollout objective with a
+physical-consistency penalty. Its design goal is not long-horizon accuracy but a \emph{smooth,
+well-conditioned} response surface for policy-gradient search. Its input vector is deliberately
+low-dimensional: thermal state, outdoor disturbance, cyclic time embedding and the direct
+supply-temperature action~\cite{Sun2024DirectTSup}. The canonical checkpoint is the early-stopped
+optimum of a 215-epoch run with held-out one-step $R^2=0.991$. Its transition carries \emph{no}
+explicit time step, so the increment learned on the canonical \SI{3600}{\second} corpus is applied
+unchanged at the \SI{900}{\second} runtime step.
+
+\paragraph{Physics-informed grey-box surrogate (GB)}
+GB replaces the black box with a first-principles lumped-capacity zone balance whose unmodeled heat
+flow is supplied by a neural residual head,
+\begin{equation}
+\Czon\,\frac{\mathrm{d}T_{\mathrm{zone}}}{\mathrm{d}t}=\dot{Q}(x;\phi),
+\qquad \dot{Q}(x;\phi)=q_{\mathrm{scale}}\,q_\phi(x),
+\label{eq:rc}
+\end{equation}
+with $q_{\mathrm{scale}}=\SI{3000}{\watt}$, integrated by a clipped explicit Euler step at the
+control period, and with \Czon{} positively reparameterized and bounded below by
+\SI{5e4}{\joule\per\kelvin}. Embedding this conservation law makes the model physics-informed in the
+sense of~\cite{Raissi2019PINN,Karpatne2017TheoryGuided,Willard2022PIML,Hedayat2025PINN}, so \Czon{}
+is physically interpretable, although the analysis treats it as an \emph{effective} capacitance that
+may absorb unmodeled fast dynamics rather than a direct measurement of zone air capacitance. Because
+\Czon{} is a property of the building rather than of the data-generating policy, it is expected to
+remain meaningful across test cases, which is what makes the inverse identification below
+worthwhile.
+
+The canonical GB is calibrated by a staged inverse
+identification~\cite{Bacher2011RCIdentification}: Stage~A aligns telemetry and removes latency and
+bias; Stage~B identifies \Czon{} as a maximum-a-posteriori estimate under a weak Gaussian prior,
+restricted to excitation-rich transients where the sensitivity $\partial\widehat{T}/\partial C$ is
+large, since quasi-steady windows would merely pull the estimate back to the prior; and Stage~C
+refines the neural residual heads with \Czon{} frozen. The identified
+$\Czon=\SI{4.413e5}{\joule\per\kelvin}$ is a $+5.1\%$ update over the physical prior, within one
+standard error of the Laplace/Fisher interval, and corresponds to about \SI{439}{\kilogram} of air,
+the expected order for this zone; a supply-temperature sweep at fixed state gives the physically
+correct sign in 100\% of 400 sampled states.
+
+A third backend, matched-resolution BB, is the \emph{same} black-box architecture retrained on a
+\SI{900}{\second} corpus. It exists solely to isolate the model-class confound in
+Section~\ref{sec:paradox}.
+
+\subsection{Role-separated hybrid training environment}\label{ssec:hybrid}
+Role-separated surrogate training assigns the two conflicting requirements to two models instead of
+compromising between them inside one. It draws on three existing lines of work: model-based and world-model training in learned
+environments~\cite{Sutton1991Dyna,Hafner2025Dreamer}, physics-informed and grey-box surrogate
+modeling~\cite{Bacher2011RCIdentification,Raissi2019PINN,Willard2022PIML}, and safe-RL reward
+shaping~\cite{Garcia2015SafeRL,Wang2025SafeDRL}. The contribution is the allocation of roles inside
+surrogate-trained HVAC control (Fig.~\ref{fig:hybrid}): BB supplies the smooth rollout dynamics,
+while a \emph{frozen} GB acts only as a per-step reward-shaping censor. Training uses the shaped
+reward
+\begin{equation}
+\tilde{r}_t=r_t-\lambda_T\,\delta_{T,t}-\lambda_P\,\delta_{P,t},
+\label{eq:hybrid}
+\end{equation}
+where the disagreement terms are the per-step $L_1$ distances between the one-step predictions of
+the rollout surrogate $f_\theta$ (BB) and the frozen twin $g_\phi$ (GB), separately for the
+zone-temperature and HVAC power channels,
+\begin{equation*}
+\delta_{\bullet,t}=\big|f_{\theta,\bullet}(s_t,a_t,d_t)-g_{\phi,\bullet}(s_t,a_t,d_t)\big|,
+\end{equation*}
+with no squaring, normalization or clipping. The two censor weights differ in scale because they
+multiply a temperature residual in \si{\celsius} and a power residual in \si{\watt}; for the
+thermostatic controller $\lambda_T=0.10$ and $\lambda_P=5\times10^{-5}$.
+
+Crucially, $g_\phi$ is evaluated \emph{forward only} and its outputs are detached, so the censor
+enters the \emph{reward} alone, never the policy loss, and never the rollout dynamics, which remain
+those of BB. Because a policy-gradient method estimates its gradient from sampled returns rather
+than by differentiating the environment, this role split does not preserve any
+environment-to-policy gradient; what it preserves is the smooth trajectory-and-return distribution
+of BB, and its favorable optimization conditioning, while penalizing state--action regions on which
+the frozen twin disagrees with the rollout. In other words, GB does not replace BB, form an
+accuracy-oriented ensemble, or introduce a second policy-loss term. The penalty measures
+disagreement between two imperfect surrogates, not violation of a conservation law or of a
+physically feasible set; it is therefore a \emph{model-disagreement} censor, physics-informed
+through GB's structure but not a hard physical-feasibility filter.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.70\linewidth]{final17_fig07_hybrid_reward_shaping_mechanism.pdf}
+\caption{Hybrid reward-shaping mechanism. The black-box surrogate (BB) supplies the smooth rollout
+dynamics; the frozen grey-box surrogate (GB) is evaluated forward-only on the same state--action
+pair and enters \emph{only} as a per-step reward penalty on BB--GB disagreement,
+Eq.~\eqref{eq:hybrid}. GB is neither the rollout model nor a policy-loss term.}
+\label{fig:hybrid}
+\end{figure}
+
+\subsection{Controller families and protocol}\label{ssec:protocol}
+All policies are optimized with proximal policy optimization (PPO)~\cite{Schulman2017PPO} using
+generalized advantage estimation~\cite{Schulman2016GAE} and the Stable-Baselines3
+implementation~\cite{Raffin2021SB3}. Shared settings are learning rate $3\times10^{-4}$, discount
+factor $\gamma=0.99$ (an effective horizon of about \SI{25}{\hour} at the \SI{900}{\second} step)
+and ten optimization epochs per rollout; the families differ in rollout length, minibatch size and
+total timestep budget. The recipe is evaluated across three controller families of increasing
+structure: a \emph{thermostatic} PPO agent on the shared forecast-augmented observation; a
+\emph{hierarchical} DRL controller (HDRL) that decomposes control across timescales in the
+options/feudal tradition~\cite{Bacon2017Options,Nachum2018HIRO} as recently applied to year-round
+HVAC operation~\cite{Liao2025HDRL}; and a \emph{preference-conditioned} multi-objective controller
+(MORL)~\cite{Yang2019MORL,Byeon2025MaxMinMORL}.
+
+Policies are trained on their surrogate backend and then evaluated \emph{zero-shot} in closed loop
+on the live emulator over two targeted 14-day windows: a January peak-heat window with daily-mean
+ambient \SI{-24.4}{\celsius} and a February typical-heat window at \SI{+2.4}{\celsius}. Because a
+policy trained on a surrogate is deployed on a different, live system, the central methodological
+risk is distribution shift~\cite{Quinonero2009DatasetShift}; the evaluation therefore always reports
+the live-emulator score. Each hypothesis, pass threshold and recalibration adapter was pre-specified
+\emph{before} the corresponding runs.
+
+\paragraph{Implementation}
+Surrogates use three corpora generated by scripted excitation: a canonical BB corpus (51\,200 rows
+at \SI{1}{\hour}), a 15-minute exploration corpus (48\,384 rows at \SI{900}{\second}) and a GB
+calibration corpus (10\,744 rows at \SI{900}{\second}); the deliberate one-hour/fifteen-minute
+pairing is the instrument behind the matched-corpus ablation. All controllers are trained in
+Stable-Baselines3~2.1.0 under Python~3.11.9. Experiments ran on a laptop workstation (6-core CPU,
+32~GB RAM, laptop-class GPU) with the emulator in a Docker container. Behind one HTTP contract sit
+four interchangeable backends (live BOPTEST, BB, GB, hybrid), so only the dynamics backend changes
+across the surrogate-versus-live comparison; the surrogate backends run \numrange{85.0}{220.2} times
+faster than the live loop, so a $5\times10^6$-step policy-optimization run costs about 47 minutes of
+environment time against roughly 66 hours on the live runtime. Canonical KPI tables use seed~42; the
+four central backends additionally carry an $N=3$ seed-robustness audit over seeds
+$\{42,43,44\}$, MORL is evaluated over five fixed seeds, and the HDRL censor-weight sweep remains a
+deterministic single-seed run.

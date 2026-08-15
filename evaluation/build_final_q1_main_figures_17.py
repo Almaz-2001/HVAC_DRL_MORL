@@ -24,6 +24,10 @@ ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "reports" / "figures" / "article_real"
 OUT.mkdir(parents=True, exist_ok=True)
 
+import sys as _sys
+_sys.path.insert(0, str(ROOT / "evaluation"))
+import _figstyle as fs   # for fs.LATEX_RC (usetex context around manuscript data figures)
+
 
 plt.rcParams.update(
     {
@@ -141,8 +145,8 @@ def fig02_backend_architecture():
     arrow(ax, (6.9, 4.1), (8.3, 4.15))
     arrow(ax, (6.1, 3.5), (8.5, 2.75))
     arrow(ax, (2.5, 2.75), (8.25, 4.0), COLORS["green"])
-    ax.text(5.4, 5.35, "Same state-action pair is evaluated by two roles: rollout dynamics (v3) and frozen physics check (v3.5)", ha="center", fontsize=10)
-    ax.set_title("v3 / v3.5 / hybrid backend architecture")
+    ax.text(5.4, 5.35, "Same state-action pair is evaluated by two roles: rollout dynamics (BB) and frozen physics check (GB)", ha="center", fontsize=10)
+    ax.set_title("BB / GB / hybrid backend architecture")
     save(fig, "final17_fig02_backend_architecture")
 
 
@@ -213,7 +217,7 @@ def fig_eng_closed_loop_traces():
     for ax in axes:
         ax.grid(alpha=0.2)
     axes[0].legend(ncol=4, fontsize=8, loc="upper right")
-    fig.suptitle("Live BOPTEST closed-loop traces: pure v3 vs direct v3.5 vs hybrid")
+    fig.suptitle("Live BOPTEST closed-loop traces: pure BB vs direct GB vs hybrid")
     save(fig, "final_eng_fig08_live_boptest_closed_loop_traces")
 
 
@@ -231,7 +235,7 @@ def fig_eng_action_phase_portrait():
         axes[0].hist(action, bins=np.linspace(-1, 1, 45), density=True, histtype="step", lw=2, color=colors[name], label=name)
         sample = df.iloc[:: max(1, len(df) // 550)]
         temp_error = sample["t_zone_c"].astype(float) - 22.5
-        sc = axes[1].scatter(temp_error, sample["a0"], c=sample["t_amb_c"], cmap="viridis", s=9, alpha=0.55, label=name if name == "direct v3.5" else None)
+        sc = axes[1].scatter(temp_error, sample["a0"], c=sample["t_amb_c"], cmap="viridis", s=9, alpha=0.55, label=("direct GB" if name == "direct v3.5" else None))
         axes[1].plot([], [], "o", color=colors[name], label=name)
     axes[0].axvline(-1, color="#999999", ls=":")
     axes[0].axvline(1, color="#999999", ls=":")
@@ -269,14 +273,14 @@ def fig_eng_block3_deployment_plane():
     ax.text(1.1, -8, "comfort fail\nenergy saving", fontsize=8, color=COLORS["red"], ha="center")
     ax.set_xlabel("Threshold-normalized safety metric: m_s_RL / (1.25 × m_s_PI)")
     ax.set_ylabel("Energy Δ% vs PI")
-    ax.set_title("Block 3 comfort-energy deployment plane")
+    ax.set_title("Comfort-energy deployment plane")
     ax.grid(alpha=0.2)
     save(fig, "final_eng_fig11_block3_deployment_plane")
 
 
 def fig_eng_czon_hypothesis_interval():
     tm = read_csv("reports/block3_transfer_matrix.csv")
-    labels = ["bestest_air", "heat pump", "hydronic", "commercial"]
+    labels = [r"\texttt{bestest\_air}", "heat pump", "hydronic", "commercial"]
     vals = [1.0] + tm["c_zon_ratio_vs_bestest_air"].tolist()
     x = np.arange(len(labels))
     hyd = np.array(vals[1:])
@@ -291,9 +295,9 @@ def fig_eng_czon_hypothesis_interval():
         ax.text(xi, v + 0.08, f"{v:.3f}×", ha="center", fontsize=9)
     ax.set_xticks(x, labels, rotation=15)
     ax.set_ylim(0.7, 4.0)
-    ax.set_ylabel("C_zon ratio vs bestest_air")
-    ax.set_title("C_zon hypothesis interval test across hydronic testcases")
-    ax.legend(loc="upper left", fontsize=8)
+    ax.set_ylabel(r"$C_{\mathrm{zon}}$ ratio vs \texttt{bestest\_air}")
+    ax.set_title(r"$C_{\mathrm{zon}}$ hypothesis interval test across hydronic testcases")
+    ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.14), ncol=1, fontsize=8, frameon=False)
     ax.grid(axis="y", alpha=0.2)
     save(fig, "final_eng_fig12_czon_hypothesis_interval")
 
@@ -319,8 +323,8 @@ def fig03_stage_calibration_improvement():
     cal = [vals[k][1] for k in labels]
     x = np.arange(len(labels))
     fig, ax = plt.subplots(figsize=(9, 4.5))
-    ax.bar(x - 0.18, raw, width=0.36, color=COLORS["orange"], label="Raw v3.5")
-    ax.bar(x + 0.18, cal, width=0.36, color=COLORS["blue"], label="Calibrated v3.5")
+    ax.bar(x - 0.18, raw, width=0.36, color=COLORS["orange"], label="Raw GB")
+    ax.bar(x + 0.18, cal, width=0.36, color=COLORS["blue"], label="Calibrated GB")
     for xi, a, b in zip(x, raw, cal):
         ax.text(xi, max(a, b) * 1.04, f"↓{(a-b)/a*100:.0f}%", ha="center", fontsize=9)
     ax.set_xticks(x, labels)
@@ -382,9 +386,9 @@ def fig06_live_controller_comparison():
     labels = ["pure_v3", "direct_v35", "hybrid_l010"]
     scen = ["peak", "typical"]
     metrics = [
-        ("m_s", "m_s", ["peak_control_m_s", "typical_control_m_s"]),
-        ("Violation %", "Violation %", [None, None]),
-        ("RMSE_T (°C)", "RMSE_T", ["peak_transfer_temp_rmse_c", "typical_transfer_temp_rmse_c"]),
+        (r"$m_s$", r"$m_s$", ["peak_control_m_s", "typical_control_m_s"]),
+        (r"Violation \%", r"Violation \%", [None, None]),
+        (r"RMSE$_T$ ($^{\circ}$C)", r"RMSE$_T$", ["peak_transfer_temp_rmse_c", "typical_transfer_temp_rmse_c"]),
         ("Energy (kWh)", "Energy", ["peak_energy_kwh", "typical_energy_kwh"]),
     ]
     # Violation comes from hybrid_transfer_comparison for the three backend variants.
@@ -395,7 +399,7 @@ def fig06_live_controller_comparison():
         x = np.arange(len(scen))
         width = 0.24
         for i, (var, lab) in enumerate(zip(variants, labels)):
-            if title == "Violation %":
+            if "Violation" in title:
                 tvar = "direct_v35" if var == "v35_calibrated" else ("pure_v3" if var == "v3" else "hybrid_l010")
                 vals = [
                     float(trans[(trans["variant"] == tvar) & (trans["scenario"] == "peak_heat_window")]["boptest_violation_pct"].iloc[0]),
@@ -409,7 +413,8 @@ def fig06_live_controller_comparison():
         ax.set_ylabel(ylabel)
         ax.set_title(title)
         ax.grid(axis="y", alpha=0.2)
-    axes[0, 0].legend(loc="upper left", fontsize=8)
+    h0, l0 = axes[0, 0].get_legend_handles_labels()
+    fig.legend(h0, l0, loc="lower center", ncol=3, fontsize=8.5, frameon=False, bbox_to_anchor=(0.5, -0.02))
     fig.suptitle("Live BOPTEST controller comparison")
     save(fig, "final17_fig06_live_boptest_controller_comparison")
 
@@ -426,15 +431,15 @@ def fig07_hybrid_reward_mechanism():
     ax.set_xlim(0, 12)
     ax.set_ylim(0, 5)
     box(ax, 0.4, 2.3, 1.8, 0.8, "Policy\nπθ(s)", "#E8F4FA")
-    box(ax, 3.0, 3.25, 2.2, 0.85, "v3 rollout dynamics\nT, P prediction", "#EAF7EA")
-    box(ax, 3.0, 1.25, 2.2, 0.85, "frozen v3.5 twin\nsame state-action", "#FFF3D6")
+    box(ax, 3.0, 3.25, 2.2, 0.85, "BB rollout dynamics\nT, P prediction", "#EAF7EA")
+    box(ax, 3.0, 1.25, 2.2, 0.85, "frozen GB twin\nsame state-action", "#FFF3D6")
     box(ax, 6.0, 3.25, 2.1, 0.85, "base reward\ncomfort + smooth + energy", "#F7F7F7")
     box(ax, 6.0, 1.25, 2.1, 0.85, f"disagreement\nmean |ΔT|={temp_mean:.2f}°C\nmean |ΔP|={pwr_mean:.0f} W", "#F7F7F7", fontsize=8)
     box(ax, 9.0, 2.2, 2.55, 1.05, "hybrid reward\nr = r_c + r_s + r_e\n− λT|ΔT| − λP|ΔP|", "#F1E8F7")
     for s, e in [((2.2, 2.7), (3.0, 3.65)), ((2.2, 2.7), (3.0, 1.65)), ((5.2, 3.65), (6.0, 3.65)), ((5.2, 1.65), (6.0, 1.65)), ((8.1, 3.65), (9.0, 2.95)), ((8.1, 1.65), (9.0, 2.45))]:
         arrow(ax, s, e)
     ax.text(7.05, 0.72, f"overall p95: |ΔT|={temp_p95:.2f}°C, |ΔP|={pwr_p95:.0f} W", ha="center", fontsize=8, color=COLORS["gray"])
-    ax.set_title("Hybrid reward-shaping mechanism: v3 rollout with frozen-v3.5 physical censor")
+    ax.set_title("Hybrid reward-shaping mechanism: BB rollout with frozen-GB physical censor")
     save(fig, "final17_fig07_hybrid_reward_shaping_mechanism")
 
 
@@ -471,7 +476,7 @@ def fig09_morl_5d_17d():
             ("17D\npower-only", d17, COLORS["green"])]
     # 3 control-relevant metrics only; energy/within-1C live in the table (the 5D->17D
     # argument is about control viability via the observation interface, not energy)
-    metrics = [("rmse_c", "RMSE_T\n(°C)"), ("violation_pct", "Violation\n%"), ("m_s", "$m_s$")]
+    metrics = [("rmse_c", "RMSE$_T$\n($^{\\circ}$C)"), ("violation_pct", "Violation\n\\%"), ("m_s", "$m_s$")]
     labels = [b[0] for b in bars]
     colors = [b[2] for b in bars]
     fig, axes = plt.subplots(1, len(metrics), figsize=(13, 3.8))
@@ -483,7 +488,7 @@ def fig09_morl_5d_17d():
         ax.grid(axis="y", alpha=0.2)
         for i, v in enumerate(vals):
             ax.text(i, v * 1.03 if v else 0.03, f"{v:.2f}", ha="center", fontsize=8)
-    fig.suptitle("MORL observation-interface ablation: 5D failure (current rerun and frozen audit) → 17D success")
+    fig.suptitle(r"MORL observation-interface ablation: 5D failure (current rerun and frozen audit) $\rightarrow$ 17D success")
     save(fig, "final17_fig09_morl_5d_failure_17d_success")
 
 
@@ -541,7 +546,7 @@ def fig11_block3_protocol():
         box(ax, x, 2.1, w, 1.25, lab, color, fontsize=8.5)
     for i in range(len(xs) - 1):
         arrow(ax, (xs[i] + widths[i], 2.72), (xs[i + 1], 2.72))
-    ax.set_title("Block 3 version-locked transferability protocol")
+    ax.set_title("Transferability protocol")
     save(fig, "final17_fig11_block3_transferability_protocol")
 
 
@@ -632,14 +637,14 @@ def fig15_full_stage_transfer_rmse():
     x = np.arange(len(labels))
     fig, ax = plt.subplots(figsize=(8.5, 4.8))
     w = 0.35
-    ax.bar(x - w / 2, tm["raw_rmse_t_c"], w, label="Raw target RMSE_T", color=COLORS["orange"])
+    ax.bar(x - w / 2, tm["raw_rmse_t_c"], w, label=r"Raw target RMSE$_T$", color=COLORS["orange"])
     ax.bar(x + w / 2, tm["full_rmse_t_c"], w, label="Full Stage A/B/C", color=COLORS["blue"])
     for i, r in tm.iterrows():
-        ax.text(i, max(r["raw_rmse_t_c"], r["full_rmse_t_c"]) + 0.08, f"↓{r['rmse_improvement_pct']:.1f}%", ha="center")
+        ax.text(i, max(r["raw_rmse_t_c"], r["full_rmse_t_c"]) + 0.08, rf"$\downarrow${r['rmse_improvement_pct']:.1f}\%", ha="center")
     ax.set_xticks(x, labels)
-    ax.set_ylabel("RMSE_T (°C)")
+    ax.set_ylabel(r"RMSE$_T$ ($^{\circ}$C)")
     ax.set_title("Full Stage A/B/C transfer RMSE improvement")
-    ax.legend()
+    ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.1), ncol=2, frameon=False)
     ax.grid(axis="y", alpha=0.2)
     save(fig, "final17_fig15_full_stage_transfer_rmse_improvement")
 
@@ -671,9 +676,9 @@ def fig17_hypothesis_closure():
         ("H2 medium", agg["H2_medium"]["verdict"], "partial recalibration"),
         ("H3 surrogate", agg["H3_weak_surrogate_side"]["verdict"], "full Stage A/B/C RMSE"),
         ("H3 controller", agg["H3_weak_controller_side"]["verdict"], "controller full regime"),
-        ("Stretch none", f"expected {stretch['mode_none_controller_verdict']['expected']} → observed PASS", "commercial mode=none"),
-        ("Stretch C_zon", f"expected scale-dependent → observed {tm.iloc[2]['c_zon_ratio_vs_bestest_air']:.3f}×", "commercial C_zon"),
-        ("Stretch RMSE", f"expected 50–90% → observed {tm.iloc[2]['rmse_improvement_pct']:.2f}%", "commercial full recalibration"),
+        ("Stretch none", rf"expected {stretch['mode_none_controller_verdict']['expected']} $\rightarrow$ observed PASS", "commercial mode=none"),
+        (r"Stretch $C_{\mathrm{zon}}$", rf"expected scale-dependent $\rightarrow$ observed {tm.iloc[2]['c_zon_ratio_vs_bestest_air']:.3f}×", r"commercial $C_{\mathrm{zon}}$"),
+        ("Stretch RMSE", rf"expected 50--90\% $\rightarrow$ observed {tm.iloc[2]['rmse_improvement_pct']:.2f}\%", "commercial full recalibration"),
     ]
     fig, ax = plt.subplots(figsize=(11, 4.8))
     ax.axis("off")
@@ -696,28 +701,37 @@ def fig17_hypothesis_closure():
 
 
 def main() -> None:
+    # The six figures that appear in the manuscript/supplementary are drawn under
+    # LaTeX (usetex); the rest (incl. the fig07 schematic slated for the TikZ pass)
+    # keep the default DejaVu rcParams so they need no LaTeX escaping.
     fig01_overall_architecture()
     fig02_backend_architecture()
     fig03_stage_calibration_improvement()
     fig04_matched_corpus_decomposition()
     fig05_fidelity_vs_rl_utility()
-    fig06_live_controller_comparison()
+    with plt.rc_context(fs.LATEX_RC):
+        fig06_live_controller_comparison()
     fig07_hybrid_reward_mechanism()
     fig08_hdrl_lambda_sweep()
-    fig09_morl_5d_17d()
+    with plt.rc_context(fs.LATEX_RC):
+        fig09_morl_5d_17d()
     fig10_morl_pareto()
     fig11_block3_protocol()
     fig12_testcase_ladder_adapters()
-    fig13_block3_verdict_heatmap()
+    with plt.rc_context(fs.LATEX_RC):
+        fig13_block3_verdict_heatmap()
     fig14_rl_vs_pi_threshold_energy()
-    fig15_full_stage_transfer_rmse()
+    with plt.rc_context(fs.LATEX_RC):
+        fig15_full_stage_transfer_rmse()
     fig16_czon_consistency()
-    fig17_hypothesis_closure()
+    with plt.rc_context(fs.LATEX_RC):
+        fig17_hypothesis_closure()
     fig_eng_residual_cdf()
     fig_eng_closed_loop_traces()
     fig_eng_action_phase_portrait()
     fig_eng_block3_deployment_plane()
-    fig_eng_czon_hypothesis_interval()
+    with plt.rc_context(fs.LATEX_RC):
+        fig_eng_czon_hypothesis_interval()
     print("Built 17 final Q1 figures in", OUT)
 
 

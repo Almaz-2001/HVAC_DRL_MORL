@@ -155,3 +155,20 @@ secrets/
 #   *.md                 — Markdown docs (README, roadmap, etc.)
 #   Dockerfile           — container definition
 #   requirements.txt     — Python dependencies
+
+# =============================================================================
+# Reference library and regenerable bundles (kept locally, not in history)
+# =============================================================================
+
+# Downloaded third-party papers used for the related-work review (~230 MB).
+# Personal reading copies; not ours to redistribute, and they would sit in the
+# git history forever.
+docs/related_works/
+docs/example_article_ASEJ.pdf
+
+# Submission bundles: rebuilt from the LaTeX sources by the per-journal
+# build_*.py scripts, so the zip itself carries no information the sources lack.
+docs/*.zip
+
+# Scratch
+tmp/

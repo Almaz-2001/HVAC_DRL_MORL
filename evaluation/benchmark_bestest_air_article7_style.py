@@ -166,7 +166,12 @@ class BOPTESTClient:
     def check_connectivity(self) -> dict[str, Any]:
         return self._request_json("GET", "/version", timeout=min(self.timeout_sec, 10.0))
 
+    # The two calls below and the advance loop used to run in complete silence, which
+    # is indistinguishable from a hang: selecting a test case spins up an FMU worker
+    # and can take a minute or more on its own.
     def select_testcase(self) -> str:
+        print("  [boptest] selecting test case...", flush=True)
+        started = time.time()
         data = self._request_json(
             "POST",
             f"/testcases/{self.testcase_id}/select",
@@ -176,9 +181,12 @@ class BOPTESTClient:
         testid = data.get("testid")
         if not testid:
             raise RuntimeError(f"Could not obtain testid from BOPTEST response: {data}")
+        print(f"  [boptest] testid={testid} ({time.time() - started:.1f} s)", flush=True)
         return str(testid)
 
     def initialize(self, testid: str, start_time_sec: float, warmup_sec: float) -> None:
+        print(f"  [boptest] initializing at t={start_time_sec / 86400:.0f} d...", flush=True)
+        started = time.time()
         self._request_json("PUT", f"/step/{testid}", payload={"step": self.step_sec}, timeout=30.0)
         self._request_json(
             "PUT",
@@ -186,6 +194,7 @@ class BOPTESTClient:
             payload={"start_time": float(start_time_sec), "warmup_period": float(warmup_sec)},
             timeout=self.select_timeout_sec,
         )
+        print(f"  [boptest] initialized ({time.time() - started:.1f} s)", flush=True)
 
     def advance(self, testid: str, actions: dict[str, Any] | None = None) -> dict[str, Any]:
         data = self._request_json("POST", f"/advance/{testid}", payload=actions or {})
@@ -695,8 +704,20 @@ def run_controller_on_scenario(
         controller.reset(state["t_amb"])
 
     rows: list[dict[str, Any]] = []
+    # One line per simulated day. 1344 silent HTTP round trips read as a hang.
+    progress_every = max(1, int(86400 / step_sec))
+    loop_started = time.time()
     try:
         for step in range(total_steps):
+            if step and step % progress_every == 0:
+                done = step / total_steps
+                elapsed = time.time() - loop_started
+                eta = elapsed / done - elapsed
+                print(f"    day {step // progress_every:>2}/{total_steps // progress_every}"
+                      f"  step {step}/{total_steps}"
+                      f"  T_zone={state['t_zone']:.1f} C"
+                      f"  elapsed {elapsed / 60:.1f} min, eta {eta / 60:.1f} min",
+                      flush=True)
             action, meta = controller.act(obs, state)
             action_arr = None if action is None else np.asarray(action, dtype=np.float32)
             command = {} if action_arr is None else build_bestest_air_command(action_arr)

@@ -1,0 +1,48 @@
+This is BibTeX, Version 0.99e
+Capacity: max_strings=200000, hash_size=200000, hash_prime=170003
+The top-level auxiliary file: ai_hvac_paradox.aux
+Reallocating 'name_of_file' (item size: 1) to 17 items.
+The style file: Definitions/mdpi.bst
+Reallocating 'name_of_file' (item size: 1) to 11 items.
+Database file #1: references.bib
+You've used 55 entries,
+            2887 wiz_defined-function locations,
+            963 strings with 18175 characters,
+and the built_in function-call counts, 24960 in all, are:
+= -- 2089
+> -- 1723
+< -- 24
++ -- 748
+- -- 462
+* -- 2232
+:= -- 3813
+add.period$ -- 210
+call.type$ -- 55
+change.case$ -- 56
+chr.to.int$ -- 55
+cite$ -- 55
+duplicate$ -- 1101
+empty$ -- 1907
+format.name$ -- 584
+if$ -- 5251
+int.to.chr$ -- 1
+int.to.str$ -- 55
+missing$ -- 56
+newline$ -- 323
+num.names$ -- 165
+pop$ -- 575
+preamble$ -- 0
+purify$ -- 55
+quote$ -- 0
+skip$ -- 728
+stack$ -- 0
+substring$ -- 1037
+swap$ -- 256
+text.length$ -- 15
+text.prefix$ -- 0
+top$ -- 0
+type$ -- 382
+warning$ -- 0
+while$ -- 181
+width$ -- 0
+write$ -- 766

@@ -30,9 +30,34 @@ import _figstyle as fs
 FIG_OUT = ROOT / "docs/results2_control_overleaf/figures/block2_fidelity_utility_scatter.pdf"
 CSV_OUT = ROOT / "reports/block2_fidelity_utility_scatter.csv"
 
+# direct-GB (v3.5) N=3 seed s.d., aggregated from committed block13 live-transfer summaries
+_DIRECT_GB_DIRS = [
+    "outputs/block13_closed_loop_transfer_no_delta_t_powerlog_tzone",
+    "outputs/block13_closed_loop_transfer_no_delta_t_powerlog_tzone_seed43",
+    "outputs/block13_closed_loop_transfer_no_delta_t_powerlog_tzone_seed44",
+]
+
 
 def _rd(rel: str) -> pd.DataFrame:
     return pd.read_csv(ROOT / rel)
+
+
+def _direct_gb_std():
+    """(peak, typical) seed s.d. of direct-GB live m_s over the N=3 seeds, or (None, None)."""
+    import numpy as np
+    wmap = {"peak_heat_window": "peak", "typical_heat_window": "typical"}
+    vals = {"peak": [], "typical": []}
+    for d in _DIRECT_GB_DIRS:
+        f = ROOT / d / "summary.csv"
+        if not f.exists():
+            return None, None
+        for _, r in pd.read_csv(f).iterrows():
+            w = wmap.get(r["scenario"])
+            if w:
+                vals[w].append(float(r["boptest_m_s"]))
+    pk = float(np.std(vals["peak"], ddof=1)) if len(vals["peak"]) == 3 else None
+    ty = float(np.std(vals["typical"], ddof=1)) if len(vals["typical"]) == 3 else None
+    return pk, ty
 
 
 def collect() -> list[dict]:
@@ -53,6 +78,7 @@ def collect() -> list[dict]:
         return float(m.iloc[0]["m_s_std"]) if not m.empty else None
 
     v35 = arch.loc["v35_calibrated"]
+    gb_std_pk, gb_std_ty = _direct_gb_std()   # N=3 seed s.d. for direct GB (Major 1)
     rows = [
         {"key": "v3", "controller": "v3 (hourly)", "rmse_24h_c": float(matched.loc["v3_hourly"]["rmse_24h_c"]),
          "m_s_peak": cl_ms("pure_v3_hourly", "peak_heat_window"), "m_s_typ": cl_ms("pure_v3_hourly", "typical_heat_window"),
@@ -62,7 +88,7 @@ def collect() -> list[dict]:
          "std_peak": std("matched v3 (15-min)", "peak"), "std_typ": std("matched v3 (15-min)", "typical"), "is_single": True},
         {"key": "v35", "controller": "v3.5 (calibrated)", "rmse_24h_c": float(v35["block1_rollout_24h_rmse_c"]),
          "m_s_peak": float(v35["peak_control_m_s"]), "m_s_typ": float(v35["typical_control_m_s"]),
-         "std_peak": None, "std_typ": None, "is_single": True},
+         "std_peak": gb_std_pk, "std_typ": gb_std_ty, "is_single": gb_std_pk is None},
         {"key": "hybrid", "controller": "hybrid (v3 rollout + v3.5 censor)", "rmse_24h_c": float(matched.loc["v3_hourly"]["rmse_24h_c"]),
          "m_s_peak": hyb_ms("peak_heat_window"), "m_s_typ": hyb_ms("typical_heat_window"),
          "std_peak": std("hybrid (lambda_T=0.10)", "peak"), "std_typ": std("hybrid (lambda_T=0.10)", "typical"), "is_single": False},
@@ -110,8 +136,8 @@ def make_figure(rows: list[dict]) -> None:
     for r in singles:
         _draw_point(axA, r)
     _zones(axA, ymax)
-    axA.set_title("(A) Single-model paradox: more accurate → worse live $m_s$", fontsize=10.5, weight="bold")
-    axA.annotate("more accurate twin", (0.62, ymax * 0.5), fontsize=8.5, color="0.4",
+    axA.set_title(r"(A) Single-model paradox: more accurate $\rightarrow$ worse live $m_s$", fontsize=10.5, weight="bold")
+    axA.annotate("more accurate twin", (0.62, ymax * 0.5), fontsize=9.5, color="0.4",
                  ha="left", rotation=0)
     axA.annotate("", xy=(0.55, ymax * 0.42), xytext=(0.95, ymax * 0.42),
                  arrowprops=dict(arrowstyle="->", color="0.5", lw=1.1))
@@ -123,35 +149,34 @@ def make_figure(rows: list[dict]) -> None:
     _draw_point(axB, byk["hybrid"])
     _zones(axB, ymax)
     hy = byk["hybrid"]
-    axB.annotate("hybrid: plotted at v3's RMSE\n(v3 supplies rollout dynamics;\nfrozen v3.5 = reward censor only)",
+    axB.annotate("hybrid: plotted at BB's RMSE\n(BB supplies rollout dynamics;\nfrozen GB = reward censor only)",
                  (hy["rmse_24h_c"], hy["m_s_mean"]), xytext=(-10, 60), textcoords="offset points",
-                 fontsize=8, ha="right", color=fs.HYBRID,
+                 fontsize=9, ha="right", color=fs.HYBRID,
                  arrowprops=dict(arrowstyle="->", color=fs.HYBRID, lw=1.2))
     axB.set_title("(B) Role-separated hybrid recovers usable control", fontsize=10.5, weight="bold")
 
     for ax in (axA, axB):
         ax.set_xlim(xlo, xhi)
         ax.set_ylim(-0.03, ymax)
-        ax.set_xlabel(r"24-h rollout RMSE$_T$ (°C)   (← lower = more predictive fidelity)")
+        ax.set_xlabel(r"24-h rollout RMSE$_T$ ($^{\circ}$C)   ($\leftarrow$ lower = more predictive fidelity)")
         ax.grid(alpha=0.16)
         for s in ("top", "right"):
             ax.spines[s].set_visible(False)
-    axA.set_ylabel(r"live maintenance score $m_s$   (↑ worse controller)")
+    axA.set_ylabel(r"live maintenance score $m_s$   ($\uparrow$ worse controller)")
 
-    # shared legends: model identity (colour+marker) and window encoding
+    # single shared legend at the bottom: model identity (colour+marker) + window encoding
     mh = fs.legend_handles(["v3", "matched", "v35", "hybrid"], with_role=True, markersize=9)
     wh = [Line2D([0], [0], lw=0, marker="o", color="0.3", mfc="0.3", mec="0.3", ms=9, label="peak window"),
           Line2D([0], [0], lw=0, marker="o", color="0.3", mfc="white", mec="0.3", ms=9, label="typical window")]
-    axA.legend(handles=mh, loc="lower left", fontsize=8, frameon=True, framealpha=0.92)
-    axB.legend(handles=wh, loc="lower left", fontsize=8, frameon=True, framealpha=0.92,
-               title="markers", title_fontsize=8)
+    fig.legend(handles=mh + wh, loc="lower center", ncol=6, fontsize=8.5,
+               frameon=False, bbox_to_anchor=(0.5, 0.045), columnspacing=1.3, handletextpad=0.4)
 
-    fig.suptitle("Fidelity–utility paradox: lower RMSE$_T$ does not imply lower live $m_s$",
+    fig.suptitle(r"Fidelity--utility paradox: lower RMSE$_T$ does not imply lower live $m_s$",
                  fontsize=12.5, weight="bold", y=0.99)
-    fig.text(0.5, 0.005, "Error bars = ±1 s.d. over N=3 seeds (v3, matched-v3, hybrid; "
-             "reports/block2_thermostatic_seed_band.csv); direct v3.5 is single-seed.",
+    fig.text(0.5, 0.005, r"Error bars = $\pm 1$ s.d. over N=3 seeds (BB, matched-resolution BB, direct GB, hybrid). "
+             r"Points are the canonical seed-42 $m_s$; the N=3 spread is the bar.",
              ha="center", fontsize=7.6, color="0.45")
-    fig.tight_layout(rect=(0, 0.03, 1, 0.96))
+    fig.tight_layout(rect=(0, 0.11, 1, 0.96))
     FIG_OUT.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(FIG_OUT, bbox_inches="tight")
     fig.savefig(FIG_OUT.with_suffix(".png"), dpi=150, bbox_inches="tight")

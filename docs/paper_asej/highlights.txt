@@ -1,0 +1,7 @@
+Highlights (max. 85 characters incl. spaces per bullet; 3-5 bullets)
+
+- A more accurate building surrogate can be a worse RL training environment.
+- Coarse per-step surrogate dynamics, not model class, make training usable.
+- Black-box rollouts plus a frozen physics-twin reward censor recover control.
+- The optimal model-disagreement censor weight is controller-family specific.
+- Calibration transfers across test cases; the frozen policy mostly does not.

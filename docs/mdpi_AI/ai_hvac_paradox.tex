@@ -1,0 +1,56 @@
+﻿\documentclass[ai,article,submit,moreauthors]{Definitions/mdpi}
+\usepackage{siunitx}
+\sisetup{detect-all, per-mode=symbol, range-phrase={--}, range-units=single}
+\usepackage{placeins}
+\graphicspath{{figures/}}
+\newcommand{\RMSE}{\ensuremath{\mathrm{RMSE}}}
+\newcommand{\MAE}{\ensuremath{\mathrm{MAE}}}
+\newcommand{\Czon}{\ensuremath{C_{\mathrm{zon}}}}
+\newcommand{\Tsupply}{\ensuremath{T_{\mathrm{sup}}}}
+\newcommand{\That}{\ensuremath{\widehat{T}}}
+\newcommand{\suppref}[1]{#1}
+\setcounter{secnumdepth}{3}
+\firstpage{1}
+\makeatletter
+\setcounter{page}{\@firstpage}
+\makeatother
+\pubvolume{1}
+\issuenum{1}
+\articlenumber{0}
+\pubyear{2026}
+\copyrightyear{2026}
+\datereceived{ }
+\daterevised{ }
+\dateaccepted{ }
+\datepublished{ }
+\Title{The Fidelity--Utility Paradox in Surrogate-Based Reinforcement Learning: A Role-Separated Hybrid Methodology in an HVAC Control Case Study}
+\newcommand{\orcidauthorA}{0000-0003-4699-0436}
+\newcommand{\orcidauthorB}{0009-0003-1521-7149}
+\newcommand{\orcidauthorC}{0009-0009-4946-4926}
+\newcommand{\orcidauthorD}{0000-0003-1313-9004}
+\newcommand{\orcidauthorE}{0009-0002-5491-7255}
+\newcommand{\orcidauthorF}{0000-0001-5850-615X}
+\Author{Aksultan Mukhanbet $^{1}$\orcidA{}, Almaz Sapargali $^{2,1,}$*\orcidB{}, Serik Aibagarov $^{2,1}$\orcidC{}, Beimbet Daribayev $^{3}$\orcidD{}, Shona Shinassylov $^{2,1}$\orcidE{} and Paulo Trigo $^{4}$\orcidF{}}
+\AuthorNames{Aksultan Mukhanbet, Almaz Sapargali, Serik Aibagarov, Beimbet Daribayev, Shona Shinassylov and Paulo Trigo}
+\address{
+$^{1}$ \quad Al-Farabi Kazakh National University, Almaty, Kazakhstan\\
+$^{2}$ \quad LLP Digit Alem, Almaty, Kazakhstan; almaz.sapargali2001@gmail.com\\
+$^{3}$ \quad Shakarim University, Semey, Abai Region, Kazakhstan\\
+$^{4}$ \quad Instituto Superior de Engenharia de Lisboa (ISEL), Lisbon, Portugal}
+\corres{Correspondence: almaz.sapargali2001@gmail.com}
+\abstract{Deep reinforcement-learning (RL) controllers for HVAC are often trained against fast neural-network surrogates, under the assumption that a more accurate surrogate provides a better training environment. We test this assumption on the BOPTEST \texttt{bestest\_air} testcase and report a negative result, the \emph{fidelity--utility paradox}: the surrogate with lower predictive error can be the worse environment for policy-gradient search. A grey-box RC surrogate with a neural residual heat-flow head (GB) attains a 24-hour rollout RMSE of $0.644\,^{\circ}$C versus $1.557\,^{\circ}$C for a black-box surrogate (BB), yet a policy trained directly on GB collapses on every seed: its BOPTEST maintenance score is $m_s = 1.07$/$1.13$ peak/typical (lower is better; $m_s > 1$ is unusable, $N{=}3$), with comfort violation $>75\%$, whereas the weaker BB trains a usable controller ($m_s = 0.073$/$0.095$). Retraining BB at finer resolution makes it \emph{more} accurate yet unusable ($m_s > 1.1$), showing that the driver is temporal resolution and the coarse per-step increment, not model class alone. We then formulate a role-separated hybrid methodology: BB supplies smooth rollout dynamics, while a frozen GB acts only as a per-step model-disagreement reward censor. This role separation gives the best cross-window robustness ($m_s = 0.041$, sub-$5\%$ violation) at ${\sim}85\times$ live-simulator throughput, with a controller-family-specific censor weight. Across three hydronic transfer cases, recalibration transfers but the frozen controller does not, indicating a component-level rather than universal transfer boundary.}
+\keyword{reinforcement learning; HVAC control; surrogate model; physics-informed calibration; transfer learning; BOPTEST}
+\begin{document}
+\input{body_content.tex}
+\vspace{6pt}
+\supplementary{The following supporting information can be downloaded at \linksupplementary{s1}: the complete nomenclature, the experimental protocol, the surrogate-calibration and controller-training details, the BOPTEST run-time-environment control-loop description, and supporting summaries for the predictive-validation, controller-utility, and transfer-boundary evidence. The Supplementary Material is a technical support layer; every quantity needed to interpret the scientific claims is reported in the main text.}
+\authorcontributions{Conceptualization, A.M., A.S. and P.T.; methodology, A.S. and P.T.; software, A.S. and S.A.; validation, A.S. and S.A.; formal analysis, A.S.; investigation, A.S. and S.S.; resources, B.D.; data curation, A.S. and S.S.; writing---original draft preparation, A.S.; writing---review and editing, A.M., P.T. and A.S.; visualization, A.S.; supervision, A.M., B.D. and P.T.; project administration, A.M.; funding acquisition, A.M. and B.D. All authors have read and agreed to the published version of the manuscript.}
+\funding{This research was funded by the Committee of Science of the Ministry of Science and Higher Education of the Republic of Kazakhstan (Grant No.~AP23488794).}
+\institutionalreview{Not applicable.}
+\informedconsent{Not applicable.}
+\dataavailability{The processed numerical summaries supporting the reported figures and tables are reported in the main article and Supplementary Material. The full project codebase is not publicly released at this stage. Additional non-confidential derived data may be made available by the corresponding author upon reasonable request. The Git SHA audit trail supporting the version-locked experimental protocol can be shared with editors and reviewers upon reasonable request.}
+\acknowledgments{The authors thank the developers of the open-source BOPTEST framework. During the preparation of this manuscript, the authors used Claude (Anthropic) for the purposes of language editing, improving the readability and clarity of the text, and \LaTeX{} formatting. The authors have reviewed and edited the output and take full responsibility for the content of this publication. No generative AI tool was used to generate, analyse, or interpret the research data, or to produce the scientific findings and conclusions, which are the work of the authors.}
+\conflictsofinterest{The authors declare no conflicts of interest. The funders had no role in the design of the study; in the collection, analyses, or interpretation of data; in the writing of the manuscript; or in the decision to publish the results.}
+\reftitle{References}
+\bibliography{references}
+\end{document}

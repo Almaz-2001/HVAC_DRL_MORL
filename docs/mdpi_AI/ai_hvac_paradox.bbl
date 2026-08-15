@@ -1,0 +1,435 @@
+\begin{thebibliography}{999}
+
+\bibitem[Al~Sayed et~al.(2024)Al~Sayed, Boodi, Sadeghian~Broujeny, and
+  Beddiar]{AlSayed2024Review}
+Al~Sayed, K.; Boodi, A.; Sadeghian~Broujeny, R.; Beddiar, K.
+\newblock Reinforcement learning for {HVAC} control in intelligent buildings: A
+  technical and conceptual review.
+\newblock {\em Journal of Building Engineering} {\bf 2024}, {\em 95},~110085.
+\newblock {\url{https://doi.org/10.1016/j.jobe.2024.110085}}.
+
+\bibitem[Nguyen et~al.(2024)Nguyen, Pham, Oo, Santamouris, Ahn, and
+  Lim]{Nguyen2024Modelling}
+Nguyen, A.T.; Pham, D.H.; Oo, B.L.; Santamouris, M.; Ahn, Y.; Lim, B.T.H.
+\newblock Modelling building {HVAC} control strategies using a deep
+  reinforcement learning approach.
+\newblock {\em Energy and Buildings} {\bf 2024}, {\em 310},~114065.
+\newblock {\url{https://doi.org/10.1016/j.enbuild.2024.114065}}.
+
+\bibitem[Savino et~al.(2025)Savino, Razzano, Pagone, Novara, and
+  Capozzoli]{Savino2025ASHRAE}
+Savino, S.; Razzano, G.; Pagone, M.; Novara, C.; Capozzoli, A.
+\newblock Deploying deep reinforcement learning for low-level {HVAC} control in
+  multi-zone buildings: A comparative study with {ASHRAE} {G36} sequences.
+\newblock {\em Energy and Buildings} {\bf 2025}, {\em 348},~116456.
+\newblock {\url{https://doi.org/10.1016/j.enbuild.2025.116456}}.
+
+\bibitem[Gao et~al.(2024)Gao, Shi, Miyata, and Akashi]{Gao2024Predictive}
+Gao, Y.; Shi, S.; Miyata, S.; Akashi, Y.
+\newblock Successful application of predictive information in deep
+  reinforcement learning control: A case study based on an office building
+  {HVAC} system.
+\newblock {\em Energy} {\bf 2024}, {\em 291},~130344.
+\newblock {\url{https://doi.org/10.1016/j.energy.2024.130344}}.
+
+\bibitem[Hou et~al.(2024)Hou, Cheng, Kwok, and Ma]{Hou2024MultiSource}
+Hou, F.; Cheng, J.C.P.; Kwok, H.H.L.; Ma, J.
+\newblock Multi-source transfer learning method for enhancing the deployment of
+  deep reinforcement learning in multi-zone building {HVAC} control.
+\newblock {\em Energy and Buildings} {\bf 2024}, {\em 322},~114696.
+\newblock {\url{https://doi.org/10.1016/j.enbuild.2024.114696}}.
+
+\bibitem[Blum et~al.(2021)Blum, Arroyo, Huang, Drgo{\v n}a, Jorissen, Walnum,
+  Chen, Benne, Vrabie, Wetter, and Helsen]{Blum2021BOPTEST}
+Blum, D.; Arroyo, J.; Huang, S.; Drgo{\v n}a, J.; Jorissen, F.; Walnum, H.T.;
+  Chen, Y.; Benne, K.; Vrabie, D.; Wetter, M.;  et~al.
+\newblock Building Optimization Testing Framework ({BOPTEST}) for
+  simulation-based benchmarking of control strategies in buildings.
+\newblock {\em Journal of Building Performance Simulation} {\bf 2021}, {\em
+  14},~586--610.
+\newblock {\url{https://doi.org/10.1080/19401493.2021.1986574}}.
+
+\bibitem[Wang et~al.(2025)Wang, Wang, Huang, Zhu, Arroyo, and
+  Li]{Wang2025SafeDRL}
+Wang, X.; Wang, P.; Huang, R.; Zhu, X.; Arroyo, J.; Li, N.
+\newblock Safe deep reinforcement learning for building energy management.
+\newblock {\em Applied Energy} {\bf 2025}, {\em 377},~124328.
+\newblock {\url{https://doi.org/10.1016/j.apenergy.2024.124328}}.
+
+\bibitem[Hou and Evins(2024)]{HouEvins2024}
+Hou, D.; Evins, R.
+\newblock A protocol for developing and evaluating neural network--based
+  surrogate models and its application to building energy prediction.
+\newblock {\em Renewable and Sustainable Energy Reviews} {\bf 2024}, {\em
+  193},~114283.
+\newblock {\url{https://doi.org/10.1016/j.rser.2024.114283}}.
+
+\bibitem[Mshragi and Petri(2026)]{Mshragi2026FastML}
+Mshragi, M.; Petri, I.
+\newblock {FastML-GA}: {FPGA}-accelerated machine learning for real-time energy
+  {HVAC} optimization in buildings.
+\newblock {\em Neural Computing and Applications} {\bf 2026}, {\em 38},~25.
+\newblock {\url{https://doi.org/10.1007/s00521-025-11737-x}}.
+
+\bibitem[Riahi~Samani et~al.(2026)Riahi~Samani, Zhao, and
+  Chen]{RiahiSamani2026OOD}
+Riahi~Samani, A.; Zhao, X.; Chen, F.
+\newblock Distribution shift, generalization and {OOD} challenge in offline
+  reinforcement learning: a comprehensive survey.
+\newblock {\em Neural Computing and Applications} {\bf 2026}, {\em 38},~150.
+\newblock {\url{https://doi.org/10.1007/s00521-026-11966-8}}.
+
+\bibitem[Byeon et~al.(2025)Byeon, Park, Chae, Leshem, and
+  Sung]{Byeon2025MaxMinMORL}
+Byeon, W.; Park, G.; Chae, J.; Leshem, A.; Sung, Y.
+\newblock Multi-objective reinforcement learning with max-min criterion: A
+  game-theoretic approach.
+\newblock In Proceedings of the Advances in Neural Information Processing
+  Systems (NeurIPS),  2025.
+
+\bibitem[Liao et~al.(2025)Liao, Miyata, Qu, and Akashi]{Liao2025HDRL}
+Liao, C.; Miyata, S.; Qu, M.; Akashi, Y.
+\newblock Year-round operational optimization of {HVAC} systems using
+  hierarchical deep reinforcement learning for enhancing indoor air quality and
+  reducing energy consumption.
+\newblock {\em Applied Energy} {\bf 2025}, {\em 390},~125816.
+\newblock {\url{https://doi.org/10.1016/j.apenergy.2025.125816}}.
+
+\bibitem[Wetter et~al.(2014)Wetter, Zuo, Nouidui, and Pang]{Wetter2014Modelica}
+Wetter, M.; Zuo, W.; Nouidui, T.S.; Pang, X.
+\newblock Modelica Buildings library.
+\newblock {\em Journal of Building Performance Simulation} {\bf 2014}, {\em
+  7},~253--270.
+\newblock {\url{https://doi.org/10.1080/19401493.2013.765506}}.
+
+\bibitem[Arroyo et~al.(2021)Arroyo, Manna, Spiessens, and
+  Helsen]{Arroyo2021GymBOPTEST}
+Arroyo, J.; Manna, C.; Spiessens, F.; Helsen, L.
+\newblock An {Open-AI} gym environment for the Building Optimization Testing
+  ({BOPTEST}) framework.
+\newblock In Proceedings of the Proceedings of Building Simulation 2021: 17th
+  Conference of IBPSA,  2021, Vol.~17, {\em Building Simulation Conference
+  Proceedings}, pp. 175--182.
+\newblock {\url{https://doi.org/10.26868/25222708.2021.30380}}.
+
+\bibitem[V\'azquez-Canteli et~al.(2019)V\'azquez-Canteli, K\"ampf, Henze, and
+  Nagy]{VazquezCanteli2019CityLearn}
+V\'azquez-Canteli, J.R.; K\"ampf, J.; Henze, G.; Nagy, Z.
+\newblock {CityLearn} v1.0: An {OpenAI} Gym Environment for Demand Response
+  with Deep Reinforcement Learning.
+\newblock In Proceedings of the Proceedings of the 6th ACM International
+  Conference on Systems for Energy-Efficient Buildings, Cities, and
+  Transportation (BuildSys),  2019, pp. 356--357.
+\newblock {\url{https://doi.org/10.1145/3360322.3360998}}.
+
+\bibitem[V\'azquez-Canteli and Nagy(2019)]{VazquezCanteli2019Review}
+V\'azquez-Canteli, J.R.; Nagy, Z.
+\newblock Reinforcement learning for demand response: A review of algorithms
+  and modeling techniques.
+\newblock {\em Applied Energy} {\bf 2019}, {\em 235},~1072--1089.
+\newblock {\url{https://doi.org/10.1016/j.apenergy.2018.11.002}}.
+
+\bibitem[Sun et~al.(2024)Sun, Hu, Mae, and Imaizumi]{Sun2024DirectTSup}
+Sun, L.; Hu, Z.; Mae, M.; Imaizumi, T.
+\newblock Individual room air-conditioning control in high-insulation
+  residential building during winter: A deep reinforcement learning-based
+  control model for reducing energy consumption.
+\newblock {\em Energy and Buildings} {\bf 2024}, {\em 323},~114799.
+\newblock {\url{https://doi.org/10.1016/j.enbuild.2024.114799}}.
+
+\bibitem[Deng et~al.(2025)Deng, Wang, and Meng]{Deng2025MultiAgent}
+Deng, J.; Wang, X.; Meng, F.
+\newblock Multi-agent deep reinforcement learning for smart building energy
+  management with chance constraints.
+\newblock {\em Energy and Buildings} {\bf 2025}, {\em 331},~115408.
+\newblock {\url{https://doi.org/10.1016/j.enbuild.2025.115408}}.
+
+\bibitem[Alotaibi(2025)]{Alotaibi2025ContextAware}
+Alotaibi, B.S.
+\newblock Context-aware smart energy management system: A reinforcement
+  learning and {IoT}-based framework for enhancing energy efficiency and
+  thermal comfort in sustainable buildings.
+\newblock {\em Energy and Buildings} {\bf 2025}, {\em 340},~115804.
+\newblock {\url{https://doi.org/10.1016/j.enbuild.2025.115804}}.
+
+\bibitem[Bacon et~al.(2017)Bacon, Harb, and Precup]{Bacon2017Options}
+Bacon, P.L.; Harb, J.; Precup, D.
+\newblock The option-critic architecture.
+\newblock In Proceedings of the Proceedings of the AAAI Conference on
+  Artificial Intelligence,  2017, Vol.~31.
+\newblock {\url{https://doi.org/10.1609/aaai.v31i1.10916}}.
+
+\bibitem[Nachum et~al.(2018)Nachum, Gu, Lee, and Levine]{Nachum2018HIRO}
+Nachum, O.; Gu, S.; Lee, H.; Levine, S.
+\newblock Data-efficient hierarchical reinforcement learning.
+\newblock In Proceedings of the Advances in Neural Information Processing
+  Systems,  2018, Vol.~31.
+\newblock {\url{https://doi.org/10.48550/arXiv.1805.08296}}.
+
+\bibitem[Yang et~al.(2019)Yang, Sun, and Narasimhan]{Yang2019MORL}
+Yang, R.; Sun, X.; Narasimhan, K.
+\newblock A generalized algorithm for multi-objective reinforcement learning
+  and policy adaptation.
+\newblock In Proceedings of the Advances in Neural Information Processing
+  Systems,  2019, Vol.~32.
+\newblock {\url{https://doi.org/10.48550/arXiv.1908.08342}}.
+
+\bibitem[Roijers et~al.(2013)Roijers, Vamplew, Whiteson, and
+  Dazeley]{Roijers2013MOSurvey}
+Roijers, D.M.; Vamplew, P.; Whiteson, S.; Dazeley, R.
+\newblock A survey of multi-objective sequential decision-making.
+\newblock {\em Journal of Artificial Intelligence Research} {\bf 2013}, {\em
+  48},~67--113.
+\newblock {\url{https://doi.org/10.1613/jair.3987}}.
+
+\bibitem[Hayes et~al.(2022)Hayes, R{\u a}dulescu, Bargiacchi,
+  K{\"a}llstr{\"o}m, Macfarlane, Reymond, Verstraeten,
+  et~al.]{Hayes2022MOSurvey}
+Hayes, C.F.; R{\u a}dulescu, R.; Bargiacchi, E.; K{\"a}llstr{\"o}m, J.;
+  Macfarlane, M.; Reymond, M.; Verstraeten, T.;  et~al.
+\newblock A practical guide to multi-objective reinforcement learning and
+  planning.
+\newblock {\em Autonomous Agents and Multi-Agent Systems} {\bf 2022}, {\em
+  36},~26.
+\newblock {\url{https://doi.org/10.1007/s10458-022-09552-y}}.
+
+\bibitem[Bacher and Madsen(2011)]{Bacher2011RCIdentification}
+Bacher, P.; Madsen, H.
+\newblock Identifying suitable models for the heat dynamics of buildings.
+\newblock {\em Energy and Buildings} {\bf 2011}, {\em 43},~1511--1522.
+\newblock {\url{https://doi.org/10.1016/j.enbuild.2011.02.005}}.
+
+\bibitem[Berthou et~al.(2014)Berthou, Stabat, Salvazet, and
+  Marchio]{Berthou2014RC}
+Berthou, T.; Stabat, P.; Salvazet, R.; Marchio, D.
+\newblock Development and validation of a gray box model to predict thermal
+  behavior of occupied office buildings.
+\newblock {\em Energy and Buildings} {\bf 2014}, {\em 74},~91--100.
+\newblock {\url{https://doi.org/10.1016/j.enbuild.2014.01.038}}.
+
+\bibitem[B{\"u}nning et~al.(2020)B{\"u}nning, Huber, Heer, Aboudonia, and
+  Lygeros]{Bunning2020RC}
+B{\"u}nning, F.; Huber, B.; Heer, P.; Aboudonia, A.; Lygeros, J.
+\newblock Experimental demonstration of data predictive control for energy
+  optimization and thermal comfort in buildings.
+\newblock {\em Energy and Buildings} {\bf 2020}, {\em 211},~109792.
+\newblock {\url{https://doi.org/10.1016/j.enbuild.2020.109792}}.
+
+\bibitem[Picard et~al.(2017)Picard, Drgo{\v n}a, Kvasnica, and
+  Helsen]{Picard2017WhiteBox}
+Picard, D.; Drgo{\v n}a, J.; Kvasnica, M.; Helsen, L.
+\newblock Impact of the controller model complexity on model predictive control
+  performance for buildings.
+\newblock {\em Energy and Buildings} {\bf 2017}, {\em 152},~739--751.
+\newblock {\url{https://doi.org/10.1016/j.enbuild.2017.07.027}}.
+
+\bibitem[Raissi et~al.(2019)Raissi, Perdikaris, and
+  Karniadakis]{Raissi2019PINN}
+Raissi, M.; Perdikaris, P.; Karniadakis, G.E.
+\newblock Physics-informed neural networks: a deep learning framework for
+  solving forward and inverse problems involving nonlinear partial differential
+  equations.
+\newblock {\em Journal of Computational Physics} {\bf 2019}, {\em
+  378},~686--707.
+\newblock {\url{https://doi.org/10.1016/j.jcp.2018.10.045}}.
+
+\bibitem[Chen et~al.(2018)Chen, Rubanova, Bettencourt, and
+  Duvenaud]{Chen2018NeuralODE}
+Chen, R.T.Q.; Rubanova, Y.; Bettencourt, J.; Duvenaud, D.K.
+\newblock Neural ordinary differential equations.
+\newblock In Proceedings of the Advances in Neural Information Processing
+  Systems,  2018, Vol.~31.
+\newblock {\url{https://doi.org/10.48550/arXiv.1806.07366}}.
+
+\bibitem[Karpatne et~al.(2017)Karpatne, Atluri, Faghmous, Steinbach, Banerjee,
+  Ganguly, Shekhar, Samatova, and Kumar]{Karpatne2017TheoryGuided}
+Karpatne, A.; Atluri, G.; Faghmous, J.H.; Steinbach, M.; Banerjee, A.; Ganguly,
+  A.; Shekhar, S.; Samatova, N.; Kumar, V.
+\newblock Theory-guided data science: a new paradigm for scientific discovery
+  from data.
+\newblock {\em IEEE Transactions on Knowledge and Data Engineering} {\bf 2017},
+  {\em 29},~2318--2331.
+\newblock {\url{https://doi.org/10.1109/tkde.2017.2720168}}.
+
+\bibitem[Willard et~al.(2022)Willard, Jia, Xu, Steinbach, and
+  Kumar]{Willard2022PIML}
+Willard, J.; Jia, X.; Xu, S.; Steinbach, M.; Kumar, V.
+\newblock Integrating scientific knowledge with machine learning for
+  engineering and environmental systems.
+\newblock {\em ACM Computing Surveys} {\bf 2022}, {\em 55},~66.
+\newblock {\url{https://doi.org/10.1145/3514228}}.
+
+\bibitem[Hedayat et~al.(2025)Hedayat, Ziarati, and Manganelli]{Hedayat2025PINN}
+Hedayat, S.; Ziarati, T.; Manganelli, M.
+\newblock A physics-informed reinforcement learning framework for {HVAC}
+  optimization: Thermodynamically-constrained deep deterministic policy
+  gradients with simulation-based validation.
+\newblock {\em Energies} {\bf 2025}, {\em 18},~6310.
+\newblock {\url{https://doi.org/10.3390/en18236310}}.
+
+\bibitem[Lu et~al.(2021)Lu, Jin, Pang, Zhang, and Karniadakis]{Lu2021DeepONet}
+Lu, L.; Jin, P.; Pang, G.; Zhang, Z.; Karniadakis, G.E.
+\newblock Learning nonlinear operators via {DeepONet} based on the universal
+  approximation theorem of operators.
+\newblock {\em Nature Machine Intelligence} {\bf 2021}, {\em 3},~218--229.
+\newblock {\url{https://doi.org/10.1038/s42256-021-00302-5}}.
+
+\bibitem[Li et~al.(2021)Li, Kovachki, Azizzadenesheli, Liu, Bhattacharya,
+  Stuart, and Anandkumar]{Li2021FNO}
+Li, Z.; Kovachki, N.; Azizzadenesheli, K.; Liu, B.; Bhattacharya, K.; Stuart,
+  A.; Anandkumar, A.
+\newblock Fourier Neural Operator for Parametric Partial Differential
+  Equations.
+\newblock In Proceedings of the International Conference on Learning
+  Representations (ICLR),  2021.
+
+\bibitem[Benner et~al.(2015)Benner, Gugercin, and Willcox]{Benner2015ROM}
+Benner, P.; Gugercin, S.; Willcox, K.
+\newblock A Survey of Projection-Based Model Reduction Methods for Parametric
+  Dynamical Systems.
+\newblock {\em SIAM Review} {\bf 2015}, {\em 57},~483--531.
+\newblock {\url{https://doi.org/10.1137/130932715}}.
+
+\bibitem[Jones et~al.(1998)Jones, Schonlau, and Welch]{Jones1998EGO}
+Jones, D.R.; Schonlau, M.; Welch, W.J.
+\newblock Efficient Global Optimization of Expensive Black-Box Functions.
+\newblock {\em Journal of Global Optimization} {\bf 1998}, {\em 13},~455--492.
+\newblock {\url{https://doi.org/10.1023/A:1008306431147}}.
+
+\bibitem[Mayor et~al.(2025)Mayor, Obando-Ceron, Courville, and
+  Castro]{Mayor2025Parallelized}
+Mayor, W.; Obando-Ceron, J.; Courville, A.; Castro, P.S.
+\newblock The impact of on-policy parallelized data collection on deep
+  reinforcement learning networks.
+\newblock In Proceedings of the Proceedings of the 42nd International
+  Conference on Machine Learning (ICML),  2025, Vol. 267, {\em PMLR}.
+
+\bibitem[Radac and Chirla(2025)]{Radac2025OnlineRL}
+Radac, M.B.; Chirla, D.P.
+\newblock Near real-time online reinforcement learning with synchronous or
+  asynchronous updates.
+\newblock {\em Scientific Reports} {\bf 2025}, {\em 15},~17158.
+\newblock {\url{https://doi.org/10.1038/s41598-025-00492-7}}.
+
+\bibitem[Garc{\'\i}a and Fern{\'a}ndez(2015)]{Garcia2015SafeRL}
+Garc{\'\i}a, J.; Fern{\'a}ndez, F.
+\newblock A comprehensive survey on safe reinforcement learning.
+\newblock {\em Journal of Machine Learning Research} {\bf 2015}, {\em
+  16},~1437--1480.
+
+\bibitem[Qui\~{n}onero Candela et~al.(2009)Qui\~{n}onero Candela, Sugiyama,
+  Schwaighofer, and Lawrence]{Quinonero2009DatasetShift}
+Qui\~{n}onero Candela, J.; Sugiyama, M.; Schwaighofer, A.; Lawrence, N.D.
+\newblock Dataset shift in machine learning.
+\newblock {\em MIT Press} {\bf 2009}.
+\newblock {\url{https://doi.org/10.7551/mitpress/9780262170055.001.0001}}.
+
+\bibitem[Lambert et~al.(2020)Lambert, Amos, Yadan, and
+  Calandra]{Lambert2020ObjectiveMismatch}
+Lambert, N.O.; Amos, B.; Yadan, O.; Calandra, R.
+\newblock Objective Mismatch in Model-based Reinforcement Learning.
+\newblock In Proceedings of the Proceedings of the 2nd Conference on Learning
+  for Dynamics and Control (L4DC),  2020, Vol. 120, {\em Proceedings of Machine
+  Learning Research}, pp. 761--770.
+
+\bibitem[Janner et~al.(2019)Janner, Fu, Zhang, and Levine]{Janner2019MBPO}
+Janner, M.; Fu, J.; Zhang, M.; Levine, S.
+\newblock When to Trust Your Model: Model-based Policy Optimization.
+\newblock In Proceedings of the Advances in Neural Information Processing
+  Systems (NeurIPS),  2019, Vol.~32.
+
+\bibitem[Farahmand et~al.(2017)Farahmand, Barreto, and
+  Nikovski]{Farahmand2017VAML}
+Farahmand, A.m.; Barreto, A.M.S.; Nikovski, D.
+\newblock Value-Aware Loss Function for Model-based Reinforcement Learning.
+\newblock In Proceedings of the Proceedings of the 20th International
+  Conference on Artificial Intelligence and Statistics (AISTATS),  2017,
+  Vol.~54, {\em Proceedings of Machine Learning Research}, pp. 1486--1494.
+
+\bibitem[Zhao et~al.(2020)Zhao, Queralta, and Westerlund]{Zhao2020Sim2Real}
+Zhao, W.; Queralta, J.P.n.; Westerlund, T.
+\newblock Sim-to-Real Transfer in Deep Reinforcement Learning for Robotics: a
+  Survey.
+\newblock In Proceedings of the IEEE Symposium Series on Computational
+  Intelligence (SSCI),  2020, pp. 737--744.
+\newblock {\url{https://doi.org/10.1109/SSCI47803.2020.9308468}}.
+
+\bibitem[Coraci et~al.(2024)Coraci, Brandi, Hong, and
+  Capozzoli]{Coraci2024HeteroTL}
+Coraci, D.; Brandi, S.; Hong, T.; Capozzoli, A.
+\newblock An innovative heterogeneous transfer learning framework to enhance
+  the scalability of deep reinforcement learning controllers in buildings with
+  integrated energy systems.
+\newblock {\em Building Simulation} {\bf 2024}, {\em 17},~739--770.
+\newblock {\url{https://doi.org/10.1007/s12273-024-1109-6}}.
+
+\bibitem[Coraci et~al.(2025)Coraci, Silvestri, Razzano, Fop, Brandi, Borkowski,
+  Hong, Schlueter, and Capozzoli]{Coraci2025HiLo}
+Coraci, D.; Silvestri, A.; Razzano, G.; Fop, D.; Brandi, S.; Borkowski, E.;
+  Hong, T.; Schlueter, A.; Capozzoli, A.
+\newblock A scalable approach for real-world implementation of deep
+  reinforcement learning controllers in buildings based on online transfer
+  learning: The {HiLo} case study.
+\newblock {\em Energy and Buildings} {\bf 2025}, {\em 329},~115254.
+\newblock {\url{https://doi.org/10.1016/j.enbuild.2024.115254}}.
+
+\bibitem[Meng et~al.(2025)Meng, Bing, Yue, Chen, Huang, Gao, Sun, and
+  Knoll]{Meng2025Lifelong}
+Meng, Y.; Bing, Z.; Yue, X.; Chen, K.; Huang, K.; Gao, Y.; Sun, F.; Knoll, A.
+\newblock Preserving and combining knowledge in robotic lifelong reinforcement
+  learning.
+\newblock {\em Nature Machine Intelligence} {\bf 2025}.
+\newblock {\url{https://doi.org/10.1038/s42256-025-00983-2}}.
+
+\bibitem[Sutton(1991)]{Sutton1991Dyna}
+Sutton, R.S.
+\newblock {Dyna}, an integrated architecture for learning, planning, and
+  reacting.
+\newblock {\em ACM SIGART Bulletin} {\bf 1991}, {\em 2},~160--163.
+\newblock {\url{https://doi.org/10.1145/122344.122377}}.
+
+\bibitem[Hafner et~al.(2025)Hafner, Pasukonis, Ba, and
+  Lillicrap]{Hafner2025Dreamer}
+Hafner, D.; Pasukonis, J.; Ba, J.; Lillicrap, T.
+\newblock Mastering diverse control tasks through world models.
+\newblock {\em Nature} {\bf 2025}, {\em 640},~647--653.
+\newblock {\url{https://doi.org/10.1038/s41586-025-08744-2}}.
+
+\bibitem[Sutton and Barto(2018)]{Sutton2018RL}
+Sutton, R.S.; Barto, A.G.
+\newblock {\em Reinforcement Learning: An Introduction}, 2nd ed.; MIT Press:
+  Cambridge, MA,  2018.
+
+\bibitem[Schulman et~al.(2017)Schulman, Wolski, Dhariwal, Radford, and
+  Klimov]{Schulman2017PPO}
+Schulman, J.; Wolski, F.; Dhariwal, P.; Radford, A.; Klimov, O.
+\newblock Proximal policy optimization algorithms.
+\newblock {\em arXiv preprint arXiv:1707.06347} {\bf 2017}.
+\newblock {\url{https://doi.org/10.48550/arXiv.1707.06347}}.
+
+\bibitem[Schulman et~al.(2016)Schulman, Moritz, Levine, Jordan, and
+  Abbeel]{Schulman2016GAE}
+Schulman, J.; Moritz, P.; Levine, S.; Jordan, M.I.; Abbeel, P.
+\newblock High-dimensional continuous control using generalized advantage
+  estimation.
+\newblock In Proceedings of the International Conference on Learning
+  Representations,  2016.
+\newblock {\url{https://doi.org/10.48550/arXiv.1506.02438}}.
+
+\bibitem[Raffin et~al.(2021)Raffin, Hill, Gleave, Kanervisto, Ernestus, and
+  Dormann]{Raffin2021SB3}
+Raffin, A.; Hill, A.; Gleave, A.; Kanervisto, A.; Ernestus, M.; Dormann, N.
+\newblock Stable-baselines3: reliable reinforcement learning implementations.
+\newblock {\em Journal of Machine Learning Research} {\bf 2021}, {\em
+  22},~1--8.
+
+\bibitem[Haarnoja et~al.(2018)Haarnoja, Zhou, Abbeel, and
+  Levine]{Haarnoja2018SAC}
+Haarnoja, T.; Zhou, A.; Abbeel, P.; Levine, S.
+\newblock Soft actor-critic: off-policy maximum entropy deep reinforcement
+  learning with a stochastic actor.
+\newblock In Proceedings of the International Conference on Machine Learning,
+  2018, pp. 1861--1870.
+\newblock {\url{https://doi.org/10.48550/arXiv.1801.01290}}.
+
+\end{thebibliography}

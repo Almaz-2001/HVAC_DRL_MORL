@@ -1,0 +1,340 @@
+% Progress report for grant work packages 10 and 11 (calendar year 2026).
+% Every figure quoted here is traceable to a committed result file under reports/
+% in the project repository; the provenance column names that file. Where a work
+% package objective has NOT been met, it is stated as such rather than softened --
+% these are milestone deliverables and an inflated status here is expensive later.
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{mathptmx}
+\usepackage[margin=2.2cm]{geometry}
+\usepackage{microtype}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{siunitx}
+\sisetup{detect-all, per-mode=symbol, range-phrase={--}, range-units=single}
+\usepackage{enumitem}
+\usepackage{caption}
+\usepackage{xcolor}
+\usepackage[hidelinks]{hyperref}
+\usepackage{fancyhdr}
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{\small Progress report: work packages 10 and 11}
+\rhead{\small \thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt}
+\newcommand{\ms}{\ensuremath{m_s}}
+\newcommand{\RMSE}{\ensuremath{\mathrm{RMSE}}}
+\newcommand{\Czon}{\ensuremath{C_{\mathrm{zon}}}}
+\newcommand{\done}{\textcolor{black!70}{\textbf{Delivered}}}
+\newcommand{\partialx}{\textcolor{black!70}{\textbf{Partly delivered}}}
+\newcommand{\notdone}{\textcolor{black!70}{\textbf{Not delivered}}}
+
+\begin{document}
+
+\begin{center}
+{\Large\bfseries Data-Driven Results for Work Packages 10 and 11}\\[4pt]
+{\large Digital twins per building with edge integration; feedback control with
+continuous learning for self-optimizing buildings}\\[8pt]
+{\small Reporting period: January--December 2026 \quad$\vert$\quad Prepared 12 August 2026}
+\end{center}
+
+\vspace{4pt}
+\hrule
+\vspace{10pt}
+
+\section*{Scope and evidential basis}
+
+This report summarizes the measured results obtained under work packages~10 and~11. All
+experiments were run on the BOPTEST framework, an open Modelica-based benchmark for building
+control, using four single-zone test cases: the air-based source case \texttt{bestest\_air} and
+three hydronic cases spanning residential and commercial scale. Every number below is traceable
+to a committed result file; the provenance column of each table names it.
+
+Two objectives within these work packages were not reached in the reporting period. They are
+reported as such under \emph{Objectives not reached} below rather than presented as partial successes, because
+both are prerequisites for the 2027 activities and the schedule depends on an accurate status.
+
+A peer-reviewed output covering the core of both work packages was submitted to
+\emph{Energies} (MDPI) on 9~August 2026, manuscript \texttt{energies-4523055}, and is under
+editorial assessment.
+
+\section*{Work package 10: digital twins per building and edge integration}
+
+\subsection*{10.1 Twin architectures and predictive validity}
+
+Two surrogate architectures were developed for the source building and validated against
+multi-step BOPTEST rollouts rather than one-step residuals, since a twin used for control is
+evaluated on trajectories, not on single transitions.
+
+\begin{table}[h]
+\centering\small
+\begin{tabularx}{\linewidth}{@{}lXr@{}}
+\toprule
+Twin & Architecture & 24\,h rollout \RMSE\ (\si{\celsius}) \\
+\midrule
+BB (hourly) & compact black-box, 8482 parameters, multi-horizon rollout objective & 1.557 \\
+BB (15-min) & same architecture, matched \SI{900}{\second} corpus & 0.876 \\
+GB (raw) & grey-box RC balance with neural residual heat-flow head, uncalibrated & 1.466 \\
+GB (calibrated) & same, after Stage A/B/C inverse identification & \textbf{0.644} \\
+\bottomrule
+\end{tabularx}
+\caption*{\small\RMSE{} is the multi-step rollout root-mean-square error of zone temperature over a
+24-hour horizon. Provenance for all four rows:
+\texttt{block1\_corpus\_matched\_comparison.csv}.}
+\end{table}
+
+The improvement from the hourly black-box baseline to the calibrated twin is
+\SI{0.913}{\celsius}. A corpus-matched ablation attributes \SI{0.681}{\celsius} (74.6\%) to
+corpus temporal resolution and \SI{0.232}{\celsius} (25.4\%) to the staged calibration itself. An
+alternative decomposition through the uncalibrated grey-box backbone assigns 90.1\% to
+calibration; the two differ because corpus and architecture interact non-additively, so the
+calibration contribution is reported as a range rather than a single number.
+
+\subsection*{10.2 Physical identifiability of the twin}
+
+The grey-box twin carries one physically interpretable parameter, the zone thermal capacitance
+\Czon, recovered by staged inverse identification from telemetry.
+
+\begin{itemize}[leftmargin=1.2em,itemsep=2pt]
+\item Identified value \Czon\ $=\SI{4.413e5}{\joule\per\kelvin}$, a $+5.1\%$ update over the
+physical prior and within one standard error of the Laplace/Fisher interval.
+\item Physically equivalent to approximately \SI{439}{\kilogram} of air, the expected order of
+magnitude for a \SI{48}{\meter\squared} zone.
+\item Directional validity: sweeping the supply-temperature command at fixed state gives the
+physically correct response sign in 100\% of 400 sampled states.
+\item Temperature-alignment stage reduced alignment \RMSE{} from \SI{0.374}{\celsius} to
+\SI{0.232}{\celsius}, a 38.0\% improvement
+(\texttt{block1\_surrogate\_final\_metrics.csv}).
+\end{itemize}
+
+\subsection*{10.3 Twins for each building: recalibration across the building family}
+
+The objective of a twin \emph{per building} was tested by porting the identification pipeline to
+three further test cases that differ in heat source, distribution path and actuator interface.
+The pipeline transferred to all three.
+
+\begin{table}[h]
+\centering\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}lrrrrrr@{}}
+\toprule
+& \multicolumn{3}{c}{Zone temperature} & \multicolumn{2}{c}{HVAC power} & \\
+\cmidrule(lr){2-4}\cmidrule(lr){5-6}
+Building & raw \RMSE & calibrated & gain & raw MAE & calibrated & $\rho_C$ \\
+& (\si{\celsius}) & (\si{\celsius}) & (\%) & (\si{\watt}) & (\si{\watt}) & \\
+\midrule
+Residential, heat pump (\SI{192}{\meter\squared}) & 1.421 & 0.565 & 60.2 & 2921 & 1767 & 1.892 \\
+Residential, boiler (\SI{48}{\meter\squared}) & 2.666 & 0.335 & 87.4 & 784 & 85 & 1.954 \\
+Commercial, district heating (\SI{8500}{\meter\squared}) & 1.952 & 0.238 & 87.8 & --- & --- & 1.909 \\
+\bottomrule
+\end{tabular}
+\caption*{\small $\rho_C$ is the re-identified zone capacitance as a ratio to the source building.
+Provenance: \texttt{block3\_hydronic\_family\_n2\_summary.csv},
+\texttt{block3\_transfer\_matrix.csv}.}
+\end{table}
+
+Two results are worth isolating. First, recalibration reduced rollout error by
+\SIrange{60.2}{87.8}{\percent} on every target, so the identification pipeline is a portable
+asset rather than a one-building artifact. Second, the re-identified capacitance clusters at
+$\rho_C = 1.918 \pm 0.032$ across an order-of-magnitude change in floor area
+(\SIrange{48}{8500}{\meter\squared}). This is reported as an effective single-zone RC signature
+of the hydronic family and not as a claimed physical invariant: it rests on three cases.
+
+\subsection*{10.4 Runtime characteristics relevant to edge deployment}
+
+Throughput was benchmarked against the live BOPTEST runtime under an identical
+\SI{900}{\second} control period, on a single CPU thread with no GPU.
+
+\begin{table}[h]
+\centering\small
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+Backend & Env.\ steps/s & Mean step (\si{\milli\second}) & Speed-up \\
+\midrule
+BOPTEST RTE (HTTP) & 21.0 & 15.33 & $1\times$ \\
+BB surrogate & 4626 & 0.19 & $220.2\times$ \\
+GB calibrated surrogate & --- & --- & $114.2\times$ \\
+Role-separated hybrid & --- & --- & $85.0\times$ \\
+\bottomrule
+\end{tabular}
+\caption*{\small Provenance: \texttt{speed\_benchmark\_table.csv}. Device \texttt{cpu},
+\texttt{torch\_num\_threads = 1}. At hybrid throughput a $5\times10^{6}$-step policy-optimization
+run costs about 47 minutes of environment time against roughly 66 hours on the live runtime.}
+\end{table}
+
+These figures characterize the computational footprint of the twin: an 8482-parameter model
+executing a control step in \SI{0.19}{\milli\second} on one commodity CPU thread. That is the
+quantitative basis on which edge deployment becomes feasible. It is not itself an edge
+deployment; see \emph{Objectives not reached} below.
+
+\section*{Work package 11: feedback control with continuous learning}
+
+\subsection*{11.1 Closed-loop control deployed on the live runtime}
+
+Feedback control was deployed against the live BOPTEST Run-Time Environment, a Dockerized
+Modelica emulator with embedded baseline loops exposed over a REST API. At each
+\SI{900}{\second} step the agent reads measurements and disturbance forecasts, and overwrites a
+single control input, the supply-air temperature setpoint, leaving the remaining embedded loops
+at baseline. Controllers are scored with the duration-and-severity maintenance score
+$\ms = r_{\mathrm{time}} + r_{\mathrm{sev}}$, where $\ms > 1$ marks an unusable controller.
+
+\begin{table}[h]
+\centering\small
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+& \multicolumn{2}{c}{\ms\ (seed 42 $\pm$ seed s.d.)} & \multicolumn{2}{c}{Comfort violation (\%)} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}
+Training backend & peak & typical & peak & typical \\
+\midrule
+BB hourly & $0.073 \pm 0.019$ & $0.095 \pm 0.047$ & 1.5 & 4.4 \\
+BB matched-resolution & $1.142 \pm 0.000$ & $1.211 \pm 0.000$ & 85.6 & 91.4 \\
+GB calibrated & $1.046 \pm 0.022$ & $1.102 \pm 0.026$ & 77.1 & 82.4 \\
+Role-separated hybrid & $\mathbf{0.087 \pm 0.026}$ & $\mathbf{0.041 \pm 0.024}$ & 4.7 & 2.4 \\
+\midrule
+BOPTEST built-in PI (12-month) & \multicolumn{2}{c}{0.910} & \multicolumn{2}{c}{63.6} \\
+\bottomrule
+\end{tabular}
+\caption*{\small Dispersions are standard deviations over seeds $\{42,43,44\}$. Provenance:
+\texttt{block2\_fidelity\_utility\_scatter.csv}, \texttt{block2\_thermostatic\_seed\_band.csv}.}
+\end{table}
+
+The principal scientific result of the period sits in this table. The most accurate twin
+(\SI{0.644}{\celsius}) trains a controller that fails on every seed, while the least accurate
+(\SI{1.557}{\celsius}) trains a usable one; making the black-box twin more accurate by refining
+its resolution moves it from the usable regime into the failing one. Predictive accuracy is
+therefore not a valid criterion for selecting a twin as a training environment. A rescaling
+control that holds scale-free response-surface roughness fixed while varying only the integration
+step reproduces the collapse, isolating the per-step increment magnitude as the operative
+property. Measured relative roughness: 0.169 for the usable hourly twin against $9.4\times$ and
+$7.9\times$ that for the two failing backends
+(\texttt{block2\_mechanism\_surface\_sharpness.csv}).
+
+\subsection*{11.2 Role separation as the deployed control architecture}
+
+The architecture that resolves the conflict assigns the two conflicting requirements to two
+models: the black-box twin supplies the rollout dynamics, and the frozen calibrated twin acts
+only as a per-step model-disagreement reward censor, never entering the rollout or the policy
+loss. Averaged over three seeds this backend leads the best single-model alternative on both
+evaluation windows (0.060 against 0.072 on the peak window, 0.014 against 0.046 on the typical
+window), at $85\times$ live throughput. Mean twin disagreement across hybrid traces is
+\SI{0.92}{\celsius} and \SI{682}{\watt} on the peak window and \SI{1.01}{\celsius} and
+\SI{735}{\watt} on the typical window (\texttt{hybrid\_disagreement\_summary.csv}).
+
+\subsection*{11.3 Controller families and the observation interface}
+
+\begin{itemize}[leftmargin=1.2em,itemsep=3pt]
+\item \textbf{Hierarchical DRL.} A seasonal hierarchy routing to winter and summer setpoint
+specialists degrades as the disagreement censor is strengthened: peak comfort violation rises
+from $6.3 \pm 1.7$\% at $\lambda_T = 0$ to $24.4 \pm 3.8$\% at $\lambda_T = 0.10$, the setting
+optimal for the thermostatic family. The sweep is replicated over seeds $\{42,43,44\}$ at all
+four settings: the endpoint gap is 10.0 (peak) and 5.8 (typical) pooled seed standard
+deviations, although the $0.05 \to 0.10$ increment sits within one pooled s.d.\ so the two
+strongest weights are not separable. The regularization strength is controller-family specific
+and cannot be quoted without naming its family
+(\texttt{block2\_hdrl\_lambda\_sweep\_seed\_band.csv}).
+
+\item \textbf{Multi-objective RL and the observation interface.} Widening the observation from a
+5-dimensional instantaneous vector to a 17-dimensional forecast-augmented one changes the
+controller from unusable to usable: \RMSE{} falls from \SI{4.96}{\celsius} to
+\SI{0.72}{\celsius}, comfort violation from 74.5\% to 4.9\%, and \ms{} from 1.046 to 0.099. The
+binding constraint is observation geometry, not the reward scalarization
+(\texttt{block2\_morl\_comparison\_summary.csv}).
+
+\item \textbf{Multi-objective stability.} Over five fixed seeds the neutral preference point
+attains $\ms = 0.187 \pm 0.078$ (coefficient of variation 0.42, range 0.103 to 0.310). The mean
+is well inside the usable band but the spread fails a pre-specified stability test, so the
+preference-conditioned controller is not yet deployment-stable
+(\texttt{morl\_canonical\_seedfix\_yearly\_summary.csv}).
+\end{itemize}
+
+\subsection*{11.4 Evidence bearing on the continuous-learning objective}
+
+Three results from the period speak directly to whether a frozen policy can be deployed across a
+building stock, which is the premise the continuous-learning objective is meant to relax.
+
+\begin{enumerate}[leftmargin=1.4em,itemsep=3pt]
+\item \textbf{Frozen-policy transfer fails on two of three target buildings.} Both residential
+cases fall short of the pre-specified $1.25\times$-PI comfort threshold ($\ms = 0.665$ against a
+threshold of 0.579; $\ms = 0.976$ against 0.938) while saving 7.3\% and 5.8\% energy
+respectively. The commercial case passes the comfort threshold ($\ms = 0.431$ against 0.785) but
+consumes 35.3\% more energy than the PI baseline, so it is a threshold pass and not a
+deployment-ready result.
+
+\item \textbf{The transferable asset is the pipeline, not the policy.} Against the same three
+targets the identification pipeline succeeded in every case (Section~10.3). Transfer is therefore
+component-level: identified physics ports across buildings, the frozen control law does not.
+
+\item \textbf{Warm-starting from the physical twin is counterproductive.} Pretraining on the
+calibrated twin and then fine-tuning on the live runtime raises \ms{} by a factor of two to three
+on both windows against an otherwise identical from-scratch fine-tune. Adaptation strategies for
+the continuous-learning objective should not assume that twin-pretrained weights are a useful
+starting point.
+\end{enumerate}
+
+Taken together these quantify the need that work package~11 addresses: local adaptation is
+required rather than optional, and the adaptation must act on the identified model rather than on
+transferred policy weights.
+
+\section*{Objectives not reached in the reporting period}
+
+\textbf{Edge computing infrastructure integration (work package 10).} \notdone. All experiments
+ran on a laptop workstation (6-core CPU, \SI{32}{\giga\byte} RAM) with the emulator in a Docker
+container. No deployment to edge hardware was performed and no edge orchestration was
+integrated. What the period delivered instead is the quantitative precondition: a twin of 8482
+parameters executing a control step in \SI{0.19}{\milli\second} on a single CPU thread, which
+establishes that the computational envelope is compatible with edge-class hardware. Integration
+remains to be carried out.
+
+\textbf{Continuous online learning (work package 11).} \partialx. Feedback control is deployed
+and evaluated in closed loop, and offline adaptation stages exist within the multi-objective
+pipeline, including a live-runtime fine-tuning stage. What has not been deployed is a continuous
+online learning loop in which a controller adapts during operation. The transfer results of
+Section~11.4 establish the requirement quantitatively and identify the correct target for
+adaptation, but the adaptation mechanism itself is not yet implemented.
+
+\section*{Summary of status against the stated deliverables}
+
+\begin{table}[h]
+\centering\small
+\begin{tabularx}{\linewidth}{@{}p{0.30\linewidth}p{0.14\linewidth}X@{}}
+\toprule
+Deliverable & Status & Evidence \\
+\midrule
+Digital twins developed for each building & \done & Two architectures validated on the source case; identification pipeline ported to three further buildings with \SIrange{60.2}{87.8}{\percent} rollout-error reduction on each \\
+Integration with edge computing infrastructure & \notdone & Computational envelope established (\SI{0.19}{\milli\second} per step, single CPU thread, 8482 parameters); no edge deployment performed \\
+Feedback control strategies deployed & \done & Closed-loop control on the live runtime across three controller families; best configuration reaches $\ms = 0.041$ with comfort violation below 5\% at $85\times$ live throughput \\
+Continuous learning for self-optimization & \partialx & Offline and live fine-tuning stages implemented; transfer study quantifies the need for local adaptation; no online learning loop in operation \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section*{Recommended priorities for the next period}
+
+\begin{enumerate}[leftmargin=1.4em,itemsep=2pt]
+\item Port the black-box twin to edge-class hardware and measure step latency, memory footprint
+and thermal behaviour under sustained operation. The single-thread CPU benchmark suggests this is
+tractable and should be confirmed empirically rather than assumed.
+\item Implement local adaptation acting on the identified model, since Section~11.4 shows that
+policy-weight transfer is the wrong mechanism and model recalibration is the one that ports.
+\item Extend seed replication to the remaining controller family. The hierarchical
+censor-weight sweep is now replicated over three seeds at all four settings, closing what was the
+weakest link in the controller-family findings; the preference-conditioned MORL controller still
+fails its pre-specified stability test and is the next target.
+\item Add a stronger control baseline. Present comparisons are against the emulator's built-in
+PI, which is a weak reference; a tuned rule-based or model-predictive baseline on the same twin
+would put the reported gains on firmer ground.
+\end{enumerate}
+
+\vspace{6pt}
+\hrule
+\vspace{4pt}
+{\footnotesize All quantities in this report are reproducible from committed result files in the
+project repository. Figures and tables of the submitted manuscript are linked to their source
+artifacts through provenance maps in the Supplementary Materials.}
+
+\end{document}

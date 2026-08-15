@@ -1,0 +1,326 @@
+\relax 
+\providecommand*\new@tpo@label[2]{}
+\providecommand\hyper@newdestlabel[2]{}
+\providecommand\HyField@AuxAddToFields[1]{}
+\providecommand\HyField@AuxAddToCoFields[2]{}
+\bibstyle{Definitions/mdpi}
+\def\@LN@column{1}
+\newmarginnote{note.1.1}{{1}{10945661sp}}
+\citation{AlSayed2024Review,Nguyen2024Modelling}
+\citation{Savino2025ASHRAE,Gao2024Predictive}
+\citation{Hou2024MultiSource}
+\citation{Blum2021BOPTEST,AlSayed2024Review}
+\citation{Wang2025SafeDRL,Hou2024MultiSource}
+\citation{HouEvins2024,Mshragi2026FastML}
+\citation{RiahiSamani2026OOD}
+\def\@LN@column{1}
+\@writefile{toc}{\contentsline {section}{\numberline {1}Introduction}{2}{section.1}\protected@file@percent }
+\citation{Byeon2025MaxMinMORL,Gao2024Predictive}
+\citation{Liao2025HDRL}
+\citation{Byeon2025MaxMinMORL}
+\def\@LN@column{1}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces \textbf  {Study overview.} \emph  {Top, primary paradox test (the central causal claim):} four surrogate backends (coarse hourly BB, matched-resolution BB, calibrated GB, and the role-separated hybrid) each train a thermostatic-PPO controller scored live on BOPTEST \texttt  {bestest\_air}; the higher-fidelity backends (GB, matched-resolution BB) collapse ($m_s>1$) while the coarse BB and the hybrid stay usable. \emph  {Bottom, boundary checks (dashed box, secondary):} HDRL, MORL, and a three-case hydronic transfer study map the scope of the recipe and are \emph  {not} part of the central test.}}{3}{figure.caption.1}\protected@file@percent }
+\providecommand*\caption@xref[2]{\@setref\relax\@undefined{#1}}
+\newlabel{fig:system_overview}{{1}{3}{\textbf {Study overview.} \emph {Top, primary paradox test (the central causal claim):} four surrogate backends (coarse hourly BB, matched-resolution BB, calibrated GB, and the role-separated hybrid) each train a thermostatic-PPO controller scored live on BOPTEST \texttt {bestest\_air}; the higher-fidelity backends (GB, matched-resolution BB) collapse ($m_s>1$) while the coarse BB and the hybrid stay usable. \emph {Bottom, boundary checks (dashed box, secondary):} HDRL, MORL, and a three-case hydronic transfer study map the scope of the recipe and are \emph {not} part of the central test}{figure.caption.1}{}}
+\newlabel{fig:system_overview@cref}{{[figure][1][]1}{[1][2][]3}{}{}{}}
+\citation{Blum2021BOPTEST,Wetter2014Modelica}
+\citation{Arroyo2021GymBOPTEST}
+\citation{VazquezCanteli2019CityLearn,VazquezCanteli2019Review}
+\citation{Savino2025ASHRAE,Wang2025SafeDRL,Nguyen2024Modelling,Sun2024DirectTSup}
+\citation{Deng2025MultiAgent,Alotaibi2025ContextAware}
+\citation{Liao2025HDRL,Bacon2017Options,Nachum2018HIRO}
+\citation{Yang2019MORL,Roijers2013MOSurvey,Hayes2022MOSurvey,Byeon2025MaxMinMORL}
+\citation{Bacher2011RCIdentification,Berthou2014RC,Bunning2020RC,Picard2017WhiteBox,Raissi2019PINN,Chen2018NeuralODE,Karpatne2017TheoryGuided,Willard2022PIML,Hedayat2025PINN}
+\citation{Lu2021DeepONet,Li2021FNO,Benner2015ROM}
+\citation{HouEvins2024}
+\citation{Mshragi2026FastML}
+\citation{Jones1998EGO}
+\def\@LN@column{1}
+\@writefile{toc}{\contentsline {section}{\numberline {2}Related Work}{4}{section.2}\protected@file@percent }
+\newlabel{sec:related}{{2}{4}{Related Work}{section.2}{}}
+\newlabel{sec:related@cref}{{[section][2][]2}{[1][4][]4}{}{}{}}
+\citation{Mayor2025Parallelized,Radac2025OnlineRL,Gao2024Predictive}
+\citation{Garcia2015SafeRL,Wang2025SafeDRL}
+\citation{Quinonero2009DatasetShift,RiahiSamani2026OOD}
+\citation{Lambert2020ObjectiveMismatch,Janner2019MBPO}
+\citation{Farahmand2017VAML}
+\citation{Zhao2020Sim2Real}
+\citation{Hou2024MultiSource,Coraci2024HeteroTL,Coraci2025HiLo,Meng2025Lifelong}
+\citation{Sutton1991Dyna,Hafner2025Dreamer}
+\def\@LN@column{1}
+\@writefile{toc}{\contentsline {section}{\numberline {3}Experimental Design}{5}{section.3}\protected@file@percent }
+\newlabel{sec:methodology}{{3}{5}{Experimental Design}{section.3}{}}
+\newlabel{sec:methodology@cref}{{[section][3][]3}{[1][5][]5}{}{}{}}
+\citation{Blum2021BOPTEST,Wetter2014Modelica}
+\citation{Arroyo2021GymBOPTEST}
+\def\@LN@column{1}
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Experimental taxonomy used throughout the paper. The first four backends define the central fidelity--utility test; HDRL, MORL, and hydronic transfer are boundary tests.}}{6}{table.caption.2}\protected@file@percent }
+\newlabel{tab:taxonomy}{{1}{6}{Experimental taxonomy used throughout the paper. The first four backends define the central fidelity--utility test; HDRL, MORL, and hydronic transfer are boundary tests}{table.caption.2}{}}
+\newlabel{tab:taxonomy@cref}{{[table][1][]1}{[1][5][]6}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}BOPTEST task and evaluation metric}{6}{subsection.3.1}\protected@file@percent }
+\newlabel{ssec:m-env}{{3.1}{6}{BOPTEST task and evaluation metric}{subsection.3.1}{}}
+\newlabel{ssec:m-env@cref}{{[subsection][1][3]3.1}{[1][6][]6}{}{}{}}
+\newlabel{ssec:m-pomdp}{{3.1}{6}{BOPTEST task and evaluation metric}{subsection.3.1}{}}
+\newlabel{ssec:m-pomdp@cref}{{[subsection][1][3]3.1}{[1][6][]6}{}{}{}}
+\@writefile{toc}{\contentsline {paragraph}{Primary test case.}{6}{paragraph*.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Transfer family.}{6}{paragraph*.4}\protected@file@percent }
+\citation{Blum2021BOPTEST}
+\citation{Sutton2018RL}
+\citation{Roijers2013MOSurvey,Yang2019MORL,Hayes2022MOSurvey}
+\citation{Gao2024Predictive}
+\citation{Wang2025SafeDRL}
+\citation{Wang2025SafeDRL}
+\citation{Garcia2015SafeRL}
+\citation{Wang2025SafeDRL}
+\def\@LN@column{1}
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces BOPTEST test cases used in this study, from the official BOPTEST documentation \citep  {Blum2021BOPTEST}. All are single-zone or single-zone-like and heating-capable.}}{7}{table.caption.5}\protected@file@percent }
+\newlabel{tab:testcases}{{2}{7}{BOPTEST test cases used in this study, from the official BOPTEST documentation \citep {Blum2021BOPTEST}. All are single-zone or single-zone-like and heating-capable}{table.caption.5}{}}
+\newlabel{tab:testcases@cref}{{[table][2][]2}{[1][7][]7}{}{}{}}
+\@writefile{toc}{\contentsline {paragraph}{Problem formulation.}{7}{paragraph*.6}\protected@file@percent }
+\newlabel{eq:m-return}{{1}{7}{Problem formulation}{equation.1}{}}
+\newlabel{eq:m-return@cref}{{[equation][1][]1}{[1][7][]7}{}{}{}}
+\newlabel{eq:action_map}{{2}{7}{Problem formulation}{equation.2}{}}
+\newlabel{eq:action_map@cref}{{[equation][2][]2}{[1][7][]7}{}{}{}}
+\newlabel{eq:m-ms}{{3}{7}{Problem formulation}{equation.3}{}}
+\newlabel{eq:m-ms@cref}{{[equation][3][]3}{[1][7][]7}{}{}{}}
+\citation{Sutton1991Dyna,Hafner2025Dreamer}
+\citation{Chen2018NeuralODE}
+\citation{Bunning2020RC,Berthou2014RC,Bacher2011RCIdentification,Picard2017WhiteBox}
+\citation{Raissi2019PINN,Karpatne2017TheoryGuided,Willard2022PIML}
+\citation{Bacher2011RCIdentification}
+\def\@LN@column{1}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Surrogate backends and the paradox test}{8}{subsection.3.2}\protected@file@percent }
+\newlabel{ssec:m-surrogate}{{3.2}{8}{Surrogate backends and the paradox test}{subsection.3.2}{}}
+\newlabel{ssec:m-surrogate@cref}{{[subsection][2][3]3.2}{[1][8][]8}{}{}{}}
+\@writefile{toc}{\contentsline {paragraph}{Control-oriented surrogate BB.}{8}{paragraph*.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Physically informed surrogate GB and Stage A/B/C calibration.}{8}{paragraph*.8}\protected@file@percent }
+\citation{Sutton1991Dyna,Hafner2025Dreamer}
+\citation{Bacher2011RCIdentification,Raissi2019PINN,Karpatne2017TheoryGuided,Willard2022PIML}
+\citation{Garcia2015SafeRL,Wang2025SafeDRL}
+\def\@LN@column{1}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Role-separated hybrid remedy}{9}{subsection.3.3}\protected@file@percent }
+\newlabel{ssec:m-hybrid}{{3.3}{9}{Role-separated hybrid remedy}{subsection.3.3}{}}
+\newlabel{ssec:m-hybrid@cref}{{[subsection][3][3]3.3}{[1][9][]9}{}{}{}}
+\newlabel{eq:m-hybrid}{{4}{9}{Role-separated hybrid remedy}{equation.4}{}}
+\newlabel{eq:m-hybrid@cref}{{[equation][4][]4}{[1][9][]9}{}{}{}}
+\citation{Schulman2017PPO}
+\citation{Schulman2016GAE}
+\citation{Raffin2021SB3}
+\citation{Bacon2017Options,Nachum2018HIRO}
+\citation{Liao2025HDRL}
+\citation{Yang2019MORL,Roijers2013MOSurvey,Hayes2022MOSurvey,Byeon2025MaxMinMORL}
+\citation{Blum2021BOPTEST}
+\citation{Bacher2011RCIdentification}
+\citation{Wang2025SafeDRL}
+\citation{Quinonero2009DatasetShift}
+\citation{Quinonero2009DatasetShift,RiahiSamani2026OOD}
+\citation{Hou2024MultiSource}
+\def\@LN@column{1}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces \textbf  {Hybrid reward-shaping mechanism.} The black-box surrogate (BB) supplies the smooth rollout dynamics; the frozen grey-box surrogate (GB) is evaluated forward-only on the same state--action pair and enters \emph  {only} as a per-step reward penalty on BB--GB disagreement~\eqref  {eq:m-hybrid}. GB is neither the rollout model nor a policy-loss term.}}{10}{figure.caption.9}\protected@file@percent }
+\newlabel{fig:hybrid_mechanism}{{2}{10}{\textbf {Hybrid reward-shaping mechanism.} The black-box surrogate (BB) supplies the smooth rollout dynamics; the frozen grey-box surrogate (GB) is evaluated forward-only on the same state--action pair and enters \emph {only} as a per-step reward penalty on BB--GB disagreement~\eqref {eq:m-hybrid}. GB is neither the rollout model nor a policy-loss term}{figure.caption.9}{}}
+\newlabel{fig:hybrid_mechanism@cref}{{[figure][2][]2}{[1][9][]10}{}{}{}}
+\@writefile{toc}{\contentsline {paragraph}{Controller families.}{10}{paragraph*.10}\protected@file@percent }
+\newlabel{ssec:m-controllers}{{3.3}{10}{Controller families}{paragraph*.10}{}}
+\newlabel{ssec:m-controllers@cref}{{[subsection][3][3]3.3}{[1][10][]10}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4}Evaluation and transfer protocol}{10}{subsection.3.4}\protected@file@percent }
+\newlabel{ssec:m-eval}{{3.4}{10}{Evaluation and transfer protocol}{subsection.3.4}{}}
+\newlabel{ssec:m-eval@cref}{{[subsection][4][3]3.4}{[1][10][]10}{}{}{}}
+\citation{Blum2021BOPTEST,Wetter2014Modelica,Arroyo2021GymBOPTEST}
+\citation{Bacher2011RCIdentification}
+\citation{Schulman2017PPO}
+\citation{Raffin2021SB3}
+\citation{Wang2025SafeDRL}
+\def\@LN@column{1}
+\@writefile{toc}{\contentsline {paragraph}{Implementation.}{11}{paragraph*.11}\protected@file@percent }
+\newlabel{sec:setup}{{3.4}{11}{Implementation}{paragraph*.11}{}}
+\newlabel{sec:setup@cref}{{[subsection][4][3]3.4}{[1][11][]11}{}{}{}}
+\newlabel{ssec:s-testbed}{{3.4}{11}{Implementation}{paragraph*.11}{}}
+\newlabel{ssec:s-testbed@cref}{{[subsection][4][3]3.4}{[1][11][]11}{}{}{}}
+\newlabel{ssec:s-data}{{3.4}{11}{Implementation}{paragraph*.11}{}}
+\newlabel{ssec:s-data@cref}{{[subsection][4][3]3.4}{[1][11][]11}{}{}{}}
+\newlabel{ssec:s-train}{{3.4}{11}{Implementation}{paragraph*.11}{}}
+\newlabel{ssec:s-train@cref}{{[subsection][4][3]3.4}{[1][11][]11}{}{}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {4}Experimental Results}{11}{section.4}\protected@file@percent }
+\newlabel{sec:experimental}{{4}{11}{Experimental Results}{section.4}{}}
+\newlabel{sec:experimental@cref}{{[section][4][]4}{[1][11][]11}{}{}{}}
+\citation{Sun2024DirectTSup}
+\def\@LN@column{1}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Predictive fidelity: establishing the asymmetry}{12}{subsection.4.1}\protected@file@percent }
+\newlabel{sec:results1-digital-twin}{{4.1}{12}{Predictive fidelity: establishing the asymmetry}{subsection.4.1}{}}
+\newlabel{sec:results1-digital-twin@cref}{{[subsection][1][4]4.1}{[1][12][]12}{}{}{}}
+\newlabel{ssec:block1-scope}{{4.1}{12}{Predictive fidelity: establishing the asymmetry}{subsection.4.1}{}}
+\newlabel{ssec:block1-scope@cref}{{[subsection][1][4]4.1}{[1][12][]12}{}{}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.1.1}Surrogate construction and inverse calibration}{12}{subsubsection.4.1.1}\protected@file@percent }
+\newlabel{ssec:block1-direct-tsup}{{4.1.1}{12}{Surrogate construction and inverse calibration}{subsubsection.4.1.1}{}}
+\newlabel{ssec:block1-direct-tsup@cref}{{[subsubsection][1][4,1]4.1.1}{[1][12][]12}{}{}{}}
+\citation{Hedayat2025PINN}
+\def\@LN@column{1}
+\@writefile{toc}{\contentsline {paragraph}{Physics-informed GB and Stage A/B/C calibration.}{13}{paragraph*.12}\protected@file@percent }
+\newlabel{ssec:block1-BB5-calibration}{{4.1.1}{13}{Physics-informed GB and Stage A/B/C calibration}{paragraph*.12}{}}
+\newlabel{ssec:block1-BB5-calibration@cref}{{[subsubsection][1][4,1]4.1.1}{[1][12][]13}{}{}{}}
+\newlabel{eq:rc-ode}{{5}{13}{Physics-informed GB and Stage A/B/C calibration}{equation.5}{}}
+\newlabel{eq:rc-ode@cref}{{[equation][5][]5}{[1][12][]13}{}{}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.1.2}Predictive fidelity and matched-corpus attribution}{13}{subsubsection.4.1.2}\protected@file@percent }
+\newlabel{ssec:block1-predictive-diagnostics}{{4.1.2}{13}{Predictive fidelity and matched-corpus attribution}{subsubsection.4.1.2}{}}
+\newlabel{ssec:block1-predictive-diagnostics@cref}{{[subsubsection][2][4,1]4.1.2}{[1][13][]13}{}{}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Multi-horizon predictive validity, residual spread, and engineering error CDFs from BOPTEST rollouts.}}{13}{figure.caption.13}\protected@file@percent }
+\newlabel{fig:predictive-validity}{{3}{13}{Multi-horizon predictive validity, residual spread, and engineering error CDFs from BOPTEST rollouts}{figure.caption.13}{}}
+\newlabel{fig:predictive-validity@cref}{{[figure][3][]3}{[1][13][]13}{}{}{}}
+\def\@LN@column{1}
+\newlabel{ssec:block1-corpus-matched}{{4.1.2}{14}{Predictive fidelity and matched-corpus attribution}{figure.caption.13}{}}
+\newlabel{ssec:block1-corpus-matched@cref}{{[subsubsection][2][4,1]4.1.2}{[1][14][]14}{}{}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Corpus-matched comparison.}}{14}{table.caption.14}\protected@file@percent }
+\newlabel{tab:matched}{{3}{14}{Corpus-matched comparison}{table.caption.14}{}}
+\newlabel{tab:matched@cref}{{[table][3][]3}{[1][14][]14}{}{}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.1.3}Runtime feasibility and predictive-validation synthesis}{14}{subsubsection.4.1.3}\protected@file@percent }
+\newlabel{ssec:block1-runtime}{{4.1.3}{14}{Runtime feasibility and predictive-validation synthesis}{subsubsection.4.1.3}{}}
+\newlabel{ssec:block1-runtime@cref}{{[subsubsection][3][4,1]4.1.3}{[1][14][]14}{}{}{}}
+\newlabel{ssec:block1-stepsize}{{4.1.3}{14}{Runtime feasibility and predictive-validation synthesis}{subsubsection.4.1.3}{}}
+\newlabel{ssec:block1-stepsize@cref}{{[subsubsection][3][4,1]4.1.3}{[1][14][]14}{}{}{}}
+\def\@LN@column{1}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Higher fidelity destroys RL utility}{15}{subsection.4.2}\protected@file@percent }
+\newlabel{sec:results2-control}{{4.2}{15}{Higher fidelity destroys RL utility}{subsection.4.2}{}}
+\newlabel{sec:results2-control@cref}{{[subsection][2][4]4.2}{[1][15][]15}{}{}{}}
+\def\@LN@column{1}
+\@writefile{toc}{\contentsline {paragraph}{Thermostatic PPO negative control and hybrid recovery.}{16}{paragraph*.15}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces \textbf  {The fidelity--utility paradox at a glance.} For the four thermostatic-PPO backends the measured chain runs \textbf  {(A)} 24\,h rollout RMSE $\to $ \textbf  {(B)} action-surface roughness $\to $ \textbf  {(C)} policy saturation $\to $ \textbf  {(D)} live maintenance score $m_s$. The higher-fidelity backends (calibrated GB, matched-resolution BB) win on (A) yet are rougher, saturate, and collapse in (D) ($m_s>1$), while the coarse hourly BB and the hybrid stay usable, and the contradiction between (A) and (D) is the paradox. For the hybrid, panel~\textbf  {(A)} shows the BB rollout RMSE because the hybrid rolls out on BB; GB enters only as a frozen reward censor, so the hybrid has no independent 24\,h predictive RMSE (hence the ``---'' in Table~\ref {tab:paradox}). Panel~\textbf  {(D)} reports the cross-window mean of the peak and typical maintenance scores (per-window values in Table~\ref {tab:paradox}).}}{16}{figure.caption.16}\protected@file@percent }
+\newlabel{fig:evidence_chain}{{4}{16}{\textbf {The fidelity--utility paradox at a glance.} For the four thermostatic-PPO backends the measured chain runs \textbf {(A)} 24\,h rollout RMSE $\to $ \textbf {(B)} action-surface roughness $\to $ \textbf {(C)} policy saturation $\to $ \textbf {(D)} live maintenance score $m_s$. The higher-fidelity backends (calibrated GB, matched-resolution BB) win on (A) yet are rougher, saturate, and collapse in (D) ($m_s>1$), while the coarse hourly BB and the hybrid stay usable, and the contradiction between (A) and (D) is the paradox. For the hybrid, panel~\textbf {(A)} shows the BB rollout RMSE because the hybrid rolls out on BB; GB enters only as a frozen reward censor, so the hybrid has no independent 24\,h predictive RMSE (hence the ``---'' in Table~\ref {tab:paradox}). Panel~\textbf {(D)} reports the cross-window mean of the peak and typical maintenance scores (per-window values in Table~\ref {tab:paradox})}{figure.caption.16}{}}
+\newlabel{fig:evidence_chain@cref}{{[figure][4][]4}{[1][16][]16}{}{}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Central fidelity--utility paradox. The four thermostatic-PPO training backends of the taxonomy (Table~\ref {tab:taxonomy}), each trained on its surrogate and evaluated zero-shot in closed loop on the live BOPTEST \texttt  {bestest\_air} runtime over the peak/typical 14-day windows. Predictive fidelity (24\,h rollout RMSE; lower is more accurate) is set against live control utility (maintenance score $m_s$, with $m_s>1$ unusable, and comfort violation). Higher predictive fidelity does not imply usability: both finer backends collapse, whereas the role-separated hybrid is robust. The matched-resolution BB row isolates the model-class confound (Section~\ref {sec:mechanism-hybrid}); per-window live closed-loop RMSE and energy are broken out in Supplementary Figure~S7.}}{16}{table.caption.17}\protected@file@percent }
+\newlabel{tab:paradox}{{4}{16}{Central fidelity--utility paradox. The four thermostatic-PPO training backends of the taxonomy (Table~\ref {tab:taxonomy}), each trained on its surrogate and evaluated zero-shot in closed loop on the live BOPTEST \texttt {bestest\_air} runtime over the peak/typical 14-day windows. Predictive fidelity (24\,h rollout RMSE; lower is more accurate) is set against live control utility (maintenance score $m_s$, with $m_s>1$ unusable, and comfort violation). Higher predictive fidelity does not imply usability: both finer backends collapse, whereas the role-separated hybrid is robust. The matched-resolution BB row isolates the model-class confound (Section~\ref {sec:mechanism-hybrid}); per-window live closed-loop RMSE and energy are broken out in Supplementary Figure~\suppref {S7}}{table.caption.17}{}}
+\newlabel{tab:paradox@cref}{{[table][4][]4}{[1][16][]16}{}{}{}}
+\def\@LN@column{1}
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Predictive fidelity versus live control utility. Lower rollout RMSE can raise live $m_s$; the hybrid returns to the usable region. Filled/open markers denote peak/typical windows; markers are the canonical seed-42 $m_s$ and error bars are $\pm 1$ seed s.d.\ over $N=3$ seeds for all four backends, including direct GB (Table~S14).}}{17}{figure.caption.18}\protected@file@percent }
+\newlabel{fig:paradox_scatter}{{5}{17}{Predictive fidelity versus live control utility. Lower rollout RMSE can raise live $m_s$; the hybrid returns to the usable region. Filled/open markers denote peak/typical windows; markers are the canonical seed-42 $m_s$ and error bars are $\pm 1$ seed s.d.\ over $N=3$ seeds for all four backends, including direct GB (Table~\suppref {S14})}{figure.caption.18}{}}
+\newlabel{fig:paradox_scatter@cref}{{[figure][5][]5}{[1][16][]17}{}{}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Live BOPTEST maintenance-score decomposition. Direct GB fails through sustained out-of-band time; pure BB and the hybrid keep duration and severity small.}}{17}{figure.caption.19}\protected@file@percent }
+\newlabel{fig:ms_decomp}{{6}{17}{Live BOPTEST maintenance-score decomposition. Direct GB fails through sustained out-of-band time; pure BB and the hybrid keep duration and severity small}{figure.caption.19}{}}
+\newlabel{fig:ms_decomp@cref}{{[figure][6][]6}{[1][17][]17}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Mechanism: temporal coarseness, roughness, and saturation}{17}{subsection.4.3}\protected@file@percent }
+\newlabel{sec:mechanism-hybrid}{{4.3}{17}{Mechanism: temporal coarseness, roughness, and saturation}{subsection.4.3}{}}
+\newlabel{sec:mechanism-hybrid@cref}{{[subsection][3][4]4.3}{[1][17][]17}{}{}{}}
+\def\@LN@column{1}
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Measured roughness mechanism. The collapsing single-model backends expose rougher action-response surfaces, produce near bang-bang saturation, and fail live BOPTEST; the pattern is mechanistically consistent with the fidelity--utility paradox but does not by itself prove the full PPO loss-landscape causality.}}{18}{figure.caption.20}\protected@file@percent }
+\newlabel{fig:roughness_mechanism}{{7}{18}{Measured roughness mechanism. The collapsing single-model backends expose rougher action-response surfaces, produce near bang-bang saturation, and fail live BOPTEST; the pattern is mechanistically consistent with the fidelity--utility paradox but does not by itself prove the full PPO loss-landscape causality}{figure.caption.20}{}}
+\newlabel{fig:roughness_mechanism@cref}{{[figure][7][]7}{[1][18][]18}{}{}{}}
+\def\@LN@column{1}
+\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces \textbf  {Live closed-loop behaviour (typical window).} Zone temperature against the comfort band, with ambient disturbance and HVAC power, for the pure-BB, direct-GB, and hybrid controllers on the live BOPTEST runtime: direct GB saturates the actuator and leaves the comfort band, whereas the coarse BB and the hybrid track it and stay in band.}}{19}{figure.caption.21}\protected@file@percent }
+\newlabel{fig:closed_loop_main}{{8}{19}{\textbf {Live closed-loop behaviour (typical window).} Zone temperature against the comfort band, with ambient disturbance and HVAC power, for the pure-BB, direct-GB, and hybrid controllers on the live BOPTEST runtime: direct GB saturates the actuator and leaves the comfort band, whereas the coarse BB and the hybrid track it and stay in band}{figure.caption.21}{}}
+\newlabel{fig:closed_loop_main@cref}{{[figure][8][]8}{[1][18][]19}{}{}{}}
+\newlabel{ssec:coarse-graining}{{4.3}{19}{Mechanism: temporal coarseness, roughness, and saturation}{figure.caption.21}{}}
+\newlabel{ssec:coarse-graining@cref}{{[subsection][3][4]4.3}{[1][19][]19}{}{}{}}
+\def\@LN@column{1}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}Hybrid robustness and controller-family boundary tests}{20}{subsection.4.4}\protected@file@percent }
+\newlabel{ssec:hybrid-recovery}{{4.4}{20}{Hybrid robustness and controller-family boundary tests}{subsection.4.4}{}}
+\newlabel{ssec:hybrid-recovery@cref}{{[subsection][4][4]4.4}{[1][20][]20}{}{}{}}
+\@writefile{toc}{\contentsline {paragraph}{Transfer-gap diagnostics.}{20}{paragraph*.22}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{HDRL, MORL, and the PI reference.}{20}{paragraph*.23}\protected@file@percent }
+\newlabel{sec:results2-boundary}{{4.4}{20}{HDRL, MORL, and the PI reference}{paragraph*.23}{}}
+\newlabel{sec:results2-boundary@cref}{{[subsection][4][4]4.4}{[1][20][]20}{}{}{}}
+\citation{Gao2024Predictive}
+\def\@LN@column{1}
+\@writefile{toc}{\contentsline {paragraph}{HDRL: censor-weight specificity.}{21}{paragraph*.24}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{MORL: observation geometry and seed stability.}{21}{paragraph*.25}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Synthesis against the PI reference.}{21}{paragraph*.26}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.5}Transfer boundary: calibration transfers, frozen policy does not}{21}{subsection.4.5}\protected@file@percent }
+\newlabel{sec:results3-transfer}{{4.5}{21}{Transfer boundary: calibration transfers, frozen policy does not}{subsection.4.5}{}}
+\newlabel{sec:results3-transfer@cref}{{[subsection][5][4]4.5}{[1][21][]21}{}{}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.5.1}Protocol, testcases, and metrics}{21}{subsubsection.4.5.1}\protected@file@percent }
+\citation{Coraci2024HeteroTL,Coraci2025HiLo}
+\def\@LN@column{1}
+\@writefile{toc}{\contentsline {paragraph}{Testcases, actuator adapters, and recalibration regimes.}{22}{paragraph*.27}\protected@file@percent }
+\newlabel{eq:hydronic_balance}{{6}{22}{Testcases, actuator adapters, and recalibration regimes}{equation.6}{}}
+\newlabel{eq:hydronic_balance@cref}{{[equation][6][]6}{[1][22][]22}{}{}{}}
+\def\@LN@column{1}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.5.2}Controller-side transfer verdicts}{23}{subsubsection.4.5.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces Transferability matrix. Columns: $m_{s,\mathrm  {RL}}$ and $m_{s,\mathrm  {PI}}$, the maintenance scores of the RL controller and the PI baseline; pass threshold $\tau =1.25\,m_{s,\mathrm  {PI}}$; the controller verdict is PASS when $m_{s,\mathrm  {RL}}\le \tau $; energy change $\Delta E=100\,(E_{\mathrm  {RL}}-E_{\mathrm  {PI}})/E_{\mathrm  {PI}}$ (\%); raw and full-recalibration rollout RMSE with relative gain $G_{\mathrm  {RMSE}}=100\,(\mathrm  {RMSE}_{\mathrm  {raw}}-\mathrm  {RMSE}_{\mathrm  {full}})/\mathrm  {RMSE}_{\mathrm  {raw}}$ (\%); capacitance ratio $\rho _C=C_{\mathrm  {zon}}/C_{\mathrm  {air}}$ against the source $C_{\mathrm  {air}}=4.413\times 10^5$~J/K. $^\dagger $ denotes threshold PASS with energy penalty.}}{23}{table.caption.28}\protected@file@percent }
+\newlabel{tab:transfer_matrix}{{5}{23}{Transferability matrix. Columns: $m_{s,\mathrm {RL}}$ and $m_{s,\mathrm {PI}}$, the maintenance scores of the RL controller and the PI baseline; pass threshold $\tau =1.25\,m_{s,\mathrm {PI}}$; the controller verdict is PASS when $m_{s,\mathrm {RL}}\le \tau $; energy change $\Delta E=100\,(E_{\mathrm {RL}}-E_{\mathrm {PI}})/E_{\mathrm {PI}}$ (\%); raw and full-recalibration rollout RMSE with relative gain $G_{\mathrm {RMSE}}=100\,(\mathrm {RMSE}_{\mathrm {raw}}-\mathrm {RMSE}_{\mathrm {full}})/\mathrm {RMSE}_{\mathrm {raw}}$ (\%); capacitance ratio $\rho _C=C_{\mathrm {zon}}/C_{\mathrm {air}}$ against the source $C_{\mathrm {air}}=4.413\times 10^5$~J/K. $^\dagger $ denotes threshold PASS with energy penalty}{table.caption.28}{}}
+\newlabel{tab:transfer_matrix@cref}{{[table][5][]5}{[1][23][]23}{}{}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces Comfort--energy deployment plane. Residential hydronic cases save energy but fail the comfort threshold; commercial hydronic passes the threshold with a 35.3\% energy penalty. No frozen-policy transfer is deployment-ready.}}{23}{figure.caption.29}\protected@file@percent }
+\newlabel{fig:deployment_plane}{{9}{23}{Comfort--energy deployment plane. Residential hydronic cases save energy but fail the comfort threshold; commercial hydronic passes the threshold with a 35.3\% energy penalty. No frozen-policy transfer is deployment-ready}{figure.caption.29}{}}
+\newlabel{fig:deployment_plane@cref}{{[figure][9][]9}{[1][23][]23}{}{}{}}
+\citation{Quinonero2009DatasetShift,RiahiSamani2026OOD}
+\citation{Liao2025HDRL,Byeon2025MaxMinMORL}
+\def\@LN@column{1}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.5.3}Surrogate-side transfer}{24}{subsubsection.4.5.3}\protected@file@percent }
+\newlabel{ssec:czon}{{4.5.3}{24}{Surrogate-side transfer}{subsubsection.4.5.3}{}}
+\newlabel{ssec:czon@cref}{{[subsubsection][3][4,5]4.5.3}{[1][23][]24}{}{}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {5}Discussion}{24}{section.5}\protected@file@percent }
+\newlabel{sec:discussion}{{5}{24}{Discussion}{section.5}{}}
+\newlabel{sec:discussion@cref}{{[section][5][]5}{[1][24][]24}{}{}{}}
+\citation{Haarnoja2018SAC}
+\def\@LN@column{1}
+\@writefile{toc}{\contentsline {paragraph}{Limitations.}{25}{paragraph*.30}\protected@file@percent }
+\newlabel{ssec:block1-limitations}{{5}{25}{Limitations}{paragraph*.30}{}}
+\newlabel{ssec:block1-limitations@cref}{{[section][5][]5}{[1][25][]25}{}{}{}}
+\newlabel{ssec:b3lim}{{5}{25}{Limitations}{paragraph*.30}{}}
+\newlabel{ssec:b3lim@cref}{{[section][5][]5}{[1][25][]25}{}{}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {6}Conclusion}{25}{section.6}\protected@file@percent }
+\newlabel{sec:conclusion}{{6}{25}{Conclusion}{section.6}{}}
+\newlabel{sec:conclusion@cref}{{[section][6][]6}{[1][25][]25}{}{}{}}
+\def\@LN@column{1}
+\bibdata{references}
+\bibcite{AlSayed2024Review}{{1}{2024}{{Al~Sayed et~al.}}{{Al~Sayed, Boodi, Sadeghian~Broujeny, and Beddiar}}}
+\bibcite{Nguyen2024Modelling}{{2}{2024}{{Nguyen et~al.}}{{Nguyen, Pham, Oo, Santamouris, Ahn, and Lim}}}
+\bibcite{Savino2025ASHRAE}{{3}{2025}{{Savino et~al.}}{{Savino, Razzano, Pagone, Novara, and Capozzoli}}}
+\bibcite{Gao2024Predictive}{{4}{2024}{{Gao et~al.}}{{Gao, Shi, Miyata, and Akashi}}}
+\bibcite{Hou2024MultiSource}{{5}{2024}{{Hou et~al.}}{{Hou, Cheng, Kwok, and Ma}}}
+\bibcite{Blum2021BOPTEST}{{6}{2021}{{Blum et~al.}}{{Blum, Arroyo, Huang, Drgo{\v n}a, Jorissen, Walnum, Chen, Benne, Vrabie, Wetter, and Helsen}}}
+\bibcite{Wang2025SafeDRL}{{7}{2025}{{Wang et~al.}}{{Wang, Wang, Huang, Zhu, Arroyo, and Li}}}
+\bibcite{HouEvins2024}{{8}{2024}{{Hou and Evins}}{{}}}
+\bibcite{Mshragi2026FastML}{{9}{2026}{{Mshragi and Petri}}{{}}}
+\bibcite{RiahiSamani2026OOD}{{10}{2026}{{Riahi~Samani et~al.}}{{Riahi~Samani, Zhao, and Chen}}}
+\bibcite{Byeon2025MaxMinMORL}{{11}{2025}{{Byeon et~al.}}{{Byeon, Park, Chae, Leshem, and Sung}}}
+\bibcite{Liao2025HDRL}{{12}{2025}{{Liao et~al.}}{{Liao, Miyata, Qu, and Akashi}}}
+\bibcite{Wetter2014Modelica}{{13}{2014}{{Wetter et~al.}}{{Wetter, Zuo, Nouidui, and Pang}}}
+\bibcite{Arroyo2021GymBOPTEST}{{14}{2021}{{Arroyo et~al.}}{{Arroyo, Manna, Spiessens, and Helsen}}}
+\def\@LN@column{1}
+\@writefile{toc}{\contentsline {section}{\numberline {7}References}{27}{section.7}\protected@file@percent }
+\bibcite{VazquezCanteli2019CityLearn}{{15}{2019}{{V\'azquez-Canteli et~al.}}{{V\'azquez-Canteli, K\"ampf, Henze, and Nagy}}}
+\bibcite{VazquezCanteli2019Review}{{16}{2019}{{V\'azquez-Canteli and Nagy}}{{}}}
+\bibcite{Sun2024DirectTSup}{{17}{2024}{{Sun et~al.}}{{Sun, Hu, Mae, and Imaizumi}}}
+\bibcite{Deng2025MultiAgent}{{18}{2025}{{Deng et~al.}}{{Deng, Wang, and Meng}}}
+\bibcite{Alotaibi2025ContextAware}{{19}{2025}{{Alotaibi}}{{}}}
+\bibcite{Bacon2017Options}{{20}{2017}{{Bacon et~al.}}{{Bacon, Harb, and Precup}}}
+\bibcite{Nachum2018HIRO}{{21}{2018}{{Nachum et~al.}}{{Nachum, Gu, Lee, and Levine}}}
+\bibcite{Yang2019MORL}{{22}{2019}{{Yang et~al.}}{{Yang, Sun, and Narasimhan}}}
+\bibcite{Roijers2013MOSurvey}{{23}{2013}{{Roijers et~al.}}{{Roijers, Vamplew, Whiteson, and Dazeley}}}
+\bibcite{Hayes2022MOSurvey}{{24}{2022}{{Hayes et~al.}}{{Hayes, R{\u a}dulescu, Bargiacchi, K{\"a}llstr{\"o}m, Macfarlane, Reymond, Verstraeten, et~al.}}}
+\bibcite{Bacher2011RCIdentification}{{25}{2011}{{Bacher and Madsen}}{{}}}
+\bibcite{Berthou2014RC}{{26}{2014}{{Berthou et~al.}}{{Berthou, Stabat, Salvazet, and Marchio}}}
+\bibcite{Bunning2020RC}{{27}{2020}{{B{\"u}nning et~al.}}{{B{\"u}nning, Huber, Heer, Aboudonia, and Lygeros}}}
+\bibcite{Picard2017WhiteBox}{{28}{2017}{{Picard et~al.}}{{Picard, Drgo{\v n}a, Kvasnica, and Helsen}}}
+\bibcite{Raissi2019PINN}{{29}{2019}{{Raissi et~al.}}{{Raissi, Perdikaris, and Karniadakis}}}
+\bibcite{Chen2018NeuralODE}{{30}{2018}{{Chen et~al.}}{{Chen, Rubanova, Bettencourt, and Duvenaud}}}
+\bibcite{Karpatne2017TheoryGuided}{{31}{2017}{{Karpatne et~al.}}{{Karpatne, Atluri, Faghmous, Steinbach, Banerjee, Ganguly, Shekhar, Samatova, and Kumar}}}
+\def\@LN@column{1}
+\bibcite{Willard2022PIML}{{32}{2022}{{Willard et~al.}}{{Willard, Jia, Xu, Steinbach, and Kumar}}}
+\bibcite{Hedayat2025PINN}{{33}{2025}{{Hedayat et~al.}}{{Hedayat, Ziarati, and Manganelli}}}
+\bibcite{Lu2021DeepONet}{{34}{2021}{{Lu et~al.}}{{Lu, Jin, Pang, Zhang, and Karniadakis}}}
+\bibcite{Li2021FNO}{{35}{2021}{{Li et~al.}}{{Li, Kovachki, Azizzadenesheli, Liu, Bhattacharya, Stuart, and Anandkumar}}}
+\bibcite{Benner2015ROM}{{36}{2015}{{Benner et~al.}}{{Benner, Gugercin, and Willcox}}}
+\bibcite{Jones1998EGO}{{37}{1998}{{Jones et~al.}}{{Jones, Schonlau, and Welch}}}
+\bibcite{Mayor2025Parallelized}{{38}{2025}{{Mayor et~al.}}{{Mayor, Obando-Ceron, Courville, and Castro}}}
+\bibcite{Radac2025OnlineRL}{{39}{2025}{{Radac and Chirla}}{{}}}
+\bibcite{Garcia2015SafeRL}{{40}{2015}{{Garc{\'\i }a and Fern{\'a}ndez}}{{}}}
+\bibcite{Quinonero2009DatasetShift}{{41}{2009}{{Qui\~{n}onero Candela et~al.}}{{Qui\~{n}onero Candela, Sugiyama, Schwaighofer, and Lawrence}}}
+\bibcite{Lambert2020ObjectiveMismatch}{{42}{2020}{{Lambert et~al.}}{{Lambert, Amos, Yadan, and Calandra}}}
+\bibcite{Janner2019MBPO}{{43}{2019}{{Janner et~al.}}{{Janner, Fu, Zhang, and Levine}}}
+\bibcite{Farahmand2017VAML}{{44}{2017}{{Farahmand et~al.}}{{Farahmand, Barreto, and Nikovski}}}
+\bibcite{Zhao2020Sim2Real}{{45}{2020}{{Zhao et~al.}}{{Zhao, Queralta, and Westerlund}}}
+\bibcite{Coraci2024HeteroTL}{{46}{2024}{{Coraci et~al.}}{{Coraci, Brandi, Hong, and Capozzoli}}}
+\bibcite{Coraci2025HiLo}{{47}{2025}{{Coraci et~al.}}{{Coraci, Silvestri, Razzano, Fop, Brandi, Borkowski, Hong, Schlueter, and Capozzoli}}}
+\bibcite{Meng2025Lifelong}{{48}{2025}{{Meng et~al.}}{{Meng, Bing, Yue, Chen, Huang, Gao, Sun, and Knoll}}}
+\def\@LN@column{1}
+\bibcite{Sutton1991Dyna}{{49}{1991}{{Sutton}}{{}}}
+\bibcite{Hafner2025Dreamer}{{50}{2025}{{Hafner et~al.}}{{Hafner, Pasukonis, Ba, and Lillicrap}}}
+\bibcite{Sutton2018RL}{{51}{2018}{{Sutton and Barto}}{{}}}
+\bibcite{Schulman2017PPO}{{52}{2017}{{Schulman et~al.}}{{Schulman, Wolski, Dhariwal, Radford, and Klimov}}}
+\bibcite{Schulman2016GAE}{{53}{2016}{{Schulman et~al.}}{{Schulman, Moritz, Levine, Jordan, and Abbeel}}}
+\bibcite{Raffin2021SB3}{{54}{2021}{{Raffin et~al.}}{{Raffin, Hill, Gleave, Kanervisto, Ernestus, and Dormann}}}
+\bibcite{Haarnoja2018SAC}{{55}{2018}{{Haarnoja et~al.}}{{Haarnoja, Zhou, Abbeel, and Levine}}}
+\def\@LN@column{1}
+\newlabel{LastPage}{{6}{30}{Conclusion}{page.30}{}}
+\gdef\lastpage@lastpage{30}
+\gdef\lastpage@lastpageHy{30}
+\gdef \@abspage@last{30}

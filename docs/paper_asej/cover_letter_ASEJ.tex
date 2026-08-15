@@ -1,0 +1,92 @@
+% Cover letter for the ASEJ submission.
+% cover_letter_ASEJ.md is the editable source of record; this file mirrors it so a
+% PDF exists for portals that want the letter as an attachment rather than pasted
+% into a text box. Keep the two in step.
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{mathptmx}
+\usepackage[margin=2.4cm]{geometry}
+\usepackage{microtype}
+\usepackage{array}
+\pagestyle{empty}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{7pt}
+
+\begin{document}
+
+To the Editor-in-Chief\\
+Ain Shams Engineering Journal\\
+editor@eng.asu.edu.eg
+
+Dear Editor,
+
+We submit for your consideration the original research article \textbf{``Predictive fidelity versus
+training utility in surrogate-based reinforcement learning for HVAC control: a role-separated hybrid
+remedy''} for publication in \emph{Ain Shams Engineering Journal}.
+
+\textbf{What the paper does.} Heating, ventilation and air-conditioning systems are the largest
+single energy consumer in buildings, and reinforcement-learning (RL) supervisory controllers are
+almost always trained against a fast learned surrogate of the building rather than against the
+building itself. The whole practice rests on an assumption that, to our knowledge, has never been
+tested directly: that a surrogate with higher predictive fidelity is a better training environment.
+Using the open BOPTEST benchmark we show it is false, diagnose why, and provide an engineering
+remedy.
+
+\textbf{Main results.}
+
+\begin{enumerate}\itemsep2pt \parskip0pt
+\item A calibrated grey-box resistance-capacitance twin is by far the better predictor (24 h
+rollout error $0.644\,^{\circ}$C against $1.557\,^{\circ}$C for a compact black-box surrogate), yet
+the controller trained directly on it collapses on the live emulator on every seed, with comfort
+violation above 77\,\%.
+\item A matched-resolution ablation, in which the \emph{same} black-box architecture is retrained on
+a finer corpus, becomes more accurate ($0.876\,^{\circ}$C) and equally unusable. This closes the
+obvious model-class confound and identifies the coarse per-step temperature increment, that is the
+temporal resolution of the training corpus, as the operative variable.
+\item A role-separated hybrid training environment, in which the black-box surrogate supplies the
+rollout dynamics and a frozen physical twin acts only as a per-step model-disagreement reward
+censor, gives the best cross-window robustness of the study (maintenance score 0.041, comfort
+violation below 5\,\%) at about 85 times live-simulator throughput.
+\item Two boundary tests bound the recipe: the censor weight is controller-family specific, and
+transfer to three hydronic test cases is component-level, since the calibration pipeline transfers
+while the frozen policy does not.
+\end{enumerate}
+
+\textbf{Fit to the journal.} The work sits at the intersection of mechanical and control engineering
+with computational methods, which the journal explicitly welcomes (``papers in which knowledge from
+other disciplines is integrated with engineering''). It is fully reproducible on an open,
+standardized building-control benchmark, and its practical recommendation is directly actionable for
+building-control practitioners: a surrogate intended as an RL training environment should be
+validated on downstream closed-loop utility and on the smoothness of its action-response surface,
+not on predictive error alone.
+
+\textbf{Compliance.} The manuscript is prepared for double-anonymized review: a separate title page
+carries all author, affiliation, funding and interest information, and the manuscript file itself
+contains no identifying material. All figures and tables are placed next to the relevant text with
+captions below each object, sections are numbered, references are numbered in order of appearance
+with journal titles abbreviated, and six keywords are given. Supplementary Material with the full
+reproduction detail is attached separately.
+
+\textbf{A note on the manuscript format.} We have submitted in Elsevier's two-column layout rather
+than the 12\,pt single-spaced single-column format named in the Guide for Authors, and we would like
+to explain the choice rather than leave it to inference. Read literally, the two instructions cannot
+be satisfied together: a recent Full Length Article in this journal runs to roughly 10\,000 words
+with 9 figures and 7 tables, which in 12\,pt single-column would occupy some 26 pages, well beyond
+the stated 10-page limit. We therefore took the page limit to refer to the journal's own two-column
+layout, in which our manuscript occupies 12 pages with 9 figures, 5 tables and 55 references, close
+to the length of a typical article in the journal. We would of course be glad to supply the
+manuscript in the single-column 12\,pt format instead if the editorial office prefers it.
+
+The work is original, has not been published previously and is not under consideration elsewhere.
+All authors have approved the manuscript and agree with its submission. The authors declare no
+competing interests.
+
+Thank you for considering our submission.
+
+Sincerely,
+
+Almaz Sapargali (corresponding author)\\
+almaz.sapargali2001@gmail.com
+
+\end{document}

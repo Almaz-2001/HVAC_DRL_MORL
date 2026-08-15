@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="refresh" content="30">
+<title>TikZ / PGFPlots figure previews</title>
+<style>
+  body { font-family: -apple-system, Segoe UI, Roboto, sans-serif; margin: 0; padding: 24px;
+         background: #f4f5f7; color: #1c2733; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  p.sub { color: #667; margin: 0 0 20px; font-size: 14px; }
+  .count { display:inline-block; background:#1b7837; color:#fff; border-radius:12px; padding:2px 10px; font-size:12px; font-weight:600; }
+  .card { background: #fff; border: 1px solid #e2e6ea; border-radius: 8px; padding: 16px 18px;
+          margin-bottom: 22px; box-shadow: 0 1px 3px rgba(0,0,0,.05); }
+  .card h2 { font-size: 15px; margin: 0 0 2px; }
+  .card .tag { font-size: 12px; color: #2166ac; font-weight: 600; }
+  .card .note { font-size: 12.5px; color: #556; margin: 4px 0 12px; }
+  .card img { max-width: 100%; height: auto; display: block; border: 1px solid #eee; border-radius: 4px; }
+</style>
+</head>
+<body>
+  <h1>Готовые фигуры — нативный TikZ / PGFPlots <span class="count">6 готово</span></h1>
+  <p class="sub">Data-driven из committed CSV · LaTeX-типографика (Latin Modern) · единый стиль <code>_pgfstyle.tex</code> · BB/GB-нейминг · siunitx-единицы · легенды снизу · страница сама обновляется каждые 30&nbsp;с</p>
+
+  <div class="card">
+    <span class="tag">MAIN · Fig 7 (центральная)</span>
+    <h2>Fidelity–utility paradox scatter</h2>
+    <p class="note">2 панели: (A) single-model paradox — точнее модель, хуже live m_s; (B) hybrid возвращается в usable band. Зоны usable/collapse, пороги, peak/typical маркеры с error bars, аннотация hybrid. Данные из block2_fidelity_utility_scatter.csv.</p>
+    <img src="fig_fidelity_scatter-1.png" alt="Fig 7 scatter">
+  </div>
+
+  <div class="card">
+    <span class="tag">MAIN · Fig 9</span>
+    <h2>Deployment plane: comfort/safety margin vs energy</h2>
+    <p class="note">Scatter margin M_k = τ_k − m_s^RL vs energy Δ, 4 интерпретируемых квадранта. Данные из block3_transfer_matrix.csv.</p>
+    <img src="fig_deployment_quadrants-1.png" alt="Fig 9 deployment">
+  </div>
+
+  <div class="card">
+    <span class="tag">MAIN · Fig 12</span>
+    <h2>C_zon hypothesis interval test</h2>
+    <p class="note">Scatter с полосами гипотез A/B и вычисленной из таблицы средней линией; значения ratio из CSV.</p>
+    <img src="fig_final_eng_fig12_czon-1.png" alt="Fig 12 czon">
+  </div>
+
+  <div class="card">
+    <span class="tag">MAIN · Fig 15</span>
+    <h2>Full Stage A/B/C transfer RMSE improvement</h2>
+    <p class="note">Сгруппированные столбцы, подписи ↓% из колонки rmse_improvement_pct.</p>
+    <img src="fig_final17_fig15-1.png" alt="Fig 15">
+  </div>
+
+  <div class="card">
+    <span class="tag">MAIN · Fig 5</span>
+    <h2>Matched-corpus predictive-fidelity decomposition (waterfall)</h2>
+    <p class="note">BB hourly → matched-BB → GB calibrated; вклад resolution (74.6%) и Stage A/B/C calibration (25.4%) вычислены в самой фигуре из block1_corpus_matched_comparison.csv.</p>
+    <img src="fig_rie05_waterfall-1.png" alt="Fig 5 waterfall">
+  </div>
+
+  <div class="card">
+    <span class="tag">SUPP · block3 controller bar</span>
+    <h2>Controller-side transfer vs the pre-specified threshold</h2>
+    <p class="note">Столбцы m_s^RL / m_s^PI, красные штрихи-пороги, вердикты PASS/FAIL прямо из колонки none_controller_verdict.</p>
+    <img src="fig_block3_controller_bar-1.png" alt="controller bar">
+  </div>
+</body>
+</html>
