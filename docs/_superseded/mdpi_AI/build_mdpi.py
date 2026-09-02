@@ -20,7 +20,9 @@ import shutil
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-SRC = HERE.parent / "paper_combined"
+# This port now lives under docs/_superseded/, two levels below docs/, so the
+# prose is still sliced from the live docs/paper_combined/.
+SRC = HERE.parent.parent / "paper_combined"
 
 
 def _supp_labelmap():

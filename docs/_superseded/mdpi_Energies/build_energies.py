@@ -22,7 +22,9 @@ import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-SRC = HERE.parent / "paper_asej"
+# This port now lives under docs/_superseded/, two levels below docs/, so the
+# results sections are still sliced from the live docs/paper_asej/.
+SRC = HERE.parent.parent / "paper_asej"
 
 BODY_SLICES = [
     ("body_related.tex", r"\section{Related work}", r"\section{Materials and methods}"),
