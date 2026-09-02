@@ -116,7 +116,7 @@ PI / RBC / MPC & -- & proportional--integral / rule-based / model predictive con
 \textbf{Main-article section} & \textbf{Supporting material in this Supplement} \\
 \midrule
 \endhead
-\S1 Introduction & Pre-specified hypotheses H1--H4 and their verdicts (\S2) \\
+\S1 Introduction & Pre-specified hypotheses H1--H5 and their verdicts (\S2) \\
 \S3.1--3.2 Test case, control problem, metrics & Full comfort-reward form (Table~\ref{tab:reward}); 17D observation breakdown (Table~\ref{tab:obs17}); evaluation scenarios (Table~\ref{tab:scenarios}); test-case list (Table~\ref{tab:testcases}); BOPTEST RTE loop (Figure~\ref{fig:rte_loop}) \\
 \S3.3 Surrogate backends & Data corpora (Table~\ref{tab:block1-corpora}); architectures (Table~\ref{tab:architecture-summary}); BB configuration and scaling (Tables~\ref{tab:v3-config}, \ref{tab:v3-scaling}); Stage A/B/C calibration (Tables~\ref{tab:stage-a}--\ref{tab:stage-abc}, \ref{tab:stage-abc-summary}); learning curve and physical-consistency audit (Figures~\ref{fig:v3-learning-curve}, \ref{fig:physics}); modeling assumptions and transition schema (Tables~\ref{tab:modelling}, \ref{tab:transition-schema}) \\
 \S3.4 Role-separated hybrid & Mechanism schematic (Figure~\ref{fig:hybrid_reward}); censor-weight sweep (Table~\ref{tab:hybrid_sweep}); censor formula (\S6) \\
@@ -131,14 +131,17 @@ PI / RBC / MPC & -- & proportional--integral / rule-based / model predictive con
 \end{longtable}
 
 \section*{2\quad Pre-specified hypotheses}
-Four claims were stated in advance of the corresponding runs and are reported whether supported or
-falsified. H1--H2 are the primary paradox and its remedy; H3--H4 are boundary tests that map the
-recipe's scope.
+Five claims were stated in advance of the corresponding runs and are reported whether supported or
+falsified. H1--H2 are the primary paradox and its remedy; H3--H5 are boundary tests that map the
+recipe's scope. H5 was registered after the first four, once the inversion itself had been
+established, and its first execution was invalidated by a defect in the planner rather than by the
+data; that run is recorded rather than discarded silently.
 \begin{enumerate}[label=\textbf{H\arabic*.},leftmargin=2.8em]
 \item \emph{Fidelity--utility:} a surrogate with higher predictive fidelity is a better RL training environment. \textbf{Falsified.}
 \item \emph{Role separation:} using the physical twin as a frozen reward-shaping censor over a smooth black-box rollout recovers the control utility that direct use of the twin destroys. \textbf{Supported.}
 \item \emph{Censor-weight universality:} a single model-disagreement censor weight is sufficient across controller families. \textbf{Falsified}, which is what establishes controller-family specificity.
 \item \emph{Transferability:} the inverse-calibration pipeline and the frozen controller transfer to related hydronic testcases under documented recalibration. \textbf{Partially supported:} the pipeline transfers, the frozen controller does not.
+\item \emph{Controller-class specificity:} the fidelity--utility inversion belongs to policy-gradient learning, so a receding-horizon planner over the same surrogates escapes it. \textbf{Falsified:} the planner reproduces the inversion, reaching $m_s=0.547$/$0.869$ on the least accurate backend against $1.051$/$1.369$ on the most accurate one, within $0.005$ of the learner on the peak window.
 \end{enumerate}
 Stating these in advance is what lets the negative outcomes be read as findings rather than tuning
 artifacts. At the controller-experiment level the same discipline is applied through the CL1--CL5
@@ -149,15 +152,26 @@ and~\ref{tab:predictions}.
 The main article reports an abridged limitations paragraph. The complete statement is as follows.
 Evaluation is simulation-only on a single-zone \texttt{bestest\_air} emulator, with multi-zone and
 richer topologies untested and transfer limited to a hydronic family. First, the fidelity--utility
-relationship is established at three discrete operating points (hourly BB, matched 15-min BB, and
-the calibrated GB) rather than as a continuous fidelity--utility curve: the seed replication
-($N=3$, seeds $\{42,43,44\}$) shows that the usable controllers, the matched-resolution collapse
-and the direct-GB collapse are all seed-stable (Table~\ref{tab:seed_band}), but the fidelity axis
-is still sampled at three points rather than as a distribution, and an intermediate-resolution
-sweep (e.g.\ $1800$\,s) is left to future work. Second, the only comparison baseline is BOPTEST's
-built-in PI, a relatively weak reference, so controller utility is established comparatively
-against a modest baseline rather than against a strong tuned rule-based, Guideline-36 or MPC
-controller on the same RC model. Third, the surrogate power channel is reproduced less accurately
+relationship is established at two directionally sound operating points (hourly BB and the
+calibrated GB) together with the $\Delta t$-rescaling control, rather than as a continuous curve.
+The matched-resolution backend is \emph{excluded} from the mechanism argument: an audit of its
+response sign finds it inverted on the supply-temperature command in about nine sampled states out
+of ten, reproducibly across four independent training draws while its 24\,h rollout error improves,
+and inverted on the fan command as well. A training constraint that repairs the supply channel
+relocates the defect to the fan channel rather than removing it, so that backend is reported as a
+failure of the predictive criterion, not as a data point about temporal resolution. The seed
+replication ($N=3$, seeds $\{42,43,44\}$) shows the remaining verdicts are seed-stable
+(Table~\ref{tab:seed_band}), but the fidelity axis is still sampled at two sound points, and an
+intermediate-resolution sweep (e.g.\ $1800$\,s) on a surrogate audited across all actuated inputs
+is left to future work. Second, controller utility is established against two references: BOPTEST's
+built-in PI ($m_s=0.910$) and a pre-registered receding-horizon MPC planning through the same
+surrogates. The MPC is the stronger of the two ($m_s=0.547$/$0.869$ on the coarse BB backend) but
+it is a fixed, untuned configuration rather than a tuned Guideline-36 or industrial controller: its
+comfort violation is still $34.5\%$ and $55.6\%$ on the two windows. It was deliberately not tuned
+against $m_s$, the metric it is scored on. The planner is also a first-order method through the
+differentiable surrogate, so the comparison separates gradient-based optimisation from other
+synthesis routes rather than planning from learning; a derivative-free planner is left to future
+work. Third, the surrogate power channel is reproduced less accurately
 than temperature (calibrated power-head MAE $482$\,W, about $9\%$ of $P_{\max}=5500$\,W, rising to
 ${\sim}2.3$\,kW in the partial-calibration diagnostic regime); the reported energy KPIs
 (Figure~\ref{fig:live_kpi}) and the transfer $\Delta E$ are live-versus-live BOPTEST measurements
@@ -169,7 +183,8 @@ density (a dense four-point $\lambda_T$ sweep for HDRL but only two measured end
 thermostatic PPO and a single adopted configuration for MORL), so it is read as consistent with
 family-specific regularization rather than as a fully-swept per-family optimum. Finally, the
 paradox mechanism is \emph{measured} statically on each surrogate's one-step action map and
-corroborated by the matched-resolution ablation, but a loss-landscape analysis along the PPO
+corroborated by the $\Delta t$-rescaling control, which preserves response signs by construction,
+rather than by the matched-resolution ablation, but a loss-landscape analysis along the PPO
 trajectory and generality to off-policy algorithms (SAC, TD3) remain open; statistical support
 otherwise varies by family (MORL $N=5$, neutral $m_s=0.187\pm0.078$ with CI far below the PI
 $0.910$; HDRL $N=3$ at each of four swept $\lambda_T$), and the backend$\times$observation grid is
@@ -926,7 +941,7 @@ PI (yearly) & 0.910 & 0.636 & 0.274 \\
 \end{table}
 \begin{table}[H]
 \centering
-\caption{Controller-learning falsifiable-hypothesis ledger (CL1--CL5), cited in the main article's central fidelity--utility test. These are distinct from the paper-level hypotheses H1--H4: CL1--CL3 are the controller-experiment counterparts of H1--H3, and CL4--CL5 add MORL-specific checks. Each hypothesis is tested on the live BOPTEST RTE.}
+\caption{Controller-learning falsifiable-hypothesis ledger (CL1--CL5), cited in the main article's central fidelity--utility test. These are distinct from the paper-level hypotheses H1--H5: CL1--CL3 are the controller-experiment counterparts of H1--H3, and CL4--CL5 add MORL-specific checks. Each hypothesis is tested on the live BOPTEST RTE.}
 \label{tab:cl-ledger}
 \small
 \begin{tabular}{>{\raggedright\arraybackslash}p{5mm}>{\raggedright\arraybackslash}p{66mm}l>{\raggedright\arraybackslash}p{40mm}}

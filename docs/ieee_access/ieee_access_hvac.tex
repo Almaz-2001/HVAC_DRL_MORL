@@ -1,0 +1,336 @@
+
+\documentclass{ieeeaccess}
+
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{enumitem}
+\usepackage{siunitx}
+
+\sisetup{per-mode=symbol, range-phrase={--}, range-units=single}
+
+
+\graphicspath{{figures/}}
+
+\newcommand{\RMSE}{\ensuremath{\mathrm{RMSE}}}
+\newcommand{\Czon}{\ensuremath{C_{\mathrm{zon}}}}
+\newcommand{\Tsupply}{\ensuremath{T_{\mathrm{sup}}}}
+\newcommand{\ms}{\ensuremath{m_s}}
+
+\begin{document}
+
+\history{Date of publication xxxx 00, 0000, date of current version xxxx 00, 0000.}
+\doi{10.1109/ACCESS.2026.0429000}
+
+\title{Surrogate Selection for Reinforcement-Learning HVAC Control:
+Step Size, Not Predictive Accuracy, Predicts Control Utility}
+
+\author{\uppercase{Aksultan Mukhanbet}\authorrefmark{1},
+\uppercase{Almaz Sapargali}\authorrefmark{2}\authorrefmark{1},
+\uppercase{Serik Aibagarov}\authorrefmark{2}\authorrefmark{1},
+\uppercase{Beimbet Daribayev}\authorrefmark{3},
+\uppercase{Shona Shinassylov}\authorrefmark{2}\authorrefmark{1},
+AND \uppercase{Paulo Trigo}\authorrefmark{4}}
+
+\address[1]{Al-Farabi Kazakh National University, Almaty 050040, Kazakhstan
+(e-mail: mukhanbet.aksultan@kaznu.kz)}
+\address[2]{LLP Digit Alem, Almaty, Kazakhstan (e-mail:
+almaz.sapargali2001@gmail.com; aibagarov\_serik@kaznu.edu.kz;
+shona.shinassylov@kaznu.edu.kz)}
+\address[3]{Shakarim University, Semey, Abai Region, Kazakhstan (e-mail:
+beimbet.daribayev@kaznu.edu.kz)}
+\address[4]{Instituto Superior de Engenharia de Lisboa (ISEL), 1959-007 Lisbon,
+Portugal (e-mail: paulo.trigo@isel.pt)}
+
+\tfootnote{This work was supported by the Committee of Science of the Ministry
+of Science and Higher Education of the Republic of Kazakhstan under Grant
+AP23488794. The funder had no role in study design, in the collection, analysis
+or interpretation of data, in the writing of the report, or in the decision to
+submit the article for publication.}
+
+\corresp{Corresponding author: Almaz Sapargali (e-mail:
+almaz.sapargali2001@gmail.com).}
+
+\begin{abstract}
+Reinforcement-learning (RL) controllers for building HVAC systems are trained
+against fast learned surrogates of the building, and surrogates are selected by
+predictive error. This paper shows that predictive error is the wrong selection
+criterion and identifies one that works. On the BOPTEST benchmark a calibrated
+grey-box twin predicts far better (24~h rollout error \SI{0.644}{\celsius}
+against \SI{1.557}{\celsius} for a compact black-box surrogate) yet trains a
+controller that fails on every seed, with comfort violation above 77\%;
+retraining the same architecture at finer resolution makes it more accurate
+(\SI{0.876}{\celsius}) and equally unusable. That retraining also inverts the
+model's response to both control inputs, reproducibly and invisibly to the
+predictive metric. A rescaling control that holds scale-free response roughness fixed while varying
+the integration step isolates the operative variable: the magnitude of the
+surrogate's per-step increment, measurable on the surrogate alone before any
+policy is trained. We then introduce
+role-separated surrogate training, which stops trading smoothness against
+fidelity by assigning the two requirements to different models: a black-box
+surrogate supplies the rollout dynamics while a frozen physics-informed twin
+acts only as a per-step model-disagreement reward censor. It gives the best worst-window maintenance score of the
+study (0.041 typical) at 85 times live-simulator throughput, against 0.547/0.869
+for a receding-horizon MPC baseline and 0.910 for the emulator's own controller.
+The planner reproduces the same inverted ordering, so the effect belongs to
+optimising through the surrogate, not to reinforcement learning. Of five pre-specified hypotheses, three are falsified, including two of
+our own.
+\end{abstract}
+
+\begin{keywords}
+Air conditioning, buildings, computational modeling, digital twins, predictive
+models, reinforcement learning.
+\end{keywords}
+
+\titlepgskip=-21pt
+
+\maketitle
+
+\section{Introduction}
+\label{sec:intro}
+
+\PARstart{T}{raining} a reinforcement-learning (RL) controller requires
+millions of environment interactions, which no real building and no
+high-fidelity Modelica simulator can supply. The standard response, across
+essentially the whole HVAC RL literature~\cite{AlSayed2024Review,Nguyen2024Modelling},
+is to fit a fast learned surrogate of the building and train the policy against
+it~\cite{HouEvins2024,Mshragi2026FastML}. That makes a design decision
+unavoidable: among candidate surrogates, which one should be used as the
+training environment?
+
+In practice the decision is made on predictive error. Surrogate papers report
+multi-step rollout error, error CDFs and calibration statistics, and the
+surrogate with the lowest error is the one carried
+forward~\cite{Bacher2011RCIdentification,Bunning2020RC,Chen2018NeuralODE,Raissi2019PINN,Hedayat2025PINN}.
+This is a reasonable-looking heuristic and it is, to our knowledge, universal in
+the building-energy literature. It is also untested: predictive error is
+measured on held-out trajectories, whereas a training environment is used as a
+closed-loop transition function on \emph{policy-induced} states, and nothing
+guarantees that the two orderings agree.
+
+\textbf{They do not.} On the BOPTEST benchmark we find the ordering is not
+merely uninformative but inverted over part of the range: the \emph{least}
+accurate surrogate in the study is the only one that trains a usable controller,
+and the most accurate one trains a controller that fails outright. A calibrated
+grey-box twin reaches a 24~h rollout error of \SI{0.644}{\celsius} against
+\SI{1.557}{\celsius} for a compact black-box model, yet a policy trained on it
+leaves the comfort band for more than 77\% of the horizon on every random seed,
+while the coarse black-box model holds it for all but a few per cent of the
+time. Retraining the \emph{same} black-box architecture on a finer corpus makes
+it strictly more accurate (\SI{0.876}{\celsius}) and equally unusable, which
+rules out model class as the explanation.
+
+That retraining turns out to break something the predictive metric does not
+measure. The finer-corpus surrogate inverts its response to the
+supply-temperature command in about nine sampled states out of ten, so that a
+hotter command predicts a colder zone, reproducibly across four independent
+training draws, while its 24~h rollout error improves in every one of them. The
+fan command is inverted too. Constraining training to preserve the
+supply-response sign restores that channel to 100\% at a \emph{lower} rollout
+error still (\SI{0.745}{\celsius}) but leaves the fan channel inverted, and the
+controller trained on the repaired surrogate exploits the remaining defect
+instead. Predictive error therefore hides defects that a controller will find,
+on every actuated input, and repairing one input is not enough. Because of this
+the matched-resolution backend is reported as a failure of the predictive
+criterion rather than as evidence for the mechanism, which rests instead on the
+calibrated twin and on a rescaling control that preserves response signs by
+construction.
+
+The question this paper answers is therefore not whether such a failure can
+occur, but \emph{what property of a surrogate does predict training utility},
+given that predictive error does not. We identify it as the magnitude of the
+surrogate's per-step state increment, that is its effective step size, and we
+isolate it causally rather than by correlation: a rescaling control that leaves
+the scale-free roughness of the action-response surface unchanged while changing
+only the per-step increment reproduces the collapse. The property is measurable
+on the surrogate alone, before any controller is trained, which turns it into an
+actionable selection criterion rather than a post-hoc diagnosis.
+
+Identifying the criterion also shows why the usual remedy fails. Smoothness and
+physical fidelity are in tension in a single model: coarsening the time step
+buys the optimization-friendly response surface that policy-gradient search
+needs, and pays for it in predictive accuracy. We resolve the tension by
+refusing the trade-off, assigning the two requirements to two different models
+rather than compromising within one. A compact black-box surrogate supplies the
+rollout dynamics, and an inverse-calibrated physics-informed twin is restricted
+to a \emph{frozen, forward-only reward censor} that penalizes per-step
+disagreement between the two. The twin never enters the rollout and never enters
+the policy loss, so policy search still runs over the smooth dynamics that make
+it tractable while state--action regions the physics disputes are discouraged.
+
+\textbf{Contributions.} This paper makes three methodological contributions.
+
+\begin{enumerate}[leftmargin=*,itemsep=2pt,topsep=3pt]
+\item \textbf{A surrogate-selection criterion for RL training environments.} We
+show that predictive error fails as a predictor of downstream control utility,
+and that the per-step increment magnitude succeeds. The criterion is
+controller-independent, measurable on the surrogate in isolation, and
+established with a rescaling control that separates it from response-surface
+smoothness, with which it is otherwise confounded. We further show that
+predictive error misses a second and simpler defect, the loss of the
+control-response sign on each actuated input independently, and that this too is
+detectable before a controller is trained.
+\item \textbf{Role-separated surrogate training.} We formulate a training
+architecture that satisfies the smoothness and fidelity requirements
+simultaneously instead of trading them off, by assigning them to a rollout model
+and a frozen disagreement censor respectively. On the benchmark it recovers the
+best worst-window robustness of the study at 85 times live throughput, and two
+negative controls establish that the gain comes from the role assignment and not
+from model averaging or from better initialization.
+\item \textbf{A falsification protocol for surrogate-based RL claims.} Four
+hypotheses are pre-specified before the corresponding runs and reported whether
+supported or not, with seed replication on the central test and on the
+censor-weight sweep. Two of the four are falsified, including one of our own,
+which is what allows the negative outcomes to be read as findings rather than as
+tuning artifacts.
+\end{enumerate}
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=\linewidth]{block2_system_overview.pdf}
+\caption{Study design. \emph{Top, the selection-criterion test:} four surrogate
+backends spanning a range of predictive accuracy and per-step increment (coarse
+hourly BB, matched-resolution BB, calibrated GB, and the role-separated hybrid)
+each train the same thermostatic PPO controller, which is then scored zero-shot
+on the live BOPTEST runtime. Predictive accuracy and control utility order the
+backends differently: the two most accurate single-model backends collapse
+($\ms>1$). \emph{Bottom, boundary tests (dashed box):} hierarchical DRL,
+multi-objective RL and a three-case hydronic transfer study map where the recipe
+holds and are not part of the central test.}
+\label{fig:overview}
+\end{figure}
+
+The pre-specified hypotheses are:
+
+\begin{enumerate}[label=\textbf{H\arabic*.},leftmargin=2.8em,itemsep=2pt,topsep=3pt]
+\item \emph{Fidelity--utility:} a surrogate with higher predictive fidelity is a
+better RL training environment.
+\item \emph{Role separation:} using the physical twin as a frozen reward-shaping
+censor over a smooth black-box rollout recovers the control utility that direct
+use of the twin destroys.
+\item \emph{Censor-weight universality:} one censor weight for model
+disagreement transfers across controller families.
+\item \emph{Transferability:} the inverse-calibration pipeline and the frozen
+controller transfer to related hydronic test cases under documented
+recalibration.
+\item \emph{Controller-class specificity:} the fidelity--utility inversion is a
+property of policy-gradient learning, so a receding-horizon planner using the
+same surrogates escapes it. Registered after the first four, once the inversion
+itself had been established, and reported here whether favourable or not.
+\end{enumerate}
+
+Evidence is kept deliberately narrow (Fig.~\ref{fig:overview}). The primary
+causal test is a four-backend comparison under one thermostatic PPO controller;
+hierarchical DRL, multi-objective RL and a three-case hydronic transfer study
+are boundary tests that map where the recipe holds, not additional support for
+the central claim. Section~\ref{sec:related} positions the work,
+Section~\ref{sec:methods} defines the control problem and the architecture,
+Section~\ref{sec:results} reports and discusses the results, and
+Section~\ref{sec:conclusions} concludes. Reproduction detail is in the
+supplementary material.
+
+\input{body_related.tex}
+\input{body_methods.tex}
+\input{body_results.tex}
+
+\section{Conclusion}
+\label{sec:conclusions}
+
+Surrogate models for reinforcement-learning HVAC control are selected by
+predictive error. This paper shows that criterion to be wrong and replaces it.
+On the BOPTEST benchmark the most accurate surrogate in the study, a calibrated
+physics-informed twin with a 24~h rollout error of \SI{0.644}{\celsius}, trains
+a controller that leaves the comfort band for more than 77\% of the horizon on
+every seed, while the least accurate one (\SI{1.557}{\celsius}) trains a usable
+controller; making the black-box surrogate more accurate by refining its
+resolution (\SI{0.876}{\celsius}) makes it unusable too, so the effect is not
+attributable to model class. H1 is therefore falsified.
+
+The finer-resolution surrogate additionally exposes a second failure of the
+predictive criterion. Retraining on the finer corpus inverts the model's
+response to the supply-temperature command in about 90\% of sampled states,
+reproducibly over four draws, while rollout error improves in all of them; the
+policy trained on such a model holds the minimum supply command while the
+building sits below band. The fan command is inverted as well, and a training
+constraint that repairs the supply channel leaves the fan channel broken, with
+the resulting controller holding the fan near zero instead. Predictive error
+therefore fails as a selection criterion in two distinct ways, and the second
+one must be tested on every actuated input rather than on the model as a whole.
+The matched-resolution backend is accordingly reported as evidence about the
+criterion, not about the mechanism.
+
+What does predict training utility is the magnitude of the surrogate's per-step
+increment. A rescaling control that holds the scale-free roughness of the
+action-response surface fixed while changing only the increment reproduces the
+collapse, which separates the operative variable from the smoothness with which
+it is otherwise confounded. Because the increment is a property of the surrogate
+alone, it can be evaluated before a controller is trained, which makes it usable
+as a selection criterion rather than only as an explanation after the fact.
+
+Role-separated surrogate training turns that finding into an architecture.
+Rather than compromising between smoothness and fidelity inside one model, the
+two requirements are assigned to two: a smooth black-box surrogate carries the
+rollout dynamics and a frozen physics-informed twin enters only as a per-step
+model-disagreement reward censor. This gives the best worst-window maintenance
+score of the study ($\ms=0.087$ peak and $0.041$ typical, against
+$0.073$/$0.095$ for the best single-model backend) with comfort violation below
+5\% on both windows and an $85\times$ training speed-up, and H2 is supported.
+Two negative controls, warm-starting from the twin and using it as an
+accuracy-oriented partner, both fail, which locates the gain in the role
+assignment itself.
+
+The remaining two hypotheses are not supported, and reporting them is part of
+the contribution. The censor weight does not transfer across controller
+families: on a sweep replicated over three seeds at every setting, the weight
+that is optimal for the thermostatic family degrades the hierarchical one across
+the whole swept range, by 10.0 and 5.8 pooled seed standard deviations at the
+endpoints. H3 is falsified, and no single regularization strength can be quoted
+without naming the family it belongs to. Transfer to related buildings resolves
+into a component-level boundary: the inverse-calibration pipeline ports, with
+rollout error falling by 60.2--87.8\% and the zone capacitance re-identifying at
+a near-uniform ratio across an order-of-magnitude change in floor area, whereas
+the frozen control policy does not transfer zero-shot.
+
+For practice the implication is concrete: a surrogate intended as an RL training
+environment should be qualified on its per-step increment and on the smoothness
+of its action--response surface, and validated on downstream closed-loop
+utility, not on predictive error alone. Future work follows from the limitations
+of Section~\ref{sec:limitations}: multi-zone and mixed-topology buildings, a
+loss-landscape analysis along the training trajectory, a validated rather than
+auxiliary heating-power channel, seed replication for the
+preference-conditioned family, and deployment on a physical building.
+
+A receding-horizon MPC planning through the same surrogates was added as a
+second reference, pre-registered as H5b and reported whether favourable or not.
+It is the stronger of the two baselines, reaching $\ms=0.547$/$0.869$ against the
+emulator PI's $0.910$, and it does not approach the role-separated controller.
+It also reproduces the inversion: $0.547$/$0.869$ on the least accurate backend
+against $1.051$/$1.369$ on the most accurate one, within $0.005$ of the learner
+on the peak window. H5b, which predicted that a planner would escape the effect,
+is therefore falsified, and the scope of the mechanism is wider than the RL
+framing implied. The planner is itself a first-order method through the
+differentiable surrogate, so this separates gradient-based optimisation from
+other synthesis routes rather than planning from learning; a derivative-free
+planner is the test that would separate those.
+
+\section*{Acknowledgment}
+
+The authors thank the developers of the BOPTEST framework for the open building
+emulators used throughout this study.
+
+During the preparation of this work the authors used Claude (Anthropic) in order
+to assist with language editing and \LaTeX{} formatting. After using this tool
+the authors reviewed and edited the content as needed and take full
+responsibility for the content of the published article. No generative AI tool
+was used to generate, analyze or interpret the research data or to produce the
+scientific findings.
+
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+
+\EOD
+
+\end{document}

@@ -1466,3 +1466,104 @@ git status --short
 Do not use `git add -A` for the paper-artifact cleanup because the repository
 may also contain unrelated model-output deletions, Word lock files, or legacy
 Sinergym archive changes.
+
+## 18. Block 1/2 Extension: Response Sign, Monotonicity, MPC Baseline
+
+Added after the *Energies* pre-check return, while porting to IEEE Access. Three
+results, all pre-registered before execution, and one execution invalidated and
+recorded rather than discarded.
+
+### 18.1 Directional validity of the matched-resolution surrogate
+
+Predictive error does not see a surrogate that has the sign of its
+control response backwards. `check_surrogate_response_sign.py` samples 400
+states and, per actuated input, asks whether raising the command moves the zone
+the right way.
+
+```bash
+python3 -B evaluation/check_surrogate_response_sign.py
+python3 -B evaluation/audit_matched_bb_sign.py
+python3 -B evaluation/run_matched_bb_seed_audit.py --seeds 42 43 44
+```
+
+The matched-resolution black box is inverted in about nine sampled states out of
+ten, reproducibly over four independent training draws, while its 24 h rollout
+error improves in every one. Evidence:
+`reports/block1_matched_bb_seed_audit.json`.
+
+### 18.2 Monotonicity-constrained retraining
+
+`train_surrogate_backbone.py` gained `--lambda-mono`, `--mono-margin`,
+`--mono-jitter` and `--lambda-mono-fan`. The fan penalty is signed: it follows
+`sign(T_sup - T_zone)`, because with supply colder than the zone more fan must
+*lower* the temperature.
+
+```bash
+python3 -B evaluation/run_matched_bb_monotonic.py --seeds 42 43 44
+python3 -B evaluation/run_matched_bb_monotonic.py --fan-sweep 500 1000 2000
+```
+
+Constraining the supply-temperature channel restores it to 100 % and relocates
+the defect to the fan channel (20.8 % valid constrained, 2.2 % unconstrained).
+Constraining both gives a surrogate that is accurate, directionally valid, and
+still trains a failing controller (`m_s` 1.426 peak / 1.597 typical). Evidence:
+`reports/block1_matched_bb_monotonic_audit.json`.
+
+**Audit anchor:** the one-channel audit was believed complete for a day, and
+four manuscript claims were written on it before the fan channel was checked.
+Auditing a model "as a whole" on one input is not an audit — a controller finds
+whichever input is wrong.
+
+### 18.3 Receding-horizon MPC baseline (H5b)
+
+Pre-registration: `configs/mpc_baseline_preregistration.yaml`. Its commit SHA is
+the audit anchor for H5b, in the same way the Block 3 manifest anchors H1–H4.
+**Do not edit it after the first run**; the outcome goes in `reports/`.
+
+```bash
+python3 -B evaluation/run_mpc_baseline.py --backends mpc_bb_mono mpc_bb_hourly mpc_gb
+```
+
+H5b is **falsified**: a gradient-based planner reproduces the same inverted
+ordering, so the effect belongs to optimising through the surrogate rather than
+to reinforcement learning specifically. Result:
+`reports/block2_mpc_baseline_report.md`.
+
+The first execution of H5 was invalidated by a defect in our own planner, not by
+the surrogates: the planner optimises an unconstrained variable through `tanh`,
+the optimiser pushed it onto the saturation shelf, the gradient died and the
+warm start carried the dead sequence forward. The giveaway was three different
+surrogates producing bit-identical results. Fixed by clamping the variable to
++/- 2.5. The invalidated run is kept, not deleted:
+`reports/block2_mpc_h5_invalidated.md`.
+
+### 18.4 Seed-replicated HDRL censor-weight sweep
+
+```bash
+python3 -B evaluation/run_hdrl_seed_sweep.py --stage train     --skip-existing
+python3 -B evaluation/run_hdrl_seed_sweep.py --stage benchmark --skip-existing
+```
+
+`train_hdrl.py` gained `--seed`; before that PPO drew its own entropy and only
+the envs were seeded, so a "seed" sweep was not reproducible. The censor-weight
+trend survives replication at 10.0 sigma / 5.8 sigma and saturates above
+lambda = 0.05.
+
+## 19. Repository Audit, 2026-09-02
+
+Working tree shrank by 2.5 GB. Nothing was deleted except regenerable build
+output; everything else moved.
+
+- `_archive/` (gitignored, local only) holds 2.24 GB of unreachable training
+  runs, 47 MB of superseded submission bundles, and the captured uncommitted
+  state of three removed agent worktrees. `_archive/README.md` lists every item
+  and how to put it back.
+- `docs/_superseded/` (tracked) holds the finished MDPI *AI*, MDPI *Energies*
+  and *Results in Engineering* ports. Their build scripts were re-pointed to the
+  live sources two directories up and still run.
+- Reachability of an `outputs/` directory must be checked **twice**: by name,
+  and against every literal `outputs/...` prefix in the code with f-string
+  placeholders treated as wildcards. The seed-replication directories behind
+  §18.1 are built as `f"outputs/surrogate_v3_15min_matched_seed{seed}"` and
+  never appear as literals, so a name-only search calls the paper's own
+  evidence orphaned.

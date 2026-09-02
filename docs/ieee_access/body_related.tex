@@ -1,0 +1,70 @@
+\section{Related work}\label{sec:related}
+
+\subsection{Benchmarks and HVAC deep reinforcement learning}
+Reproducible HVAC-control research depends on a shared benchmark, because controller claims
+otherwise vary with the simulator, weather year, disturbance schedule and comfort definition.
+BOPTEST serves Modelica building models through a uniform
+API~\cite{Blum2021BOPTEST,Wetter2014Modelica} with a Gym interface for RL
+workflows~\cite{Arroyo2021GymBOPTEST}, complementing demand-response benchmarks such as
+CityLearn~\cite{VazquezCanteli2019CityLearn,VazquezCanteli2019Review}; every controller here is
+finally re-scored in BOPTEST, not only in its learned environment. Against this benchmark, HVAC DRL
+studies compare learned policies with rule-based, Guideline~36 or MPC
+references~\cite{Savino2025ASHRAE,Wang2025SafeDRL,Nguyen2024Modelling,Sun2024DirectTSup} and extend
+them to multi-agent and context-aware
+settings~\cite{Deng2025MultiAgent,Alotaibi2025ContextAware}; hierarchical policies decompose
+comfort and energy objectives across timescales~\cite{Liao2025HDRL,Bacon2017Options,Nachum2018HIRO},
+and multi-objective RL represents the energy--comfort trade-off
+explicitly~\cite{Yang2019MORL,Roijers2013MOSurvey,Hayes2022MOSurvey,Byeon2025MaxMinMORL}. These
+works fix the training environment, which is precisely what this study varies.
+
+\subsection{Learned building surrogates}
+Learned building surrogates make DRL-scale training feasible where direct simulation is too slow,
+spanning black-box networks, grey-box RC models, Neural ODEs and physics-informed
+learning~\cite{Bacher2011RCIdentification,Berthou2014RC,Bunning2020RC,Picard2017WhiteBox,Raissi2019PINN,Chen2018NeuralODE,Karpatne2017TheoryGuided,Willard2022PIML,Hedayat2025PINN},
+and connecting to the broader scientific-machine-learning literature on operator learning and
+projection-based reduced-order models~\cite{Lu2021DeepONet,Li2021FNO,Benner2015ROM}. Surrogate
+development has itself been framed as a staged validation protocol~\cite{HouEvins2024}, and
+fast-surrogate work emphasizes runtime feasibility~\cite{Mshragi2026FastML}. Most of this literature
+validates prediction metrics, yet a controller, like a surrogate-based optimizer that can drive an
+accurate surrogate into infeasible optima by exploiting its residual error~\cite{Jones1998EGO}, uses
+the surrogate as a closed-loop transition function under policy-induced states. We therefore report
+predictive fidelity and runtime first, then test the stronger claim that fidelity implies training
+utility.
+
+\subsection{Objective mismatch and distribution shift}
+That stronger claim is a distribution-shift question. On-policy data collection and observation
+design shape the states an RL controller learns
+on~\cite{Mayor2025Parallelized,Radac2025OnlineRL,Gao2024Predictive}, and safe-RL work shows that
+small model errors become operationally important once actions are optimized against
+them~\cite{Garcia2015SafeRL,Wang2025SafeDRL}. This links HVAC control to model exploitation and
+dataset shift in model-based RL~\cite{Quinonero2009DatasetShift,RiahiSamani2026OOD}, and
+specifically to the \emph{objective mismatch} between a surrogate trained for predictive likelihood
+and one that yields a good downstream policy~\cite{Lambert2020ObjectiveMismatch,Janner2019MBPO};
+decision- and value-aware model learning answer this mismatch by retraining the model toward the
+control objective~\cite{Farahmand2017VAML}, and the same low-error-yet-poor-transfer effect is
+central to sim-to-real deployment~\cite{Zhao2020Sim2Real}. Training a policy inside a learned model
+is the model-based, or Dyna, tradition~\cite{Sutton1991Dyna}, now scaled to world-model
+agents~\cite{Hafner2025Dreamer}. Unlike value-aware retraining, we hold both surrogates fixed and
+instead \emph{measure} the mismatch mechanism, action-response roughness induced by temporal
+resolution, and resolve it by \emph{role separation} rather than by changing the surrogate's
+training objective.
+
+The shaped reward of Section~\ref{ssec:hybrid} has a recognizable form here, and the relationship
+is worth stating plainly. Model-ensemble methods keep several dynamics models and use their
+disagreement to stop the policy exploiting any one model's errors~\cite{Kurutach2018METRPO}, and
+offline model-based RL makes the device explicit by subtracting a model-uncertainty term from the
+reward~\cite{Yu2020MOPO}. Our censor is structurally the same instrument. Two things differ, and
+they are what this paper contributes. First, disagreement is measured not inside an ensemble of like
+models fitted to a common objective but between two deliberately unlike ones, a smooth
+control-oriented black box and a calibrated physics-informed twin, so the penalty carries physical
+information a homogeneous ensemble lacks. Second, the models are assigned roles rather than
+averaged: the twin never enters the rollout, so policy search still runs over the smooth dynamics
+that make it tractable. The mechanism is thus an instance of a known family; what is new is the role
+assignment and its measured effect on a building-control benchmark.
+
+\subsection{Transfer across buildings}
+Transfer-oriented HVAC work reduces the cost of adapting DRL controllers across buildings, zones and
+climates~\cite{Hou2024MultiSource,Coraci2024HeteroTL,Coraci2025HiLo}. These lines
+rarely separate two questions kept distinct here: whether the surrogate recalibrates to the target
+physics, and whether a frozen controller stays deployable through a new actuator interface, which
+the version-locked hydronic transfer study of Section~\ref{sec:transfer} answers separately.

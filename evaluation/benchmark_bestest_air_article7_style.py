@@ -575,6 +575,25 @@ class SurrogateMPCController(BaseController):
         return np.asarray(action, dtype=np.float32), {"source": "surrogate_mpc"}
 
 
+class MPCBaselineController(BaseController):
+    """Receding-horizon MPC baseline (evaluation/mpc_baseline.py).
+
+    Distinct from SurrogateMPCController above, which wraps the runtime safety
+    fallback: that one freezes ambient over the horizon and holds a single
+    action pair, which is not a defensible baseline. This one plans an action
+    sequence against the forecast. Selected with --controllers mpc.
+    """
+
+    name = "mpc"
+    obs_mode = "none"          # plans from `state`; needs no policy observation
+
+    def __init__(self, planner) -> None:
+        self.planner = planner
+
+    def act(self, obs: np.ndarray | None, state: dict[str, float]) -> tuple[np.ndarray, dict[str, Any]]:
+        return self.planner.compute(state), {"source": "mpc"}
+
+
 class MORLController(BaseController):
     name = "morl"
     obs_mode = "morl"
@@ -808,6 +827,18 @@ def main() -> None:
     parser.add_argument("--mpc-safety-margin-c", type=float, default=0.75)
     parser.add_argument("--mpc-lambda-safety", type=float, default=80.0)
     parser.add_argument("--mpc-lambda-energy", type=float, default=0.4)
+    # --- receding-horizon MPC baseline (--controllers mpc), see
+    # --- configs/mpc_baseline_preregistration.yaml for the fixed settings
+    parser.add_argument("--mpc-surrogate-kind", default="legacy_v3",
+                        choices=["legacy_v3", "v35_raw", "v35_calibrated", "hybrid_v3_v35"])
+    parser.add_argument("--mpc-surrogate-path", default="outputs/surrogate_v2/rc_node_v3_tsupply.pt")
+    parser.add_argument("--mpc-summary-json", default=None)
+    parser.add_argument("--mpc-model-step-sec", type=float, default=3600.0,
+                        help="Native step of the planning surrogate; the horizon is given in "
+                             "hours and converted with it, so backends are compared at equal "
+                             "physical lookahead.")
+    parser.add_argument("--mpc-horizon-hours", type=float, default=6.0)
+    parser.add_argument("--mpc-lambda-comfort", type=float, default=60.0)
     args = parser.parse_args()
 
     output_dir = REPO_ROOT / args.output_dir
@@ -877,6 +908,28 @@ def main() -> None:
                     power_feature_mode=args.power_feature_mode,
                 )
             )
+        elif name == "mpc":
+            from surrogate.direct_tsup_adapter import load_direct_tsup_adapter
+            from evaluation.mpc_baseline import RecedingHorizonMPC
+
+            adapter = load_direct_tsup_adapter(
+                kind=args.mpc_surrogate_kind,
+                legacy_model_path=args.mpc_surrogate_path,
+                summary_json=args.mpc_summary_json,
+                device="cpu",
+            )
+            controllers.append(MPCBaselineController(RecedingHorizonMPC(
+                adapter,
+                weather,
+                model_step_sec=args.mpc_model_step_sec,
+                horizon_hours=args.mpc_horizon_hours,
+                n_iters=args.mpc_iters,
+                lr=args.mpc_lr,
+                t_low=T_LOW,
+                t_high=T_HIGH,
+                lambda_comfort=args.mpc_lambda_comfort,
+                lambda_energy=args.mpc_lambda_energy,
+            )))
         elif name == "surrogate_mpc":
             controllers.append(
                 SurrogateMPCController(

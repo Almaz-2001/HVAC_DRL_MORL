@@ -166,12 +166,16 @@ def run_logged(command: list[str], log_path: Path, *, dry_run: bool) -> tuple[in
 
     log_path.parent.mkdir(parents=True, exist_ok=True)
     started = time.time()
+    # Piping stdout flips the child's Python to block buffering, which hides
+    # progress until 8 KB has accumulated. PPO's tables fill that quickly enough
+    # to have masked it here, but a quieter child looks like a hang.
+    env = {**os.environ, "PYTHONUNBUFFERED": "1"}
     with log_path.open("w", encoding="utf-8") as log:
         log.write(" ".join(command) + "\n")
         log.flush()
         proc = subprocess.Popen(
             command, cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-            text=True, bufsize=1,
+            text=True, bufsize=1, env=env,
         )
         assert proc.stdout is not None
         for line in proc.stdout:

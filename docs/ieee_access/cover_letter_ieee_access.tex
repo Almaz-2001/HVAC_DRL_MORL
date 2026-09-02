@@ -1,0 +1,92 @@
+% Cover letter for the IEEE Access submission.
+%
+% Deliberately short. IEEE Access does not run a scope-fit negotiation the way
+% the MDPI and Elsevier submissions did, and the editor reads the abstract
+% anyway. What a cover letter can usefully carry here is exactly three things:
+% what the paper claims, what makes it verifiable, and the disclosures that
+% would otherwise surface as a query.
+%
+% No em dashes and no "we believe / we are confident" padding: the previous
+% cover letters had both and neither survived a read-through.
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{mathptmx}
+\usepackage[margin=2.4cm]{geometry}
+\usepackage{microtype}
+\pagestyle{empty}
+% Date generated at build time so the letter cannot go stale between
+% rebuilds. Redefined to day-month-year; the LaTeX default is US order.
+\renewcommand{\today}{\number\day\ \ifcase\month\or January\or February\or March\or April\or May\or June\or July\or August\or September\or October\or November\or December\fi\ \number\year}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{7pt}
+
+\begin{document}
+
+{\raggedleft \today\par}
+
+\vspace{4pt}
+To the Editors, \emph{IEEE Access}
+
+\vspace{6pt}
+Dear Editors,
+
+We submit for your consideration the article \textbf{``Surrogate Selection for
+Reinforcement-Learning HVAC Control: Step Size, Not Predictive Accuracy,
+Predicts Control Utility''} together with its supplementary material.
+
+\textbf{What the article reports.} Reinforcement-learning controllers for
+building HVAC systems are trained against fast learned surrogates, and the
+surrogate is selected by predictive error. On the BOPTEST benchmark we find that
+criterion to be not merely uninformative but inverted: the least accurate
+surrogate in the study is the only one that trains a usable controller, while the
+most accurate one trains a controller that leaves the comfort band for more than
+77\% of the horizon on every random seed. We identify the property that does
+predict training utility, the magnitude of the surrogate's per-step increment,
+and isolate it with a rescaling control that holds response-surface roughness
+fixed while changing only the integration step. We then give an architecture,
+role-separated surrogate training, that acts on the finding, and a
+receding-horizon MPC baseline showing that a planner reproduces the same inverted
+ordering, so the effect belongs to optimising through the surrogate rather than
+to reinforcement learning specifically.
+
+\textbf{Why it is verifiable.} Every experiment runs on BOPTEST, the open
+IBPSA-derived benchmark, rather than on a private building model, so the results
+can be reproduced and contested by other groups. Five hypotheses were written
+down with their pass criteria before the corresponding runs; three are falsified,
+including two of our own predictions, and all are reported as they came out. The
+central comparisons are replicated across random seeds, and the censor-weight
+sweep is replicated at every swept setting. One planned experiment was executed
+and then invalidated by a defect we found in our own planner; that run is
+recorded in the project artifacts rather than discarded, and the corrected run
+supersedes it.
+
+\textbf{Fit to IEEE Access.} The contribution is methodological, about how to
+choose a training environment for a learning controller, demonstrated on a
+building-control case study. It sits between machine learning and building
+systems, and its central result is a negative one about a criterion the field
+uses by default. IEEE Access states that it welcomes multidisciplinary and
+applications-oriented work and negative results that do not fit the traditional
+journals, which is the reason we bring the article here.
+
+\textbf{Disclosures.} The work is original and is not under consideration
+elsewhere. Earlier results from this study were presented as a conference talk at
+the WCCM--ECCOMAS Congress 2026 (Munich, 19--24 July 2026); the present article
+substantially extends that material and shares no text with it. All authors have
+approved the submission and declare no competing interests. Author biographies
+and photographs are not included with this submission and can be supplied if the
+article proceeds. The project codebase is not publicly released at this stage; it
+is available to the editors and reviewers on request, together with the derived
+artifacts, from the corresponding author.
+
+Thank you for considering the article.
+
+\vspace{10pt}
+Yours sincerely,
+
+\vspace{6pt}
+Almaz Sapargali, on behalf of all authors\\
+Al-Farabi Kazakh National University and LLP Digit Alem, Almaty, Kazakhstan\\
+almaz.sapargali2001@gmail.com
+
+\end{document}

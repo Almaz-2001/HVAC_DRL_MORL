@@ -442,7 +442,11 @@ correct sign in 100\% of 400 sampled states.
 
 A third backend, matched-resolution BB, is the \emph{same} black-box architecture retrained on a
 \SI{900}{\second} corpus. It exists solely to isolate the model-class confound in
-Section~\ref{sec:paradox}.
+Section~\ref{sec:paradox}. Retraining on that corpus turns out to break the model's control channel
+(Section~\ref{sec:fidelity}), so the backend is carried in two forms: as trained, and with a
+monotonicity constraint that restores directional validity. The constraint penalises, at jittered
+states, any predicted temperature decrease in response to an increased supply-temperature command;
+it touches no other part of the recipe.
 
 \subsection{Role-separated hybrid training environment}\label{ssec:hybrid}
 The hybrid backend is not a new RL algorithm. It is an application-specific role-separation strategy
@@ -576,20 +580,45 @@ bounded, and it is reported symmetrically rather than as a single number.
 \begin{table}[t]
 \centering
 \small
-\begin{tabular}{@{}lrlr@{}}
+\begin{tabular}{@{}lrlrr@{}}
 \toprule
-Variant & Step (s) & Calibration & 24 h $\RMSE_T$ \\
+Variant & Step & Calib. & 24 h $\RMSE_T$ & Sign \\
 \midrule
-BB hourly & 3600 & n/a (black box) & 1.557 \\
-BB 15-min matched & 900 & n/a (black box) & 0.876 \\
-raw GB & 900 & OFF & 1.466 \\
-calibrated GB & 900 & FULL (A + B + C) & 0.644 \\
+BB hourly & 3600 & --- & 1.557 & 100\% \\
+BB matched & 900 & --- & 0.876 & \textbf{9.8\%} \\
+raw GB & 900 & off & 1.466 & 100\% \\
+calibrated GB & 900 & A+B+C & 0.644 & 100\% \\
 \bottomrule
 \end{tabular}
-\caption{Corpus-matched comparison. The second row is what separates the corpus-resolution
-contribution from the Stage~A/B/C calibration contribution.}
+\caption{Corpus-matched comparison. The second row separates the corpus-resolution contribution
+from the Stage~A/B/C calibration contribution. Step is in seconds; \emph{Calib.} names the
+applied inverse-calibration stages, which do not apply to the black-box variants.
+\emph{Sign} is the fraction of 400 sampled
+states in which raising the supply-temperature command does not lower the predicted zone
+temperature. The matched-resolution retraining improves rollout error and inverts the control
+channel; the monotonicity-constrained variant (third row) improves both.}
 \label{tab:matched}
 \end{table}
+
+\paragraph{Rollout error does not detect a lost control channel}
+Predictive error is not the only property the corpus change moves. Auditing directional validity
+shows the matched-resolution BB inverting the supply-temperature channel in about nine states out of
+ten, while its rollout error improves. The inversion is not a defective draw: four independent
+trainings, differing only in seed, give \SIrange{3.2}{14.0}{\percent} valid states with median
+response \SIrange{-1.14}{-0.84}{\celsius}, and over the same four draws the 24~h rollout error
+\emph{improves} to \SIrange{0.696}{0.876}{\celsius}. The metric the surrogate literature reports,
+and the one this study deliberately chose over one-step error, is blind to it.
+
+The defect is not confined to one input. The same audit applied to the fan command finds the
+unconstrained matched-resolution model valid in only 2.2\% of states with hot supply air, against
+98.5\% for the hourly BB and 98.8\% for the calibrated GB. Constraining the supply channel during
+training raises its own validity to 100\% at a \emph{lower} rollout error
+(\SIrange{0.745}{0.817}{\celsius} over three seeds) but leaves the fan channel at 20.8\%, so the
+constraint relocates the defect rather than removing it. Two conclusions follow. Directional
+validity is something a surrogate can lose while its predictive score improves, and it must be
+audited on \emph{every} actuated input, because a controller will find whichever channel is wrong:
+policies and planners trained on these models drive the fan to its minimum and deliver almost no
+heat. Both checks cost seconds and run before any controller is trained.
 
 The runtime benchmark closes the predictive-validation step: the calibrated GB is $114.2\times$
 faster than the live HTTP loop and the hybrid reference $85.0\times$, so the surrogate family is not
@@ -611,7 +640,15 @@ PPO is already usable ($\ms=0.073$ peak, $0.095$ typical). Direct GB PPO fails c
 despite its superior predictive fidelity: live violation reaches 77.1\% on the peak window and
 82.4\% on the typical window, with closed-loop \RMSE{} above \SI{4.3}{\celsius}. This is not a
 grey-box artifact: the matched-resolution BB, that is the \emph{same} black-box architecture made
-strictly more accurate, collapses as well ($\ms=1.142$/$1.211$, violation 85.6/91.4\%). The hybrid
+strictly more accurate, collapses as well ($\ms=1.142$/$1.211$, violation 85.6/91.4\%). That backend
+is directionally inverted on both actuated inputs (Section~\ref{sec:fidelity}), so it cannot by
+itself isolate model class: a controller trained on it fails for a reason that has nothing to do
+with temporal resolution. We attempted to repair it with a training constraint on the supply
+channel; the repaired model is more accurate and valid in that channel, but its fan channel remains
+inverted and the controller trained on it exploits that instead, so the matched-resolution point
+does not isolate the mechanism either way. The mechanism argument below therefore rests on the
+calibrated GB, which is directionally sound on both inputs, and on the rescaling control, which
+preserves response signs by construction. The hybrid
 backend resolves the conflict, reaching $\ms=0.087$ on the peak window and $0.041$ on the typical
 window with violation below 5\% on both and lower energy than pure BB on the peak window.
 
@@ -688,14 +725,31 @@ time; pure BB and the hybrid keep both duration and severity small.}
 \subsection{Mechanism: temporal coarseness, roughness and saturation}\label{sec:mechanism}
 
 The high-fidelity backends collapse because their action-response surfaces are rougher, which drives
-near bang-bang policy saturation and live failure. The mechanism is a measured chain from surrogate
+near bang-bang saturation and live failure. The effect is not confined to policy-gradient learning.
+A receding-horizon MPC planning through the same surrogates reproduces the same ordering: it reaches
+$\ms=0.547$/$0.869$ on the coarse hourly BB, the least accurate backend, and $1.051$/$1.369$ on the
+calibrated GB, the most accurate one, landing within $0.005$ of the learner on the peak window
+($1.046$). Whatever the surrogates do to a controller, they do it to a planner as well, so the
+operative interaction is between the response surface and gradient-based optimisation through the
+model rather than between the response surface and policy-gradient search specifically. One caveat
+bounds this: the planner optimises its action sequence with a first-order method through the
+differentiable surrogate, so it shares any pathology gradients have on a rough surface. The
+comparison therefore separates gradient-based optimisation from other synthesis routes, not planning
+from learning; a derivative-free planner over the same backends is the test that would separate
+those, and is left to future work. The mechanism is a measured chain from surrogate
 response geometry to policy behavior to live outcome (Fig.~\ref{fig:roughness}). Sweeping each
 backend's one-step map $\widehat{T}(a_0)$ over a grid of states and computing a scale-free
 \emph{relative roughness}, mean curvature divided by mean slope, orders the backends cleanly with
 usability: the usable hourly BB is smoothest (0.17), while the matched-resolution BB and GB are
 $9.4\times$ and $7.9\times$ rougher. Both collapsing backends saturate the actuator, placing extreme
 actions in temperature-error regimes the live building does not support, in 100\% of steps against
-24\% for the usable controller. The time-domain signature is direct GB saturating and leaving the
+24\% for the usable controller. The matched-resolution backends are excluded from this comparison because their
+directional defects give their controllers a separate and sufficient reason to fail: the
+unconstrained model's policy holds the minimum supply command (10th and 90th percentiles both
+\SI{18.0}{\celsius}) while the zone sits below band, and the supply-constrained model's policy
+instead holds the fan near zero (mean \num{0.201}, mean power \SI{182}{\watt} against
+\SI{959}{\watt} for the usable controller). Both are the behaviour a controller learns when the
+model tells it that acting is counterproductive. The time-domain signature is direct GB saturating and leaving the
 comfort band while the coarse BB and the hybrid stay in band (Fig.~\ref{fig:closedloop}).
 
 \begin{figure*}[t]
@@ -886,12 +940,19 @@ frozen-policy transfer is deployment-ready.}
 
 Evaluation is simulation-only on a single-zone emulator, with multi-zone and richer topologies
 untested and transfer limited to a hydronic family. Several caveats bound the central claim. First,
-the fidelity--utility relationship is established at three discrete operating points, hourly BB,
-matched 15-min BB and calibrated GB, rather than as a continuous curve; the three-seed replication
-shows all verdicts are seed-stable, but an intermediate-resolution sweep is left to future work.
-Second, the only comparison baseline is BOPTEST's built-in PI, a relatively weak reference, so
-controller utility is established against a modest rather than a strong tuned rule-based,
-Guideline-36 or MPC controller on the same RC model. Third, the surrogate power channel is
+the fidelity--utility relationship is established at two directionally sound operating points,
+hourly BB and calibrated GB, together with the rescaling control, rather than as a continuous curve.
+The matched-resolution backend is reported as a predictive-metric failure rather than as a
+mechanism data point, because both of its actuated channels are directionally defective and a
+training constraint on one relocates the defect to the other; an intermediate-resolution sweep on a
+surrogate audited across all inputs is left to future work.
+Second, controller utility is established against two references, BOPTEST's built-in PI
+($\ms=0.910$) and a pre-registered receding-horizon MPC planning on the same surrogates. The MPC is
+the stronger of the two, reaching $\ms=0.547$/$0.869$ on the coarse BB backend, but it is a fixed,
+untuned configuration rather than a tuned Guideline-36 or industrial MPC: its comfort violation is
+still 34.5\% and 55.6\% on the two windows. It was deliberately not tuned against \ms{}, the metric
+it is scored on, so it should be read as a stronger reference than PI rather than as a
+state-of-the-art controller. Third, the surrogate power channel is
 reproduced less accurately than temperature, with a calibrated power-head mean absolute error of
 \SI{482}{\watt}, about 9\% of $P_{\max}=\SI{5500}{\watt}$; the reported energy KPIs and the transfer
 $\Delta E$ are live-versus-live measurements that do not inherit this error, but the weaker power
@@ -903,8 +964,9 @@ that the thermostatic optimum does not transfer to the hierarchical family, not 
 per-family optimum for every family; and within the HDRL sweep the response saturates above
 $\lambda_T=0.05$, so the ranking of the two largest weights is not resolved above seed noise. Finally, the mechanism is
 \emph{measured} statically on each surrogate's one-step action map and corroborated by the
-matched-resolution ablation, but a loss-landscape analysis along the training trajectory and
-generality to off-policy algorithms remain open.
+$\Delta t$-rescaling control, which preserves response signs by construction, rather than by the
+matched-resolution ablation, whose backend is directionally defective. A loss-landscape analysis
+along the training trajectory and generality to off-policy algorithms remain open.
 
 \section{Conclusions}\label{sec:conclusions}
 

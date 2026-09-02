@@ -22,6 +22,17 @@ moves it from the usable regime into failure:
 
 `m_s > 1` marks a controller that cannot be put into service.
 
+Predictive error also misses a second, simpler defect. Retraining the same
+architecture on the finer corpus **inverts the model's response to the control
+command** in about nine sampled states out of ten — a hotter supply-temperature
+command predicting a colder zone — reproducibly across four independent training
+draws, while the 24 h rollout error improves in every one of them. Constraining
+training to preserve the response sign restores directional validity to 100 % at
+a lower rollout error still (0.745 °C), and a controller trained on that
+corrected surrogate fails as well (`m_s` 1.426 peak / 1.597 typical). Accuracy,
+model class and response sign can all be held right while the surrogate stays
+unusable as a training environment.
+
 The operative property is the surrogate's **per-step increment magnitude**, not
 its accuracy: a Δt-rescaling control that holds scale-free response-surface
 roughness fixed reproduces the collapse. Measured relative roughness is 0.169
@@ -32,6 +43,11 @@ The resolution is **role separation**: the black-box surrogate supplies the
 rollout dynamics, and the frozen calibrated grey-box twin acts only as a
 forward-only model-disagreement reward censor — never in the rollout, never in
 the policy loss.
+
+The effect is **not** specific to reinforcement learning. A receding-horizon MPC
+planning on the same surrogates reproduces the same inverted ordering, so it
+belongs to optimising through the surrogate rather than to policy-gradient
+search. That was a pre-registered prediction of ours, and it is falsified.
 
 ## Repository layout
 
@@ -46,6 +62,11 @@ paper_artifacts/  canonical paper-facing figures, tables, manifests (tracked)
 outputs/       raw run artifacts (gitignored, large)
 models/        checkpoints (gitignored, large)
 docs/          manuscript sources per target journal
+  ieee_access/   live submission set
+  paper_asej/    prose source the live set is sliced from
+  paper_combined/  upstream long-format source
+  _superseded/   finished ports to journals no longer targeted
+_archive/      local only, gitignored: dead runs and old bundles
 ```
 
 `reports/*.csv` is the audit trail: every number in the manuscript traces to a
@@ -101,18 +122,38 @@ controller is not yet deployment-stable.
   §16, cross-referenced from `configs/block3_testcase_manifest.yaml` and
   `configs/morl_canonical_selection_log.yaml`. **Those commits must remain
   untouched.**
-- Verdicts are reported as they came out: of H1–H4, one is falsified, one
-  supported, one falsified on seed-replicated evidence, one partly supported.
+- Verdicts are reported as they came out: of H1–H5b, three are falsified —
+  including two of our own predictions — one supported and one partly
+  supported. `configs/mpc_baseline_preregistration.yaml` is the anchor for H5b
+  and keeps the superseded H5 verbatim rather than rewriting it.
+- One planned experiment was executed and then invalidated by a defect in our
+  own planner. The run is recorded in `reports/block2_mpc_h5_invalidated.md`
+  rather than deleted: quietly re-running would leave the pre-registration
+  looking untouched when a completed run had already been seen.
 - Canonical KPI tables use seed 42; the four central backends, the HDRL sweep
   and MORL additionally carry seed-replication bands.
 
 ## Publication status
 
-A full article covering the core of this work was submitted to *Energies*
-(MDPI), manuscript `energies-4523055`, and was returned at technical pre-check
-as out of scope for that journal rather than on quality. The work is being
-ported to *IEEE Access*, whose scope explicitly covers multidisciplinary and
-negative results. Per-journal manuscript sources live under `docs/`.
+The current target is *IEEE Access*, whose scope explicitly covers
+multidisciplinary work and negative results. The submission set is built and
+compiles clean against the official `ieeeaccess.cls`: 14-page article, 28-page
+supplementary material, cover letter.
+
+```bash
+python docs/ieee_access/build_ieee.py
+```
+
+It slices Related work, Materials and methods, and Results verbatim out of
+`docs/paper_asej/manuscript.tex`, so there is one source of truth for the
+science, and flattens the result to a single `.tex` for upload.
+
+Earlier targets: *Results in Engineering* (Elsevier) and *Ain Shams Engineering
+Journal* desk-rejected on novelty; *Energies* (MDPI, manuscript
+`energies-4523055`) was returned at technical pre-check as out of scope for an
+energy journal rather than on quality. Their ports are under
+`docs/_superseded/`, except `docs/paper_asej/`, which stays in place because the
+live IEEE Access set is sliced from it.
 
 The project codebase is not publicly released at this stage; it is available to
 editors and reviewers on request.

@@ -172,3 +172,16 @@ docs/*.zip
 
 # Scratch
 tmp/
+
+# =============================================================================
+# Local archive
+# =============================================================================
+# Artifacts moved out of the working tree during the 2026-09-02 audit: dead
+# training runs, superseded submission bundles, and the uncommitted state of
+# three removed agent worktrees. Local only -- see _archive/README.md for what
+# is in there and how to put any of it back.
+_archive/
+
+# Agent worktrees. The .claude/ rule above already covers these, but they held
+# 321 MB of stale checkouts, so name them explicitly.
+.claude/worktrees/
