@@ -76,7 +76,7 @@ acts only as a per-step model-disagreement reward censor. It gives the best wors
 study (0.041 typical) at 85 times live-simulator throughput, against 0.547/0.869
 for a receding-horizon MPC baseline and 0.910 for the emulator's own controller.
 The planner reproduces the same inverted ordering, so the effect belongs to
-optimising through the surrogate, not to reinforcement learning. Of five pre-specified hypotheses, three are falsified, including two of
+optimizing through the surrogate, not to reinforcement learning. Of five pre-specified hypotheses, three are falsified, including two of
 our own.
 \end{abstract}
 
@@ -219,7 +219,7 @@ recalibration.
 \item \emph{Controller-class specificity:} the fidelity--utility inversion is a
 property of policy-gradient learning, so a receding-horizon planner using the
 same surrogates escapes it. Registered after the first four, once the inversion
-itself had been established, and reported here whether favourable or not.
+itself had been established, and reported here whether favorable or not.
 \end{enumerate}
 
 Evidence is kept deliberately narrow (Fig.~\ref{fig:overview}). The primary
@@ -304,7 +304,7 @@ auxiliary heating-power channel, seed replication for the
 preference-conditioned family, and deployment on a physical building.
 
 A receding-horizon MPC planning through the same surrogates was added as a
-second reference, pre-registered as H5b and reported whether favourable or not.
+second reference, pre-registered as H5b and reported whether favorable or not.
 It is the stronger of the two baselines, reaching $\ms=0.547$/$0.869$ against the
 emulator PI's $0.910$, and it does not approach the role-separated controller.
 It also reproduces the inversion: $0.547$/$0.869$ on the least accurate backend
@@ -312,7 +312,7 @@ against $1.051$/$1.369$ on the most accurate one, within $0.005$ of the learner
 on the peak window. H5b, which predicted that a planner would escape the effect,
 is therefore falsified, and the scope of the mechanism is wider than the RL
 framing implied. The planner is itself a first-order method through the
-differentiable surrogate, so this separates gradient-based optimisation from
+differentiable surrogate, so this separates gradient-based optimization from
 other synthesis routes rather than planning from learning; a derivative-free
 planner is the test that would separate those.
 
@@ -330,6 +330,10 @@ scientific findings.
 
 \bibliographystyle{IEEEtran}
 \bibliography{references}
+
+% Required by IEEE Access for every author; the submission was returned to
+% draft on 02 Sep 2026 for their absence.
+\input{bios.tex}
 
 \EOD
 

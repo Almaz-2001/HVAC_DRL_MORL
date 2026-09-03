@@ -169,6 +169,8 @@ def main() -> None:
     if missing:
         sys.exit(f"!! missing figures: {missing}")
 
+    check_biographies()
+
     stem = "ieee_access_hvac"
     pdf = HERE / f"{stem}.pdf"
     before = pdf.stat().st_mtime if pdf.exists() else None
@@ -214,6 +216,45 @@ def main() -> None:
     flatten()
 
 
+def check_biographies() -> None:
+    """Every author on the title page must have a biography, with no placeholders.
+
+    Both halves of this have already gone wrong once. In August a skeleton
+    bios.tex put thirty `[bracketed]` placeholders into a compiled PDF; the fix
+    was to delete the biographies, and IEEE Access returned the manuscript to
+    draft on 02 Sep 2026 because it requires one per author. So check both.
+    """
+    tex = (HERE / "ieee_access_hvac.tex").read_text(encoding="utf-8")
+    bios = (HERE / "bios.tex").read_text(encoding="utf-8")
+
+    block = tex[tex.index(r"\author{"):]
+    block = block[:block.index("\n\n")]
+    authors = re.findall(r"\\uppercase\{([^}]+)\}", block)
+
+    # Commented-out entries do not reach the PDF and must not count as present.
+    live = "\n".join(l for l in bios.splitlines() if not l.lstrip().startswith("%"))
+    have = re.findall(r"\\begin\{IEEEbiography(?:nophoto)?\}(?:\[[^\]]*\])?\{([^}]+)\}", live)
+
+    missing = [a for a in authors if a not in have]
+    if missing:
+        msg = (f"biography missing for: {', '.join(missing)}\n"
+               f"   IEEE Access requires one per author -- this is what got\n"
+               f"   Access-2026-42535 returned to draft. Questionnaire:\n"
+               f"   docs/paper_asej/author_bio_form.md")
+        # --draft-bios builds a preview of the entries that DO exist. It must
+        # never be how a submission is produced, so it is loud and opt-in.
+        if "--draft-bios" in sys.argv:
+            print(f"!! {msg}\n   BUILDING ANYWAY (--draft-bios): NOT SUBMITTABLE")
+        else:
+            sys.exit(f"!! {msg}")
+
+    placeholders = re.findall(r"\[[a-z][^\]]{2,}\]", live)
+    if placeholders:
+        sys.exit(f"!! placeholders would print verbatim in the PDF: {placeholders[:5]}")
+
+    print(f"[bios]  {len(have)}/{len(authors)} authors, no placeholders")
+
+
 def flatten() -> None:
     """Write ieee_access_hvac_onefile.tex with the body files spliced in.
 
@@ -222,7 +263,7 @@ def flatten() -> None:
     document.
     """
     src = (HERE / "ieee_access_hvac.tex").read_text(encoding="utf-8")
-    for name, _, _ in BODY_SLICES:
+    for name in [n for n, _, _ in BODY_SLICES] + ["bios.tex"]:
         marker = "\\input{" + name + "}"
         if marker not in src:
             sys.exit(f"!! cannot flatten: {marker} not found in ieee_access_hvac.tex")

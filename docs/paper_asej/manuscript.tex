@@ -444,7 +444,7 @@ A third backend, matched-resolution BB, is the \emph{same} black-box architectur
 \SI{900}{\second} corpus. It exists solely to isolate the model-class confound in
 Section~\ref{sec:paradox}. Retraining on that corpus turns out to break the model's control channel
 (Section~\ref{sec:fidelity}), so the backend is carried in two forms: as trained, and with a
-monotonicity constraint that restores directional validity. The constraint penalises, at jittered
+monotonicity constraint that restores directional validity. The constraint penalizes, at jittered
 states, any predicted temperature decrease in response to an increased supply-temperature command;
 it touches no other part of the recipe.
 
@@ -730,11 +730,11 @@ A receding-horizon MPC planning through the same surrogates reproduces the same 
 $\ms=0.547$/$0.869$ on the coarse hourly BB, the least accurate backend, and $1.051$/$1.369$ on the
 calibrated GB, the most accurate one, landing within $0.005$ of the learner on the peak window
 ($1.046$). Whatever the surrogates do to a controller, they do it to a planner as well, so the
-operative interaction is between the response surface and gradient-based optimisation through the
+operative interaction is between the response surface and gradient-based optimization through the
 model rather than between the response surface and policy-gradient search specifically. One caveat
-bounds this: the planner optimises its action sequence with a first-order method through the
+bounds this: the planner optimizes its action sequence with a first-order method through the
 differentiable surrogate, so it shares any pathology gradients have on a rough surface. The
-comparison therefore separates gradient-based optimisation from other synthesis routes, not planning
+comparison therefore separates gradient-based optimization from other synthesis routes, not planning
 from learning; a derivative-free planner over the same backends is the test that would separate
 those, and is left to future work. The mechanism is a measured chain from surrogate
 response geometry to policy behavior to live outcome (Fig.~\ref{fig:roughness}). Sweeping each
@@ -748,7 +748,7 @@ directional defects give their controllers a separate and sufficient reason to f
 unconstrained model's policy holds the minimum supply command (10th and 90th percentiles both
 \SI{18.0}{\celsius}) while the zone sits below band, and the supply-constrained model's policy
 instead holds the fan near zero (mean \num{0.201}, mean power \SI{182}{\watt} against
-\SI{959}{\watt} for the usable controller). Both are the behaviour a controller learns when the
+\SI{959}{\watt} for the usable controller). Both are the behavior a controller learns when the
 model tells it that acting is counterproductive. The time-domain signature is direct GB saturating and leaving the
 comfort band while the coarse BB and the hybrid stay in band (Fig.~\ref{fig:closedloop}).
 

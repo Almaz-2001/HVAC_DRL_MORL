@@ -51,13 +51,31 @@ following were run before submission rather than promised in a response letter:
    `\titlepgskip`, `\PARstart` (not `\IEEEPARstart`), and `\EOD` before
    `\end{document}`.
 
-## Closed since
+## Returned to draft, 02 Sep 2026 — Access-2026-42535
 
-- **Biographies removed entirely.** Author biographies and photographs are
-  optional for IEEE Access. `bios.tex` held five skeletons whose `[bracketed]`
-  placeholders printed verbatim — 30 of them reached a compiled PDF before this
-  was caught. The file is out of the tree (`_archive/old_bundles/`); the cover
-  letter says biographies can be supplied if the article proceeds.
+One issue: *"we require a biography from each author on the manuscript."*
+
+**Biographies are not optional for IEEE Access.** The presence of
+`\IEEEbiographynophoto` in the class means a biography may omit the
+*photograph*, not that the biography itself can be omitted. That misreading is
+what cost this submission a cycle: the file was deleted in August because its
+five skeletons printed `[bracketed]` placeholders into the PDF, and deletion was
+the wrong fix for that problem.
+
+`bios.tex` is back, with real text for five of six authors, sourced from what
+each author wrote about themselves — Mukhanbet, Daribayev and Trigo verbatim
+from their own IEEE Access biographies in `docs/biography info/`, Shinassylov
+converted from the first-person CV in the same file, Sapargali as supplied.
+
+`build_ieee.py` now refuses to build unless every name in `\author{}` has a
+biography and no `[bracketed]` placeholder survives. Both halves of that check
+correspond to a real failure. `--draft-bios` builds a preview anyway and says
+loudly that the result is not submittable.
+
+- **Photographs.** Not requested by the editorial office, so every entry uses
+  `\IEEEbiographynophoto`. Portraits do exist in the supplied file but Word
+  downscaled them to 102–216 dpi against IEEE's 300 dpi minimum; originals would
+  be needed.
 - **Supplementary synced line by line** against the sign-audit and MPC revisions
   to the main text.
 - **AI-use disclosure** added, in the wording the corresponding author supplied.
@@ -67,8 +85,28 @@ following were run before submission rather than promised in a response letter:
 
 ## Open
 
-- **Language.** The text has not been read by a native speaker. IEEE Access
-  requires standard English; grammar is sound but this is not the same assurance.
+- **BLOCKER: biography for Serik Aibagarov.** The only thing between the
+  manuscript and resubmission. Request form: `bio_request_aibagarov.md`. Do not
+  write it from inference — a wrong degree or institution in a published
+  biography is corrected only by corrigendum.
+- **Name spelling, Shona Shinassylov.** The paper, `CITATION.cff` and the author
+  block all use *Shinassylov*; the CV he supplied is headed *Shonazilov Shona
+  Zhoaraevich*. The biography follows the paper. He should confirm which
+  transliteration he wants published.
+- **University name in the same biography.** His CV names "Kazakh National
+  Technical University named after K.I. Satybaldin". The institution in Almaty
+  is named after K.I. Satpayev, so this looks like a slip. The biography says
+  "Kazakh National Technical University, Almaty" with no eponym rather than
+  print a name that may be wrong; he should supply the correct full form.
+- **Language.** The return letter asks for a grammar review. A mechanical pass
+  was run over the flattened source: doubled words, a/an agreement, spacing
+  before punctuation — no real defects (the apparent ones were `\uppercase`
+  markup and "a usable"/"an RL", both correct). 12 British spellings that were
+  *mixed* with their American forms were normalized (optimise→optimize,
+  behaviour→behavior, penalise→penalize, favourable→favorable,
+  programme→program). `grey-box` is left as is: it is a term of art, used
+  consistently, and the GB abbreviation derives from it. This is not a
+  native-speaker read, and that assurance is still missing.
 - **ORCID** for the corresponding author, required by the submission system:
   0009-0003-1521-7149.
 - **Data-availability statement.** Not currently present. Confirm against the
