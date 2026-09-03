@@ -8,7 +8,7 @@ API~\cite{Blum2021BOPTEST,Wetter2014Modelica} with a Gym interface for RL
 workflows~\cite{Arroyo2021GymBOPTEST}, complementing demand-response benchmarks such as
 CityLearn~\cite{VazquezCanteli2019CityLearn,VazquezCanteli2019Review}; every controller here is
 finally re-scored in BOPTEST, not only in its learned environment. Against this benchmark, HVAC DRL
-studies compare learned policies with rule-based, Guideline~36 or MPC
+studies compare learned policies with rule-based, Guideline~36 or model predictive control (MPC)
 references~\cite{Savino2025ASHRAE,Wang2025SafeDRL,Nguyen2024Modelling,Sun2024DirectTSup} and extend
 them to multi-agent and context-aware
 settings~\cite{Deng2025MultiAgent,Alotaibi2025ContextAware}; hierarchical policies decompose
@@ -19,7 +19,7 @@ works fix the training environment, which is precisely what this study varies.
 
 \subsection{Learned building surrogates}
 Learned building surrogates make DRL-scale training feasible where direct simulation is too slow,
-spanning black-box networks, grey-box RC models, Neural ODEs and physics-informed
+spanning black-box networks, grey-box resistance--capacitance (RC) models, Neural ordinary differential equations (ODEs) and physics-informed
 learning~\cite{Bacher2011RCIdentification,Berthou2014RC,Bunning2020RC,Picard2017WhiteBox,Raissi2019PINN,Chen2018NeuralODE,Karpatne2017TheoryGuided,Willard2022PIML,Hedayat2025PINN},
 and connecting to the broader scientific-machine-learning literature on operator learning and
 projection-based reduced-order models~\cite{Lu2021DeepONet,Li2021FNO,Benner2015ROM}. Surrogate

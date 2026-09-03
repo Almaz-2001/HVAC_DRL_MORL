@@ -95,14 +95,16 @@ models, reinforcement learning.
 \PARstart{T}{raining} a reinforcement-learning (RL) controller requires
 millions of environment interactions, which no real building and no
 high-fidelity Modelica simulator can supply. The standard response, across
-essentially the whole HVAC RL literature~\cite{AlSayed2024Review,Nguyen2024Modelling},
+essentially the whole heating, ventilation and air conditioning (HVAC) RL
+literature~\cite{AlSayed2024Review,Nguyen2024Modelling},
 is to fit a fast learned surrogate of the building and train the policy against
 it~\cite{HouEvins2024,Mshragi2026FastML}. That makes a design decision
 unavoidable: among candidate surrogates, which one should be used as the
 training environment?
 
 In practice the decision is made on predictive error. Surrogate papers report
-multi-step rollout error, error CDFs and calibration statistics, and the
+multi-step rollout error, error cumulative distribution functions (CDFs)
+and calibration statistics, and the
 surrogate with the lowest error is the one carried
 forward~\cite{Bacher2011RCIdentification,Bunning2020RC,Chen2018NeuralODE,Raissi2019PINN,Hedayat2025PINN}.
 This is a reasonable-looking heuristic and it is, to our knowledge, universal in
@@ -111,12 +113,13 @@ measured on held-out trajectories, whereas a training environment is used as a
 closed-loop transition function on \emph{policy-induced} states, and nothing
 guarantees that the two orderings agree.
 
-\textbf{They do not.} On the BOPTEST benchmark we find the ordering is not
+\textbf{They do not.} On the Building Optimization Testing (BOPTEST) benchmark
+we find the ordering is not
 merely uninformative but inverted over part of the range: the \emph{least}
 accurate surrogate in the study is the only one that trains a usable controller,
 and the most accurate one trains a controller that fails outright. A calibrated
-grey-box twin reaches a 24~h rollout error of \SI{0.644}{\celsius} against
-\SI{1.557}{\celsius} for a compact black-box model, yet a policy trained on it
+grey-box twin (GB) reaches a 24~h rollout error of \SI{0.644}{\celsius} against
+\SI{1.557}{\celsius} for a compact black-box model (BB), yet a policy trained on it
 leaves the comfort band for more than 77\% of the horizon on every random seed,
 while the coarse black-box model holds it for all but a few per cent of the
 time. Retraining the \emph{same} black-box architecture on a finer corpus makes
@@ -197,9 +200,10 @@ hourly BB, matched-resolution BB, calibrated GB, and the role-separated hybrid)
 each train the same thermostatic PPO controller, which is then scored zero-shot
 on the live BOPTEST runtime. Predictive accuracy and control utility order the
 backends differently: the two most accurate single-model backends collapse
-($\ms>1$). \emph{Bottom, boundary tests (dashed box):} hierarchical DRL,
-multi-objective RL and a three-case hydronic transfer study map where the recipe
-holds and are not part of the central test.}
+($\ms>1$). \emph{Bottom, boundary tests (dashed box):} hierarchical deep
+reinforcement learning (DRL), multi-objective RL and a three-case hydronic
+transfer study map where the recipe holds and are not part of the central
+test.}
 \label{fig:overview}
 \end{figure}
 

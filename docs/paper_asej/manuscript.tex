@@ -203,7 +203,7 @@ API~\cite{Blum2021BOPTEST,Wetter2014Modelica} with a Gym interface for RL
 workflows~\cite{Arroyo2021GymBOPTEST}, complementing demand-response benchmarks such as
 CityLearn~\cite{VazquezCanteli2019CityLearn,VazquezCanteli2019Review}; every controller here is
 finally re-scored in BOPTEST, not only in its learned environment. Against this benchmark, HVAC DRL
-studies compare learned policies with rule-based, Guideline~36 or MPC
+studies compare learned policies with rule-based, Guideline~36 or model predictive control (MPC)
 references~\cite{Savino2025ASHRAE,Wang2025SafeDRL,Nguyen2024Modelling,Sun2024DirectTSup} and extend
 them to multi-agent and context-aware
 settings~\cite{Deng2025MultiAgent,Alotaibi2025ContextAware}; hierarchical policies decompose
@@ -214,7 +214,7 @@ works fix the training environment, which is precisely what this study varies.
 
 \subsection{Learned building surrogates}
 Learned building surrogates make DRL-scale training feasible where direct simulation is too slow,
-spanning black-box networks, grey-box RC models, Neural ODEs and physics-informed
+spanning black-box networks, grey-box resistance--capacitance (RC) models, Neural ordinary differential equations (ODEs) and physics-informed
 learning~\cite{Bacher2011RCIdentification,Berthou2014RC,Bunning2020RC,Picard2017WhiteBox,Raissi2019PINN,Chen2018NeuralODE,Karpatne2017TheoryGuided,Willard2022PIML,Hedayat2025PINN},
 and connecting to the broader scientific-machine-learning literature on operator learning and
 projection-based reduced-order models~\cite{Lu2021DeepONet,Li2021FNO,Benner2015ROM}. Surrogate
@@ -295,15 +295,15 @@ multi-objective RL and hydronic transfer are boundary tests.}
 \subsection{Test case and runtime environment}\label{ssec:testcase}
 The plant is the BOPTEST \texttt{bestest\_air} emulator~\cite{Blum2021BOPTEST,Wetter2014Modelica}, a
 single-zone office of $6\times8\times2.7$~m (\SI{48}{\meter\squared}) whose envelope follows the
-ASHRAE Standard~140 BESTEST Case~900 definition, with heavyweight concrete-block walls, an insulated
+American Society of Heating, Refrigerating and Air-Conditioning Engineers (ASHRAE) Standard~140 BESTEST Case~900 definition, with heavyweight concrete-block walls, an insulated
 slab and \SI{12}{\meter\squared} of south glazing. Conditioning is an idealized four-pipe fan-coil
 unit: a gas boiler of constant efficiency 0.9 feeds the heating coil and a chiller of constant
-COP~3.0 the cooling coil, with a variable-speed supply fan. The zone is a two-person office occupied
+coefficient of performance (COP)~3.0 the cooling coil, with a variable-speed supply fan. The zone is a two-person office occupied
 08:00--18:00 with light internal gains and occupied comfort setpoints of 21/\SI{24}{\celsius}, under
-Denver-Stapleton TMY weather.
+Denver-Stapleton typical meteorological year (TMY) weather.
 
 Control is applied through the BOPTEST Run-Time Environment, a Dockerized Modelica emulator with
-embedded baseline local-loop and supervisory controllers, a disturbance forecaster and a KPI
+embedded baseline local-loop and supervisory controllers, a disturbance forecaster and a key performance indicator (KPI)
 calculator, all exposed through a RESTful HTTP API~\cite{Arroyo2021GymBOPTEST}. The agent does not
 replace the plant: it \emph{overwrites} one control input, the supply-air temperature setpoint,
 while the remaining embedded loops run at baseline. At each \SI{900}{\second} control step it reads
@@ -329,7 +329,7 @@ Test case & Type & Heat source / emitter & Climate \\
 \texttt{bestest\_air} (source) & Office, \SI{48}{\meter\squared} & Gas boiler + chiller / 4-pipe fan-coil & Denver \\
 \texttt{bestest\_hydronic} & Residential, \SI{48}{\meter\squared} & Gas water heater / radiator (\SI{5}{\kilo\watt}) & Brussels \\
 \texttt{bestest\_hydronic\_heat\_pump} & Residential, \SI{192}{\meter\squared} & Air-to-water heat pump (\SI{15}{\kilo\watt}) / floor loop & Brussels \\
-\texttt{singlezone\_commercial\_hydronic} & Commercial, \SI{8500}{\meter\squared} & District heating / AHU + radiator circuit & Copenhagen \\
+\texttt{singlezone\_commercial\_hydronic} & Commercial, \SI{8500}{\meter\squared} & District heating / air-handling unit (AHU) + radiator circuit & Copenhagen \\
 \bottomrule
 \end{tabular}
 \caption{BOPTEST test cases used in this study~\cite{Blum2021BOPTEST}. All are single-zone or
@@ -520,7 +520,7 @@ at \SI{1}{\hour}), a 15-minute exploration corpus (48\,384 rows at \SI{900}{\sec
 calibration corpus (10\,744 rows at \SI{900}{\second}); the deliberate one-hour/fifteen-minute
 pairing is the instrument behind the matched-corpus ablation. All controllers are trained in
 Stable-Baselines3~2.1.0 under Python~3.11.9. Experiments ran on a laptop workstation (6-core CPU,
-32~GB RAM, laptop-class GPU) with the emulator in a Docker container. Behind one HTTP contract sit
+32~GiB of memory, laptop-class GPU) with the emulator in a Docker container. Behind one HTTP contract sit
 four interchangeable backends (live BOPTEST, BB, GB, hybrid), so only the dynamics backend changes
 across the surrogate-versus-live comparison; the surrogate backends run \numrange{85.0}{220.2} times
 faster than the live loop, so a $5\times10^6$-step policy-optimization run costs about 47 minutes of
@@ -865,8 +865,8 @@ Pareto front, but an $N=5$ seed extension turns the canonical operating points i
 distributions (coefficient of variation 0.42--0.61) that fail a pre-specified stability test:
 promising in the mean, but not deployment-stable without explicit stabilization.
 
-\paragraph{Synthesis against the PI reference}
-The BOPTEST built-in PI controller is a reproducible reference, comfort-poor but energy-frugal, with
+\paragraph{Synthesis against the built-in reference controller}
+The BOPTEST built-in proportional--integral (PI) controller is a reproducible reference, comfort-poor but energy-frugal, with
 12-month means $\RMSE_T=\SI{3.40}{\celsius}$, 63.6\% violation and $\ms=0.910$. All evaluated
 learned agents reach \ms{} well below PI, dominating it on comfort at comparable or lower energy.
 The cross-family maintenance-score decomposition makes the pattern explicit: the failures, direct GB

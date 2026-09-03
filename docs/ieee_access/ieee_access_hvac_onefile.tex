@@ -95,14 +95,16 @@ models, reinforcement learning.
 \PARstart{T}{raining} a reinforcement-learning (RL) controller requires
 millions of environment interactions, which no real building and no
 high-fidelity Modelica simulator can supply. The standard response, across
-essentially the whole HVAC RL literature~\cite{AlSayed2024Review,Nguyen2024Modelling},
+essentially the whole heating, ventilation and air conditioning (HVAC) RL
+literature~\cite{AlSayed2024Review,Nguyen2024Modelling},
 is to fit a fast learned surrogate of the building and train the policy against
 it~\cite{HouEvins2024,Mshragi2026FastML}. That makes a design decision
 unavoidable: among candidate surrogates, which one should be used as the
 training environment?
 
 In practice the decision is made on predictive error. Surrogate papers report
-multi-step rollout error, error CDFs and calibration statistics, and the
+multi-step rollout error, error cumulative distribution functions (CDFs)
+and calibration statistics, and the
 surrogate with the lowest error is the one carried
 forward~\cite{Bacher2011RCIdentification,Bunning2020RC,Chen2018NeuralODE,Raissi2019PINN,Hedayat2025PINN}.
 This is a reasonable-looking heuristic and it is, to our knowledge, universal in
@@ -111,12 +113,13 @@ measured on held-out trajectories, whereas a training environment is used as a
 closed-loop transition function on \emph{policy-induced} states, and nothing
 guarantees that the two orderings agree.
 
-\textbf{They do not.} On the BOPTEST benchmark we find the ordering is not
+\textbf{They do not.} On the Building Optimization Testing (BOPTEST) benchmark
+we find the ordering is not
 merely uninformative but inverted over part of the range: the \emph{least}
 accurate surrogate in the study is the only one that trains a usable controller,
 and the most accurate one trains a controller that fails outright. A calibrated
-grey-box twin reaches a 24~h rollout error of \SI{0.644}{\celsius} against
-\SI{1.557}{\celsius} for a compact black-box model, yet a policy trained on it
+grey-box twin (GB) reaches a 24~h rollout error of \SI{0.644}{\celsius} against
+\SI{1.557}{\celsius} for a compact black-box model (BB), yet a policy trained on it
 leaves the comfort band for more than 77\% of the horizon on every random seed,
 while the coarse black-box model holds it for all but a few per cent of the
 time. Retraining the \emph{same} black-box architecture on a finer corpus makes
@@ -197,9 +200,10 @@ hourly BB, matched-resolution BB, calibrated GB, and the role-separated hybrid)
 each train the same thermostatic PPO controller, which is then scored zero-shot
 on the live BOPTEST runtime. Predictive accuracy and control utility order the
 backends differently: the two most accurate single-model backends collapse
-($\ms>1$). \emph{Bottom, boundary tests (dashed box):} hierarchical DRL,
-multi-objective RL and a three-case hydronic transfer study map where the recipe
-holds and are not part of the central test.}
+($\ms>1$). \emph{Bottom, boundary tests (dashed box):} hierarchical deep
+reinforcement learning (DRL), multi-objective RL and a three-case hydronic
+transfer study map where the recipe holds and are not part of the central
+test.}
 \label{fig:overview}
 \end{figure}
 
@@ -243,7 +247,7 @@ API~\cite{Blum2021BOPTEST,Wetter2014Modelica} with a Gym interface for RL
 workflows~\cite{Arroyo2021GymBOPTEST}, complementing demand-response benchmarks such as
 CityLearn~\cite{VazquezCanteli2019CityLearn,VazquezCanteli2019Review}; every controller here is
 finally re-scored in BOPTEST, not only in its learned environment. Against this benchmark, HVAC DRL
-studies compare learned policies with rule-based, Guideline~36 or MPC
+studies compare learned policies with rule-based, Guideline~36 or model predictive control (MPC)
 references~\cite{Savino2025ASHRAE,Wang2025SafeDRL,Nguyen2024Modelling,Sun2024DirectTSup} and extend
 them to multi-agent and context-aware
 settings~\cite{Deng2025MultiAgent,Alotaibi2025ContextAware}; hierarchical policies decompose
@@ -254,7 +258,7 @@ works fix the training environment, which is precisely what this study varies.
 
 \subsection{Learned building surrogates}
 Learned building surrogates make DRL-scale training feasible where direct simulation is too slow,
-spanning black-box networks, grey-box RC models, Neural ODEs and physics-informed
+spanning black-box networks, grey-box resistance--capacitance (RC) models, Neural ordinary differential equations (ODEs) and physics-informed
 learning~\cite{Bacher2011RCIdentification,Berthou2014RC,Bunning2020RC,Picard2017WhiteBox,Raissi2019PINN,Chen2018NeuralODE,Karpatne2017TheoryGuided,Willard2022PIML,Hedayat2025PINN},
 and connecting to the broader scientific-machine-learning literature on operator learning and
 projection-based reduced-order models~\cite{Lu2021DeepONet,Li2021FNO,Benner2015ROM}. Surrogate
@@ -336,15 +340,15 @@ hybrid & 900 s & Remedy: BB rollout dynamics plus frozen GB as a model-disagreem
 \subsection{Test case and runtime environment}\label{ssec:testcase}
 The plant is the BOPTEST \texttt{bestest\_air} emulator~\cite{Blum2021BOPTEST,Wetter2014Modelica}, a
 single-zone office of $6\times8\times2.7$~m (\SI{48}{\meter\squared}) whose envelope follows the
-ASHRAE Standard~140 BESTEST Case~900 definition, with heavyweight concrete-block walls, an insulated
+American Society of Heating, Refrigerating and Air-Conditioning Engineers (ASHRAE) Standard~140 BESTEST Case~900 definition, with heavyweight concrete-block walls, an insulated
 slab and \SI{12}{\meter\squared} of south glazing. Conditioning is an idealized four-pipe fan-coil
 unit: a gas boiler of constant efficiency 0.9 feeds the heating coil and a chiller of constant
-COP~3.0 the cooling coil, with a variable-speed supply fan. The zone is a two-person office occupied
+coefficient of performance (COP)~3.0 the cooling coil, with a variable-speed supply fan. The zone is a two-person office occupied
 08:00--18:00 with light internal gains and occupied comfort setpoints of 21/\SI{24}{\celsius}, under
-Denver-Stapleton TMY weather.
+Denver-Stapleton typical meteorological year (TMY) weather.
 
 Control is applied through the BOPTEST Run-Time Environment, a Dockerized Modelica emulator with
-embedded baseline local-loop and supervisory controllers, a disturbance forecaster and a KPI
+embedded baseline local-loop and supervisory controllers, a disturbance forecaster and a key performance indicator (KPI)
 calculator, all exposed through a RESTful HTTP API~\cite{Arroyo2021GymBOPTEST}. The agent does not
 replace the plant: it \emph{overwrites} one control input, the supply-air temperature setpoint,
 while the remaining embedded loops run at baseline. At each \SI{900}{\second} control step it reads
@@ -373,7 +377,7 @@ Test case & Type & Heat source / emitter & Climate \\
 \texttt{bestest\_air} (source) & Office, \SI{48}{\meter\squared} & Gas boiler + chiller / 4-pipe fan-coil & Denver \\
 \texttt{bestest\_hydronic} & Residential, \SI{48}{\meter\squared} & Gas water heater / radiator (\SI{5}{\kilo\watt}) & Brussels \\
 \texttt{bestest\_hydronic\_heat\_pump} & Residential, \SI{192}{\meter\squared} & Air-to-water heat pump (\SI{15}{\kilo\watt}) / floor loop & Brussels \\
-\texttt{singlezone\_commercial\_hydronic} & Commercial, \SI{8500}{\meter\squared} & District heating / AHU + radiator circuit & Copenhagen \\
+\texttt{singlezone\_commercial\_hydronic} & Commercial, \SI{8500}{\meter\squared} & District heating / air-handling unit (AHU) + radiator circuit & Copenhagen \\
 \bottomrule
 \end{tabular}
 \label{tab:testcases}
@@ -561,7 +565,7 @@ at \SI{1}{\hour}), a 15-minute exploration corpus (48\,384 rows at \SI{900}{\sec
 calibration corpus (10\,744 rows at \SI{900}{\second}); the deliberate one-hour/fifteen-minute
 pairing is the instrument behind the matched-corpus ablation. All controllers are trained in
 Stable-Baselines3~2.1.0 under Python~3.11.9. Experiments ran on a laptop workstation (6-core CPU,
-32~GB RAM, laptop-class GPU) with the emulator in a Docker container. Behind one HTTP contract sit
+32~GiB of memory, laptop-class GPU) with the emulator in a Docker container. Behind one HTTP contract sit
 four interchangeable backends (live BOPTEST, BB, GB, hybrid), so only the dynamics backend changes
 across the surrogate-versus-live comparison; the surrogate backends run \numrange{85.0}{220.2} times
 faster than the live loop, so a $5\times10^6$-step policy-optimization run costs about 47 minutes of
@@ -907,8 +911,8 @@ Pareto front, but an $N=5$ seed extension turns the canonical operating points i
 distributions (coefficient of variation 0.42--0.61) that fail a pre-specified stability test:
 promising in the mean, but not deployment-stable without explicit stabilization.
 
-\paragraph{Synthesis against the PI reference}
-The BOPTEST built-in PI controller is a reproducible reference, comfort-poor but energy-frugal, with
+\paragraph{Synthesis against the built-in reference controller}
+The BOPTEST built-in proportional--integral (PI) controller is a reproducible reference, comfort-poor but energy-frugal, with
 12-month means $\RMSE_T=\SI{3.40}{\celsius}$, 63.6\% violation and $\ms=0.910$. All evaluated
 learned agents reach \ms{} well below PI, dominating it on comfort at comparable or lower energy.
 The cross-family maintenance-score decomposition makes the pattern explicit: the failures, direct GB
