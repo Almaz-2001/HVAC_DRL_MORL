@@ -118,11 +118,25 @@ loudly that the result is not submittable.
 
 ## What gets uploaded
 
-`../ieee_access_submission.zip` (91 files, 11.6 MB) is the archive as submitted:
-`ieee_access_hvac_onefile.tex` as the main document, `supplementary.tex`, the
-class and font files, `references.bib`, `IEEEtran.bst`, and `figures/`. It is
-tracked deliberately — no script rebuilds it, so it is the only record of
-exactly what the journal received. The cover letter is uploaded separately.
+Build both archives with `python docs/ieee_access/make_submission_zip.py`.
+
+| File | Portal slot |
+| --- | --- |
+| `../ieee_access_main_manuscript.zip` (58 files, 4.1 MB) | Main Manuscript |
+| `supplementary.pdf`, or `../ieee_access_supplementary.zip` (32 files, 6.2 MB) | Supplementary Material |
+| `cover_letter_ieee_access.pdf` | Cover Letter |
+
+**Two archives, not one.** The portal states that the Main Manuscript "should
+not include any supplementary materials". The build copies the union of both
+documents' figures into one `figures/` folder, and 30 of the 39 are the
+supplement's alone — so the earlier single archive was shipping supplementary
+material inside the main manuscript, and was 10.3 MB instead of 4.1 MB.
+
+The split is verified, not assumed: the packaging script compiles the main
+bundle in an isolated copy of only its own packed files, so a figure filed under
+the wrong archive fails as a missing-file error instead of passing quietly. That
+compile's PDF is the one packed, which is how the `.tex` and `.pdf` are kept
+identical in content as checklist item 1 requires.
 
 Form fields for the file-upload step (label ≤ 30 chars, description ≤ 1000):
 label `LaTeX source and figures`, description naming the build order
