@@ -1,14 +1,18 @@
 # HVAC DRL/MORL Reproduction Roadmap
 
-Date: 2026-05-18 (last updated 2026-08-15)
+Date: 2026-05-18 (last updated 2026-09-16)
 
-This roadmap is the command-level path to reproduce the current article state:
+This roadmap is the step-by-step path a reviewer follows to rebuild every
+result in the article from scratch. Each section states what it consumes, the
+commands that produce the artifacts, and where those artifacts land, so any
+single number can be traced without re-running the whole chain. The three
+compute blocks are:
 
 - Block 1: surrogate fidelity and Hou-and-Evins numerical artifacts.
 - Block 2: thermostatic, HDRL, and MORL control results on `bestest_air`.
 - Block 3: hydronic-family transferability with pre-registered adapters.
 - Paper artifacts: canonical CSV evidence, tables, and figures in
-  `paper_artifacts/`; manuscript DOCX drafts in `docs/`.
+  `paper_artifacts/`; the LaTeX manuscript sources in `docs/`.
 
 Paper artifact dataflow:
 
@@ -18,9 +22,9 @@ reports/*.csv   compact computed evidence from outputs, tracked by Git
 paper_artifacts final paper-facing package: figures, tables, CSV evidence, manifests
 ```
 
-Do not commit bulk `outputs/` or generated figure variants under
-`reports/figures/`. The canonical GitHub-facing paper package is
-`paper_artifacts/`.
+`outputs/` holds the raw run artifacts and is large; it is rebuilt by the
+commands below. `reports/` and `paper_artifacts/` are versioned, so every
+number in the article can be checked there without running anything at all.
 
 Use Linux/bash syntax inside the project container (`/app`). Do not paste Windows
 PowerShell backticks into bash. Use `\` for line continuation.
@@ -31,7 +35,7 @@ If BOPTEST RTE is not running yet, start it from the BOPTEST runtime folder on
 the host machine:
 
 ```powershell
-cd C:\Users\user\Desktop\HVAC_DRL_MORL\boptest_rte
+cd <your-clone>/boptest_rte
 docker compose up -d
 docker compose ps
 ```
@@ -69,8 +73,7 @@ separate file, `roadmap_dependencies.md`, in the repository root. That file
 is the single source of truth for which prerequisite sections must already
 be complete before any given section can run. It covers all three blocks
 (Block 1, Block 2, Block 3) and explicitly marks independent sections
-(runtime checks, audit anchors, cleanup workflow, pre-registration
-manifests).
+(runtime checks, audit anchors, pre-registration manifests).
 
 To inspect dependencies before planning a re-run:
 
@@ -1004,9 +1007,8 @@ ls reports/hou_evins_*.csv
 ### 11.1. Results II provenance map (reviewer-facing data and figures)
 
 Results II (Block 2 control results) lives in `docs/results2_control_overleaf/`.
-Following the Results I pattern, it is regenerated from versioned artifacts by a
-data-driven builder `build_results2_overleaf.py` (to be added, mirroring
-`docs/results1_digital_twin_overleaf/build_results1_overleaf.py`). Reviewers can
+Following the Results I pattern, it is regenerated from versioned artifacts by
+`docs/results2_control_overleaf/build_results2_overleaf.py`. Reviewers can
 inspect every Block 2 number directly from `reports/` and `outputs/`:
 
 ```text
@@ -1044,25 +1046,6 @@ reconstructed 5D interface and yields a useful Pareto structure, but N=5
 canonical variance is too high for a deployment-stability claim), and the
 fidelity-to-RL gap / hybrid role assignment is the Block 1->Block 2 dependency
 established in Section 3.1.
-
-## 12. Rebuild the Word Article Skeleton
-
-```bash
-python3 -B docs/build_hvac_paper_docx.py
-```
-
-Expected output:
-
-```bash
-ls -lh docs/hvac_paper_skeleton_q1_restructured.docx
-```
-
-This document now contains:
-
-- Block 1 surrogate fidelity tables and figures.
-- Block 2 thermostatic/HDRL/MORL results.
-- Hou-and-Evins supplementary tables S1-S11.
-- Post-N=5 MORL falsification result and seasonal variance diagnostic figure.
 
 ## 13. Audit Anchors
 
@@ -1116,42 +1099,12 @@ Reviewer-facing protection:
   gives a useful Pareto structure, but N=5 canonical variance remains too high
   for deployment-stability claims."
 
-## 13.5. Pre-Block-3 Cleanup Workflow
-
-Before opening Block 3, keep cleanup commits separate from article/result
-commits. Do not use `git add -A`.
-
-Recommended sequence:
-
-```powershell
-git status --short
-git diff -- docs\build_hvac_paper_docx.py roadmap.md
-
-# Article/roadmap commit only
-git add docs\build_hvac_paper_docx.py docs\hvac_paper_skeleton_q1_restructured.docx roadmap.md
-git diff --cached --stat
-git commit -m "article roadmap: freeze Block 1, Block 2, and Block 3 reproduction path"
-
-# Cleanup/archive commit only, if staged cleanup moves are still pending
-git status --short
-git commit -m "cleanup: archive legacy docs, logs, results, literature, and planning notes"
-```
-
-Rules:
-
-- Keep `.claude/worktrees/` out of git.
-- Keep Word lock files (`~$*.docx`) out of git.
-- Do not mix cleanup moves with scientific result updates.
-- Do not rewrite commits `93df9b3` or `62dc859`.
-
 ## 14. Block 3: Transferability Pre-Registration
 
 Block 3 opened only after the Block 1/2 article state was committed. The first
-Block 3 artifact is the pre-registration manifest:
-
-```bash
-configs/block3_testcase_manifest.yaml
-```
+Block 3 artifact is the pre-registration manifest
+`configs/block3_testcase_manifest.yaml`. It is not a command; it is the file a
+reviewer reads to confirm what was fixed in advance of the runs in Section 15.
 
 The manifest pre-registers, BEFORE any Block 3 BOPTEST run:
 
@@ -1327,34 +1280,19 @@ Pre-registered hypothesis status at Block 3 closure:
 ```bash
 ls reports/block3_*_transfer_summary.csv
 cat reports/block3_transfer_matrix.csv
-cat configs/block3_testcase_manifest.yaml | yq '.aggregated_results'
+
+# The manifest's aggregated_results block. PyYAML is already a project
+# dependency; yq is not, so read it with Python rather than adding a tool.
+python3 - <<'PY'
+import yaml
+m = yaml.safe_load(open("configs/block3_testcase_manifest.yaml"))
+print(yaml.safe_dump(m["aggregated_results"], sort_keys=False))
+PY
 ```
 
 Audit anchor for Block 3 closure: the commit SHA that wrote
 `aggregated_results.status: closed` into the manifest. Logged inside
 `audit.block3_close_commit_sha`.
-
-### 15.6. Block 3 frozen copy bundle
-
-The Block 3 code/data/results snapshot is also packaged as a copy-only bundle:
-
-```bash
-ls block3_transferability_bundle
-cat block3_transferability_bundle/README.md
-cat block3_transferability_bundle/manifests/bundle_manifest.json
-```
-
-The bundle mirrors the Block 1/2 organization:
-
-- `block3_transferability_bundle/code/` — adapter, yearly validation, telemetry, and recalibration scripts
-- `block3_transferability_bundle/configs/` — pre-registration manifest and adapter YAMLs
-- `block3_transferability_bundle/data/` — target hydronic telemetry CSVs
-- `block3_transferability_bundle/outputs/` — yearly validation and surrogate recalibration outputs
-- `block3_transferability_bundle/reports/` — transfer summaries and transfer matrix
-- `block3_transferability_bundle/models/` — frozen thermostatic checkpoints
-
-This is a non-destructive copy bundle. Source paths remain active in
-`evaluation/`, `configs/`, `data/`, `outputs/`, and `reports/`.
 
 ### 15.7. Results III provenance map (reviewer-facing data and figures)
 
@@ -1381,9 +1319,13 @@ Figures (protocol, heatmap, RMSE gain, C_zon, closure) -> docs/results3_transfer
 To rebuild the artifacts themselves, run the per-testcase Section 15.2 commands
 (`smoke_block3_hydronic_adapter.py`, `yearly_validation_universal_adapter.py`,
 `collect_block3_hydronic_adapter_telemetry.py`,
-`run_block3_surrogate_recalibration.py`) and then
-`evaluation/build_block3_transfer_matrix.py`; finally regenerate the section with
+`run_block3_surrogate_recalibration.py`), then regenerate the section with
 `build_results3_overleaf.py`.
+
+`reports/block3_transfer_matrix.csv` has no generator: no script in the
+repository writes it, every reference reads it. It was assembled once from the
+per-testcase summaries and is a committed input, not a build product. Treat it
+as evidence to be edited deliberately, not regenerated.
 
 ## 16. Audit Anchor Chain (Updated)
 
@@ -1409,10 +1351,9 @@ python3 -B evaluation/build_hybrid_evidence_closure.py
 python3 -B evaluation/build_morl_pareto_table.py
 python3 -B evaluation/build_morl_canonical_variance_diagnostics.py
 python3 -B evaluation/build_morl_seasonal_variance_inversion.py
-python3 -B evaluation/build_block3_transfer_matrix.py
 
-# Rebuild the Word skeleton with Block 3 results, if regenerating from source
-python3 -B docs/build_hvac_paper_docx.py
+# reports/block3_transfer_matrix.csv is a committed input with no generator;
+# see Section 15.7.
 
 # Consolidate the canonical GitHub-facing paper package
 python3 -B evaluation/organize_paper_artifacts.py
@@ -1433,45 +1374,36 @@ Expected canonical counts:
 
 - `paper_artifacts/figures/main/`: 12 main figures, each as PNG and PDF
   (`24` files).
-- `paper_artifacts/tables/main/`: 7 main-paper tables exported from
-  `docs/hvac_paper_final_q1.docx`.
+- `paper_artifacts/tables/main/`: 7 main-paper tables, matching the tables
+  typeset in the LaTeX manuscript.
 - `paper_artifacts/csv/reports/`: compact report-level CSV evidence used by
   the paper.
 - `paper_artifacts/manifests/`: main-figure manifest and full artifact
   inventory.
 
-`reports/figures/` is legacy/generated output and is ignored by Git. Old figure
-variants are archived under `draft/legacy_archive/figure_variants_archive/`;
-they are not the paper-facing artifact location.
+`reports/figures/` is generated output and is ignored by Git. The paper-facing
+figure location is `paper_artifacts/figures/`; a figure that appears in the
+manuscript but not there is a build error, not an alternative source.
 
-Final paper checklist:
+The manuscript itself is typeset from LaTeX sources under `docs/`, each
+journal port having its own build script; `docs/ieee_access/build_ieee.py`
+is the current one. Those scripts assemble the text and pull the figures and
+tables from `paper_artifacts/`, so the manuscript cannot show a number that
+the commands above did not produce.
 
-- All four audit anchor SHAs cited in Methods §4.5 reproducibility statement
-- Section 7 of paper draws cell-by-cell from `cell_results` block of the
-  Block 3 manifest
-- Threats-to-Validity (§8) explicitly mentions the threshold-framework
-  limitation revealed by the commercial-testcase result
-- Cover letter highlights pre-registration discipline (three audit anchors)
-  as the methodological differentiator
-- which metrics define transferability success
+What a reviewer should be able to confirm at this point:
 
-Git staging for the paper package must remain explicit:
-
-```bash
-git add .gitignore evaluation/organize_paper_artifacts.py paper_artifacts
-git add -u reports/figures/article_real
-git status --short
-```
-
-Do not use `git add -A` for the paper-artifact cleanup because the repository
-may also contain unrelated model-output deletions, Word lock files, or legacy
-Sinergym archive changes.
+- the four audit-anchor SHAs cited in the reproducibility statement resolve
+  in this repository (Section 16);
+- the transferability section draws cell by cell from the `cell_results`
+  block of the Block 3 manifest, which was committed before those runs;
+- the threats-to-validity discussion names the threshold-framework
+  limitation that the commercial testcase exposed.
 
 ## 18. Block 1/2 Extension: Response Sign, Monotonicity, MPC Baseline
 
-Added after the *Energies* pre-check return, while porting to IEEE Access. Three
-results, all pre-registered before execution, and one execution invalidated and
-recorded rather than discarded.
+Three results, all pre-registered before execution, and one execution
+invalidated and recorded rather than discarded.
 
 ### 18.1 Directional validity of the matched-resolution surrogate
 
@@ -1483,7 +1415,7 @@ the right way.
 ```bash
 python3 -B evaluation/check_surrogate_response_sign.py
 python3 -B evaluation/audit_matched_bb_sign.py
-python3 -B evaluation/run_matched_bb_seed_audit.py --seeds 42 43 44
+python3 -B evaluation/run_matched_bb_seed_audit.py --seeds 42,43,44
 ```
 
 The matched-resolution black box is inverted in about nine sampled states out of
@@ -1499,15 +1431,38 @@ error improves in every one. Evidence:
 *lower* the temperature.
 
 ```bash
-python3 -B evaluation/run_matched_bb_monotonic.py --seeds 42 43 44
-python3 -B evaluation/run_matched_bb_monotonic.py --fan-sweep 500 1000 2000
+# --stage defaults to "surrogate", so the controller run has to be asked
+# for explicitly; without it this produces no m_s at all.
+python3 -B evaluation/run_matched_bb_monotonic.py --stage all --seeds 42,43,44
+
+# Fan-penalty sweep: one run per weight. There is no --fan-sweep flag;
+# --lambda-mono-fan takes a single value.
+python3 -B evaluation/run_matched_bb_monotonic.py --stage surrogate --seeds 42 --lambda-mono-fan 500
+python3 -B evaluation/run_matched_bb_monotonic.py --stage surrogate --seeds 42 --lambda-mono-fan 1000
+python3 -B evaluation/run_matched_bb_monotonic.py --stage surrogate --seeds 42 --lambda-mono-fan 2000
 ```
 
-Constraining the supply-temperature channel restores it to 100 % and relocates
-the defect to the fan channel (20.8 % valid constrained, 2.2 % unconstrained).
-Constraining both gives a surrogate that is accurate, directionally valid, and
-still trains a failing controller (`m_s` 1.426 peak / 1.597 typical). Evidence:
-`reports/block1_matched_bb_monotonic_audit.json`.
+Constraining the supply-temperature channel restores that channel to 100 % at a
+24 h rollout error of 0.745 C, lower than the 0.876 C it started from, and
+relocates the defect to the fan channel, which stays inverted: 20.8 % valid
+under the supply constraint against 2.2 % without it.
+
+The controller is trained on that supply-corrected surrogate, and it fails:
+`m_s` 1.426 peak / 1.597 typical. **It is not a directionally valid model.**
+`run_matched_bb_monotonic.py` selects `ckpt(seed)` with no fan penalty, which
+resolves to `outputs/surrogate_v3_15min_mono_seed42`, still 20.8 % valid on the
+fan. Constraining both channels as well (`--lambda-mono-fan 2000`) does restore
+the fan sign, but costs accuracy: 24 h error rises to 1.465 C, worse than the
+unconstrained 0.876 C, and no controller was trained on it. The manuscript
+states this correctly; earlier wording here did not.
+
+Evidence, by claim:
+
+- surrogate rows: `reports/block1_matched_bb_monotonic_audit.json` (the single
+  row there is the `fan2000` model, 1.4649 C);
+- controller scores: `outputs/block2_thermostatic_mono15min_seed42/summary.csv`;
+- per-channel validity: `reports/block2_mpc_h5_invalidated.md`;
+- per-variant 24 h error: `outputs/surrogate_v3_15min_mono_seed42*/rollout_prepared/v3/horizon_metrics.csv`.
 
 **Audit anchor:** the one-channel audit was believed complete for a day, and
 four manuscript claims were written on it before the fan channel was checked.
@@ -1521,7 +1476,10 @@ the audit anchor for H5b, in the same way the Block 3 manifest anchors H1–H4.
 **Do not edit it after the first run**; the outcome goes in `reports/`.
 
 ```bash
-python3 -B evaluation/run_mpc_baseline.py --backends mpc_bb_mono mpc_bb_hourly mpc_gb
+# Comma separated, and the ids come from the pre-registration: mpc_bb_hourly,
+# mpc_bb_mono, mpc_bb_matched, mpc_gb_calibrated.
+python3 -B evaluation/run_mpc_baseline.py \
+  --backends mpc_bb_mono,mpc_bb_hourly,mpc_gb_calibrated
 ```
 
 H5b is **falsified**: a gradient-based planner reproduces the same inverted
@@ -1548,22 +1506,3 @@ python3 -B evaluation/run_hdrl_seed_sweep.py --stage benchmark --skip-existing
 the envs were seeded, so a "seed" sweep was not reproducible. The censor-weight
 trend survives replication at 10.0 sigma / 5.8 sigma and saturates above
 lambda = 0.05.
-
-## 19. Repository Audit, 2026-09-02
-
-Working tree shrank by 2.5 GB. Nothing was deleted except regenerable build
-output; everything else moved.
-
-- `_archive/` (gitignored, local only) holds 2.24 GB of unreachable training
-  runs, 47 MB of superseded submission bundles, and the captured uncommitted
-  state of three removed agent worktrees. `_archive/README.md` lists every item
-  and how to put it back.
-- `docs/_superseded/` (tracked) holds the finished MDPI *AI*, MDPI *Energies*
-  and *Results in Engineering* ports. Their build scripts were re-pointed to the
-  live sources two directories up and still run.
-- Reachability of an `outputs/` directory must be checked **twice**: by name,
-  and against every literal `outputs/...` prefix in the code with f-string
-  placeholders treated as wildcards. The seed-replication directories behind
-  §18.1 are built as `f"outputs/surrogate_v3_15min_matched_seed{seed}"` and
-  never appear as literals, so a name-only search calls the paper's own
-  evidence orphaned.

@@ -4,7 +4,8 @@ This file is the single source of truth for which prerequisite sections must
 already be complete before a given section in `roadmap.md` can run. It is
 referenced from `roadmap.md` Section 0.5 and is intentionally kept as a
 separate file so that the main roadmap stays focused on commands while this
-file stays focused on structural dependencies.
+file stays focused on structural dependencies. A reviewer reproducing one
+result reads a row here first, to see which earlier sections must have run.
 
 Read order: a row's "Reads from" column lists the prerequisite sections that
 produce the inputs that row's section consumes. A blank "Reads from" cell
@@ -35,22 +36,21 @@ means the section is independent of compute closure.
 
 | Section | Title                                                    | Reads from                                  | Produces outputs consumed by |
 |---------|----------------------------------------------------------|---------------------------------------------|------------------------------|
-| 11      | Rebuild Block 2 Tables and Figures                       | 3, 4, 4.5, 4.6, 5, 5.5, 6, 6.5, 8, 9, 10    | 12                           |
-| 12      | Rebuild the Word Article Skeleton                        | 11                                          | (final manuscript)           |
-| 17      | Paper Manuscript Build Path + Artifact Consolidation     | 11, 12, 15                                  | `paper_artifacts/` canonical paper package |
+| 11      | Rebuild Block 2 Tables and Figures                       | 3, 4, 4.5, 4.6, 5, 5.5, 6, 6.5, 8, 9, 10    | 17                           |
+| 17      | Paper Manuscript Build Path + Artifact Consolidation     | 11, 15                                      | `paper_artifacts/` canonical paper package |
 
 ## Manuscript section packages (Overleaf, `docs/`)
 
 Each results block has a standalone, data-driven Overleaf package that
 regenerates its manuscript section, figures, and tables directly from the
 `reports/` and `outputs/` artifacts produced by the sections above. These are
-section-build steps (not compute), analogous to Sections 11-12 but per-block and
+section-build steps (not compute), analogous to Section 11 but per-block and
 LaTeX-facing.
 
 | Package (builder)                                            | Reads from (roadmap sections)        | Produces / status |
 |--------------------------------------------------------------|--------------------------------------|-------------------|
 | Results I  (`build_results1_overleaf.py`)                    | 1, 2, 2.5, 3                         | `docs/results1_digital_twin_overleaf/` — **done** (provenance map: roadmap 3.2) |
-| Results II (`build_results2_overleaf.py`, planned)           | 4, 4.5, 5, 5.5, 6, 6.5, 8, 9, 10, 11 | `docs/results2_control_overleaf/` — planned (provenance map: roadmap 11.1) |
+| Results II (`build_results2_overleaf.py`)                    | 4, 4.5, 5, 5.5, 6, 6.5, 8, 9, 10, 11 | `docs/results2_control_overleaf/` — **done** (provenance map: roadmap 11.1) |
 | Results III (`build_results3_overleaf.py`)                   | 15                                   | `docs/results3_transferability_overleaf/` — **done** (provenance map: roadmap 15.7) |
 
 ## Independent sections (no compute closure)
@@ -60,7 +60,6 @@ LaTeX-facing.
 | 0       | Runtime Checks                                           | Container health / BOPTEST RTE lifecycle    |
 | 3.1     | Boundary: why direct-v3.5 failure and hybridization are in Block 2 | Explanatory bridge; no compute; maps Block 1 artifacts to Block 2 controller-backend tests |
 | 13      | Audit Anchors                                            | Reference list of pre-registration commits  |
-| 13.5    | Pre-Block-3 Cleanup Workflow                             | Repository hygiene before Block 3 opens     |
 | 14      | Block 3: Transferability Pre-Registration                | Manifest; must be committed before Section 15 runs |
 | 16      | Audit Anchor Chain (Updated)                             | Reference list including Block 3 closure SHA |
 
@@ -134,9 +133,9 @@ LaTeX-facing.
 - **Manuscript section packages are data-driven and read-only**: the
   per-block Overleaf builders under `docs/` consume `reports/`/`outputs/`
   artifacts and never modify model or pipeline code. They depend only on the
-  artifact-producing sections listed in their table row, so Results II cannot be
-  finalized until its Block 2 inputs (Sections 4-11) exist, and Results III
-  until Section 15 closes. Results I is the reference implementation; Results II
+  artifact-producing sections listed in their table row: Results II requires its
+  Block 2 inputs (Sections 4-11), and Results III requires Section 15 to have
+  closed. Results I is the reference implementation; Results II
   and III mirror its structure (provenance map, nomenclature/SI, limitations,
   data-driven tables/figures). The power-channel checkpoint caveat from
   Results I (canonical `power_head_only`, not the intermediate `episodeaware`)
