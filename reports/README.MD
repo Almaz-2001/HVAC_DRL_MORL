@@ -1,13 +1,21 @@
 # reports/
 
-Working notes, intermediate analysis, drafts. May change frequently.
+Computed evidence and the narrative analysis behind it. `reports/*.csv` and
+`reports/*.json` are the audit trail: every number in the manuscript traces to a
+file here, which is why they are tracked while `outputs/` is not.
 
 Start here for article-facing navigation:
 
-- [literature_review_alignment_block1_block2.md](C:/Users/user/Desktop/HVAC_DRL_MORL/reports/literature_review_alignment_block1_block2.md): maps the Literature review / Hou-and-Evins protocol to Block 1 and Block 2.
-- [hou_evins_compliance_matrix.md](C:/Users/user/Desktop/HVAC_DRL_MORL/reports/hou_evins_compliance_matrix.md): current methodology compliance matrix.
-- [q1_article_full_progress_report.md](C:/Users/user/Desktop/HVAC_DRL_MORL/reports/q1_article_full_progress_report.md): full scientific progress narrative.
+- [literature_review_alignment_block1_block2.md](literature_review_alignment_block1_block2.md)
+  maps the literature review and the Hou-and-Evins protocol onto Block 1 and
+  Block 2.
+- [hou_evins_compliance_matrix.md](hou_evins_compliance_matrix.md) is the
+  methodology compliance matrix.
+- [block2_mpc_h5_invalidated.md](block2_mpc_h5_invalidated.md) records the run
+  that a defect in our own planner invalidated. It is kept rather than deleted:
+  quietly re-running would leave the pre-registration looking untouched when a
+  completed run had already been seen.
 
-For canonical, article-facing reports see paper_canonical_bundle/docs/.
-For frozen Block 1 / Block 2 packaging snapshots see
-block1_surrogate_fidelity_bundle/reports/ and block2_hybrid_branch_bundle/reports/.
+To rebuild any of this from scratch, follow `roadmap.md` in the repository
+root; it is the step-by-step path, and `roadmap_dependencies.md` says which
+sections have to have run first.

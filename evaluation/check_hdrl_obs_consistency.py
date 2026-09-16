@@ -13,9 +13,8 @@ power_feature_mode=raw. The ablations zero out slots rather than removing them
 still matches and nothing raises -- the policy is simply fed a different encoding
 at evaluation than the one it was trained on.
 
-reports/reproduce_current_state_runbook.md records the same omission for the
-thermostatic hybrid benchmarks, so this is worth resolving before the multi-seed
-sweep is run, not after.
+The same omission applies to the thermostatic hybrid benchmarks, so this is
+worth resolving before the multi-seed sweep is run, not after.
 
 This script benchmarks ONE already-trained HDRL policy twice against live
 BOPTEST -- once with the matched encoding, once with the legacy one -- and prints

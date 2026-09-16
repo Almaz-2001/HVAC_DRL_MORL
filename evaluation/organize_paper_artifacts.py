@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import csv
 import shutil
-from datetime import datetime
 from pathlib import Path
 
 from docx import Document
@@ -153,7 +152,7 @@ Canonical paper-facing artifact directory for the HVAC DRL/MORL Q1 article.
 
 - `figures/main/`: final main-paper figures selected from `reports/final_q1_12_engineering_figures_manifest.csv`.
 - `figures/supplementary/`: retained diagnostic figures not selected for the main paper.
-- `tables/main/`: main-paper tables exported from `docs/hvac_paper_final_q1.docx`.
+- `tables/main/`: main-paper tables, matching the tables typeset in the LaTeX manuscript.
 - `csv/reports/`: report-level CSV evidence used to build tables and figures.
 - `manifests/`: figure manifests and the generated artifact inventory.
 
@@ -163,19 +162,23 @@ Large training outputs, raw corpora, model checkpoints, and BOPTEST binaries rem
     )
 
 
-def archive_old_article_real_dir(inventory: list[dict[str, str]]) -> None:
+def discard_old_article_real_dir(inventory: list[dict[str, str]]) -> None:
+    """Drop the stale figure-variant directory rather than stashing it.
+
+    This used to move the directory into draft/legacy_archive/, a tree that no
+    longer exists, so every run recreated it. FIG_SRC is generated output under
+    reports/figures/ and is gitignored: rebuilding the figures produces it
+    again, and the paper-facing copies are already in paper_artifacts/.
+    """
     if not FIG_SRC.exists():
         return
-    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    dst = ROOT / "draft" / "legacy_archive" / "figure_variants_archive" / f"article_real_{stamp}"
-    dst.parent.mkdir(parents=True, exist_ok=True)
-    shutil.move(str(FIG_SRC), str(dst))
+    shutil.rmtree(FIG_SRC)
     inventory.append(
         {
-            "role": "legacy_archive",
-            "status": "moved",
+            "role": "stale_figure_variants",
+            "status": "deleted",
             "source": str(FIG_SRC.relative_to(ROOT)),
-            "destination": str(dst.relative_to(ROOT)),
+            "destination": "",
             "bytes": "",
         }
     )
@@ -190,7 +193,7 @@ def main() -> None:
     copy_reports_csv(inventory)
     export_docx_tables(inventory)
     write_readme()
-    archive_old_article_real_dir(inventory)
+    discard_old_article_real_dir(inventory)
     write_inventory(inventory)
 
     print(f"Created canonical paper artifacts at: {ARTIFACTS}")

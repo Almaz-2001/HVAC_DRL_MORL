@@ -72,10 +72,10 @@ V3_15MIN_CANONICAL_PT = f"{V3_15MIN_OUTPUT_DIR}/rc_node_v3_15min_matched.pt"
 V3_15MIN_ROLLOUT_OUT = "outputs/surrogate_v3_15min_matched_rollout_prepared"
 CORPUS_MATCHED_REPORT = "reports/block1_corpus_matched_comparison.csv"
 
-LEGACY_PREPARE = (
-    "draft/legacy_archive/top_level/block_1_2_surrogate_rmse/data/"
-    "prepare_surrogate_15min_dataset.py"
-)
+# Builds data/block_1_2_surrogate_rmse/boptest_block12_15min_prepared.csv from
+# the 15-min closed-loop traces under outputs/. Recovered from commit 11bbcf7^
+# after the draft/ tree it used to live in was deleted.
+PREPARE_15MIN = "surrogate/data/prepare_block12_15min_dataset.py"
 
 
 # ---------------------------------------------------------------------------
@@ -193,7 +193,7 @@ def build_corpus_matched_report_command() -> list[str]:
 
 
 def prepare_15min_command() -> list[str]:
-    return cmd(PY, "-B", LEGACY_PREPARE)
+    return cmd(PY, "-B", PREPARE_15MIN)
 
 
 def v35_calibrate_command(preset: str) -> list[str]:

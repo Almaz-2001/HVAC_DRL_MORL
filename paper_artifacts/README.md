@@ -6,7 +6,7 @@ Canonical paper-facing artifact directory for the HVAC DRL/MORL Q1 article.
 
 - `figures/main/`: final main-paper figures selected from `reports/final_q1_12_engineering_figures_manifest.csv`.
 - `figures/supplementary/`: retained diagnostic figures not selected for the main paper.
-- `tables/main/`: main-paper tables exported from `docs/hvac_paper_final_q1.docx`.
+- `tables/main/`: main-paper tables, matching the tables typeset in the LaTeX manuscript.
 - `csv/reports/`: report-level CSV evidence used to build tables and figures.
 - `manifests/`: figure manifests and the generated artifact inventory.
 

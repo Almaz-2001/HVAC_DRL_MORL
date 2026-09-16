@@ -5,16 +5,11 @@ Produces `ieee_access_hvac.pdf` (14 pp) and `supplementary.pdf` (28 pp).
 
 ## Why this journal
 
-| Journal | Outcome | Stated reason |
-| --- | --- | --- |
-| Results in Engineering | desk reject | generic |
-| Ain Shams Eng. J. | desk reject | "lack of sufficient novelty" |
-| Energies (MDPI) | returned at technical pre-check | **scope**, explicitly *not* quality |
-
-The Energies outcome is the informative one: the contribution is methodological
-(which surrogate to train an RL controller on), demonstrated on a building.
-IEEE Access states that it welcomes multidisciplinary work, applications-oriented
-articles and negative results that do not fit the traditional journals.
+The contribution is methodological -- which surrogate to train an RL controller
+on -- and a building is where it is demonstrated, not what it is about. That
+placement is what makes IEEE Access the right venue: it states that it welcomes
+multidisciplinary work, applications-oriented articles, and negative results
+that do not fit the traditional journals.
 
 ## The structural risk
 

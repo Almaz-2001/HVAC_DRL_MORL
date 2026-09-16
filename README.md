@@ -61,12 +61,10 @@ reports/       compact computed evidence: *.csv, *.json, *.md  (tracked)
 paper_artifacts/  canonical paper-facing figures, tables, manifests (tracked)
 outputs/       raw run artifacts (gitignored, large)
 models/        checkpoints (gitignored, large)
-docs/          manuscript sources per target journal
+docs/          manuscript sources
   ieee_access/   live submission set
   paper_asej/    prose source the live set is sliced from
   paper_combined/  upstream long-format source
-  _superseded/   finished ports to journals no longer targeted
-_archive/      local only, gitignored: dead runs and old bundles
 ```
 
 `reports/*.csv` is the audit trail: every number in the manuscript traces to a
@@ -148,12 +146,9 @@ It slices Related work, Materials and methods, and Results verbatim out of
 `docs/paper_asej/manuscript.tex`, so there is one source of truth for the
 science, and flattens the result to a single `.tex` for upload.
 
-Earlier targets: *Results in Engineering* (Elsevier) and *Ain Shams Engineering
-Journal* desk-rejected on novelty; *Energies* (MDPI, manuscript
-`energies-4523055`) was returned at technical pre-check as out of scope for an
-energy journal rather than on quality. Their ports are under
-`docs/_superseded/`, except `docs/paper_asej/`, which stays in place because the
-live IEEE Access set is sliced from it.
+`docs/paper_asej/` and `docs/paper_combined/` keep their historical directory
+names. They are the prose source and the long-format source the live set is
+sliced from, not separate submissions.
 
 The project codebase is not publicly released at this stage; it is available to
 editors and reviewers on request.
