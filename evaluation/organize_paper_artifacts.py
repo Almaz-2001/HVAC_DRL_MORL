@@ -4,7 +4,6 @@ import csv
 import shutil
 from pathlib import Path
 
-from docx import Document
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -12,7 +11,6 @@ REPORTS = ROOT / "reports"
 FIG_SRC = REPORTS / "figures" / "article_real"
 ARTIFACTS = ROOT / "paper_artifacts"
 MAIN_MANIFEST = REPORTS / "final_q1_12_engineering_figures_manifest.csv"
-DOCX = ROOT / "docs" / "hvac_paper_final_q1.docx"
 
 
 def ensure_dirs() -> None:
@@ -101,37 +99,6 @@ def copy_reports_csv(inventory: list[dict[str, str]]) -> None:
         copy_file(src, target_dir / src.name, inventory, role)
 
 
-def export_docx_tables(inventory: list[dict[str, str]]) -> None:
-    if not DOCX.exists():
-        inventory.append(
-            {
-                "role": "main_table",
-                "status": "missing_docx",
-                "source": str(DOCX.relative_to(ROOT)),
-                "destination": "",
-                "bytes": "",
-            }
-        )
-        return
-
-    doc = Document(DOCX)
-    for index, table in enumerate(doc.tables, start=1):
-        dst = ARTIFACTS / "tables" / "main" / f"table_{index:02d}.csv"
-        with dst.open("w", newline="", encoding="utf-8") as handle:
-            writer = csv.writer(handle)
-            for row in table.rows:
-                writer.writerow([cell.text.replace("\n", " ").strip() for cell in row.cells])
-        inventory.append(
-            {
-                "role": "main_table",
-                "status": "exported",
-                "source": str(DOCX.relative_to(ROOT)),
-                "destination": str(dst.relative_to(ROOT)),
-                "bytes": str(dst.stat().st_size),
-            }
-        )
-
-
 def write_inventory(inventory: list[dict[str, str]]) -> None:
     dst = ARTIFACTS / "manifests" / "paper_artifacts_inventory.csv"
     fields = ["role", "status", "source", "destination", "bytes"]
@@ -191,7 +158,6 @@ def main() -> None:
     main_basenames = copy_main_figures(inventory)
     copy_supplementary_figures(main_basenames, inventory)
     copy_reports_csv(inventory)
-    export_docx_tables(inventory)
     write_readme()
     discard_old_article_real_dir(inventory)
     write_inventory(inventory)
