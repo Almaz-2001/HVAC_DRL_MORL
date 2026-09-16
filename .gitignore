@@ -165,3 +165,51 @@ docs/*.zip
 
 # Scratch
 tmp/
+
+# =============================================================================
+# Kept locally, out of the repository
+# =============================================================================
+# Administrative deliverables that are not this research: the NPU thesis
+# proposal, the iQUAT grant report, the WP10/WP11 progress report. Nothing in
+# the reproduction path reads them.
+docs/master_dissertation/
+docs/report/
+docs/current_tasks/
+
+# The submission packet. A reviewer receiving this repository should get the
+# science, not our correspondence about placing it -- and not the authors'
+# personal data. bios.tex is NOT here: the manuscript \input's it.
+docs/*/SUBMISSION_NOTES.md
+docs/*/SUBMISSION_CHECKLIST.md
+docs/*/bio_request_*.md
+docs/*/cover_letter*
+docs/*/title_page.*
+docs/*/declaration_of_competing_interests.*
+docs/*/author_bio_form.md
+docs/*/author_biograph*
+docs/*/*corresponding_author*
+docs/*/my_biography/
+
+# Compiled manuscripts. Rebuilt by the per-journal build_*.py scripts.
+# Figures under figures/ and figure_files/ stay tracked: they are evidence.
+docs/ieee_access/ieee_access_hvac.pdf
+docs/ieee_access/ieee_access_hvac_onefile.pdf
+docs/ieee_access/supplementary.pdf
+docs/paper_asej/manuscript.pdf
+docs/paper_asej/supplementary.pdf
+
+# Journal template machinery, downloaded from the publisher's author kit rather
+# than vendored here. make_submission_zip.py names any missing file on exit.
+docs/ieee_access/ieeeaccess.cls
+docs/ieee_access/spotcolor.sty
+docs/ieee_access/IEEEtran.bst
+docs/ieee_access/t1-*.pfb
+docs/ieee_access/t1-*.tfm
+docs/ieee_access/t1-*.map
+docs/ieee_access/t1*.fd
+docs/paper_combined/cas-*.sty
+docs/paper_combined/cas-*.cls
+docs/paper_combined/cas-*.bst
+docs/paper_combined/rineng_submission/cas-*.sty
+docs/paper_combined/rineng_submission/cas-*.cls
+docs/paper_combined/rineng_submission/cas-*.bst

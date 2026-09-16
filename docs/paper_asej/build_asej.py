@@ -3,12 +3,12 @@ Build the Ain Shams Engineering Journal submission set from docs/paper_asej/.
 
 Outputs (all written next to this script):
     manuscript.pdf    anonymized manuscript, two-column elsarticle 5p
-    title_page.pdf    author/affiliation/funding page, uploaded separately
     supplementary.pdf reproduction detail; built HERE, not copied -- it diverges
                       from the long-format supplement in docs/paper_combined/
-    declaration_of_competing_interests.pdf
-    cover_letter_ASEJ.pdf
-    author_biography.pdf
+
+The submission packet -- title page, competing-interests declaration, cover
+letter and author biography -- is no longer kept in this repository. This
+script builds the science; the paperwork lives with the author.
 
 PAGE_LIMIT is 12, not the 10 stated in the guide. Recent accepted ASEJ articles run
 ~10 000 words with 9 figures and 7 tables, which cannot fit 10 pages in ANY layout,
@@ -88,11 +88,6 @@ n = pages(man)
 print(f"[check] manuscript.pdf = {n} pages (limit {PAGE_LIMIT})")
 if n > PAGE_LIMIT:
     sys.exit(f"!! OVER THE JOURNAL LIMIT by {n - PAGE_LIMIT} page(s) -- trim before submitting")
-
-build("title_page")
-build("declaration_of_competing_interests")
-build("cover_letter_ASEJ")
-build("author_biography")
 
 # No page limit on the supplement, but it is published exactly as received, so a
 # broken build ships as-is if nobody looks.

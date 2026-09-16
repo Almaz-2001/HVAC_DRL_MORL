@@ -150,5 +150,12 @@ science, and flattens the result to a single `.tex` for upload.
 names. They are the prose source and the long-format source the live set is
 sliced from, not separate submissions.
 
+The repository carries the science, not the submission packet. Cover letters,
+title pages, competing-interests declarations and author biographies are kept
+outside it. The IEEE Access class file, `spotcolor.sty`, `IEEEtran.bst` and the
+Formata fonts are not vendored either: download the journal's author kit into
+`docs/ieee_access/` before running `build_ieee.py` or `make_submission_zip.py`
+from a fresh clone. Compiled PDFs are build output and are not tracked.
+
 The project codebase is not publicly released at this stage; it is available to
 editors and reviewers on request.
